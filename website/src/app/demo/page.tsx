@@ -12,11 +12,30 @@ export const metadata: Metadata = {
 export default function DemoPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-      <Badge className="mb-4">Recorded + interactive</Badge>
+      <Badge className="mb-4">Interactive + recorded</Badge>
       <h1 className="text-3xl tracking-tight text-[var(--ink)] sm:text-4xl">
         See rBuilder in action
       </h1>
       <p className="mt-3 max-w-2xl text-[var(--body)]">
+        Interactive agent scenarios first — prompt → tool call → schema-aligned
+        JSON → reasoning. Recorded CLI and dashboard walkthroughs below. Prefer
+        the ecommerce-java fixture when you run commands locally.
+      </p>
+
+      <h2 className="mt-10 text-2xl tracking-tight text-[var(--ink)]">
+        Agent skill scenarios
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm text-[var(--body)]">
+        Commands match the live CLI.
+      </p>
+      <div className="mt-8">
+        <DemoPlayground />
+      </div>
+
+      <h2 className="mt-16 text-2xl tracking-tight text-[var(--ink)]">
+        Recorded walkthroughs
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm text-[var(--body)]">
         VHS terminal recording from{" "}
         <a
           href={`${GITHUB_REPO}/blob/main/docs/videos/user-guide-cli.tape`}
@@ -26,11 +45,10 @@ export default function DemoPage() {
         >
           user-guide-cli.tape
         </a>
-        , plus interactive agent scenarios. Prefer the ecommerce-java fixture
-        when you run commands locally.
+        , plus a dashboard montage.
       </p>
 
-      <div className="mt-10 space-y-14">
+      <div className="mt-8 space-y-14">
         <DemoMedia
           kind="cli"
           preferGif
@@ -59,17 +77,6 @@ export default function DemoPage() {
         </code>
         .
       </p>
-
-      <h2 className="mt-16 text-2xl tracking-tight text-[var(--ink)]">
-        Agent skill scenarios
-      </h2>
-      <p className="mt-2 max-w-2xl text-sm text-[var(--body)]">
-        Prompt → tool call → schema-aligned JSON → reasoning. Commands match the
-        live CLI.
-      </p>
-      <div className="mt-8">
-        <DemoPlayground />
-      </div>
     </div>
   );
 }
