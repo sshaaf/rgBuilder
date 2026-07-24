@@ -42,7 +42,7 @@ Typical user turns are natural language (“Where is the checkout flow?”), not
 
 | # | User says (patterns) | Prefer |
 |---|-------------------------------------|--------|
-| 1 | Generate a migration plan / modernize this repo | `discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints` then **read** `.rbuilder/migration_plan.json` (stdout is discover telemetry, not the plan) |
+| 1 | Generate a migration plan / modernize this repo | `discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints [--migration-preset hybrid_default\|foundational_first\|dense_cluster\|risk_mitigation] [--migration-order scheduled\|priority]` then **read** `.rbuilder/migration_plan.json` (stdout is discover telemetry, not the plan) |
 | 2 | Bottlenecks / central dependencies / hotspots | `-f json metrics --pagerank` → `.pagerank.top` |
 | 3 | Inventory of functions / candidates to delete or shrink | `-f json gql --macro-name all_functions unused` — **`unused` is a required QUERY placeholder**, not “find dead code”; follow up with blast-radius / CALL queries |
 | 4 | What communities / packages does the graph see? | `-f json gql --macro-name all_communities unused` (lists communities, **not** orphans) or prefer `communities list` |
@@ -59,6 +59,8 @@ Typical user turns are natural language (“Where is the checkout flow?”), not
 | 15 | Trace variable `quantity` / data flow | `-f json cpg flows FILE --line N --variable quantity --function updateQuantity --direction forward` |
 | 16 | Loop-carried / parallelization hazards | `discover . --with-cfg --with-dfg-loops` then `-f json inspect <Symbol> pdg --edge-layer data` (look for `loop_carried`) |
 | 17 | Validate against policy before commit | `-f json check --policy-file policy.json` (blast-radius policy schema — see `docs/policy-format.md`) |
+| 18 | Find X and show what's connected to it / its callers | `-f json semantic query "X" --expand all --expand-depth 2` (single call: hits + neighbors + blast-radius + a ready GQL query) |
+| 19 | Community labels look stale / relabel after a rename | `communities label --write` (persists into `analysis_results.bin`; check `written` in response) |
 | — | relationship between X and Y | `gql` CALLS/DEPENDSON path (see encyclopedia) |
 | — | who calls X / what X calls | incoming vs outgoing GQL (or blast-radius for impact) |
 | — | open dashboard / many queries | `serve --open` |
@@ -74,7 +76,7 @@ rbuilder -r "$REPO" discover .
 rbuilder -r "$REPO" -f json <command> …
 ```
 
-Globals: `-f json` (agents), `-r` / `--repo`, `-o` file. Workflow: **discover once → query many**.
+Globals: `-f json` (agents), `-r` / `--repo`, `-o` file, `-d` / `--db` (custom graph cache path — rarely needed, defaults under `.rbuilder/`). Workflow: **discover once → query many**.
 
 ## Artifacts
 
@@ -117,11 +119,13 @@ Samples below are truncated. Field names match live CLI / `docs/cli-output-schem
 
 ### `discover`
 
-**Command:** `rbuilder [-f json] discover [PATH] [--with-cfg] [--with-security] [--with-taint] [--with-dashboard] [--with-harmonic] [--export-migration-hints] [--with-ast-skeleton] [--with-dfg-loops] …`
+**Command:** `rbuilder [-f json] discover [PATH] [-l/--languages CSV] [-e/--exclude GLOB] [-v/--verbose] [--with-cfg] [--with-security] [--with-taint] [--with-dashboard] [--with-harmonic] [--export-migration-hints] [--with-ast-skeleton] [--with-dfg-loops] [--write-json-graph] …`
 
 **Purpose:** Index the repo once (or after large changes). Build the graph agents query.
 
 **Prerequisites:** None (this creates `.rbuilder/`).
+
+**Other flags:** `--languages java,go` restricts the language set; `--exclude` filters paths (glob); `--verbose` prints per-file progress (noisy — skip unless debugging a stuck/slow discover); `--write-json-graph` also writes legacy `graph.db`/`graph.json` (rarely needed, snapshot-only is the default and is what agents should rely on).
 
 **Sample** (`-f json`, ecommerce-java):
 
@@ -185,7 +189,7 @@ rbuilder -f json gql --macro-name all_communities unused
 
 ### `blast-radius`
 
-**Command:** `rbuilder -f json blast-radius '<Symbol>' [--depth N] [--class C] [--file P] [--with-slices] [--policy-file PATH]`
+**Command:** `rbuilder -f json blast-radius '<Symbol>' [--depth N] [--class C] [--file P] [--with-slices] [--policy-file PATH] [--no-policy]`
 
 **Purpose:** Upstream change impact — who breaks if this symbol changes.
 
@@ -236,7 +240,7 @@ rbuilder -f json blast-radius 'checkout' --class OrderService --depth 3
 }
 ```
 
-**Pitfalls:** Ambiguous names need `--class` / `--file`. `--with-slices` is slow. Exit `1` when policy `VIOLATED` (JSON still emitted first). **Interface / dynamic dispatch:** blast-radius and CALLS edges track static call sites only — receiver methods, virtual calls, and trait/interface impls may return score=0 / 0 callers even when widely used. If blast-radius returns 0 for a method that clearly has callers, fall back to `grep` for call sites in source.
+**Pitfalls:** Ambiguous names need `--class` / `--file`. `--with-slices` is slow. Exit `1` when policy `VIOLATED` (JSON still emitted first). `--no-policy` skips policy evaluation entirely (gatekeeping reports `SKIPPED`) — use for pure impact analysis when the user isn't asking about CI gates. **Interface / dynamic dispatch:** blast-radius and CALLS edges track static call sites only — receiver methods, virtual calls, and trait/interface impls may return score=0 / 0 callers even when widely used. If blast-radius returns 0 for a method that clearly has callers, fall back to `grep` for call sites in source.
 
 **Agent should report:** score, direct callers (`fqn` / `file_path`), impact_zone_size, policy status — not full topology arrays. Ignore or pass through extra v2 fields (`id`, `language`, `signature`, `scc_component_id`) as needed.
 
@@ -281,11 +285,13 @@ rbuilder -f json slice src/main/java/com/example/ecommerce/service/CartService.j
 
 ### `inspect`
 
-**Command:** `rbuilder -f json inspect <SYMBOL> cfg|pdg|dom`
+**Command:** `rbuilder -f json inspect <SYMBOL> cfg [--prune] | pdg [--edge-layer all|data|control] [--def-use] | dom [--frontiers]`
 
 **Purpose:** Raw CFG / PDG / dominator view for one function.
 
 **Prerequisites:** `discover --with-cfg`. Symbol only — **no** `--class` (disambiguate via blast-radius / GQL first).
+
+**Layer flags:** `cfg --prune` drops unreachable blocks before display. `pdg --edge-layer data|control` filters to one dependence type (default `all`); `--def-use` adds def-use variable lists per node. `dom --frontiers` prints dominance frontiers instead of just the tree.
 
 **Sample:**
 
@@ -365,13 +371,19 @@ Loop over `top[]` UUIDs and resolve each. GQL `WHERE n.id = '<uuid>'` does **not
 **Command:**
 
 ```bash
-rbuilder semantic index [--embedder code-daemon|vocab|hash]
-rbuilder -f json semantic query "…" [--limit N] [--scope community]
+rbuilder semantic index [--embedder code-daemon|vocab|hash|onnx] [--model PATH] [--tokenizer PATH] \
+  [--dimensions N] [--incremental] [--diffuse] [--diffuse-alpha F] [--diffuse-iters N] [--diffuse-bidirectional]
+rbuilder -f json semantic query "…" [--limit N] [--scope function|community] \
+  [--expand neighbors|blast|gql|all] [--expand-depth N] [--no-fusion] [--candidate-pool N] [--keyword-and]
 ```
 
-**Purpose:** Natural-language / keyword find of functions (and community-scoped search).
+**Purpose:** Natural-language / keyword find of functions (and community-scoped search), with optional one-shot expansion into graph context.
 
-**Prerequisites:** `discover`, then **`semantic index`** (separate artifact). Offline: `--embedder vocab` or `hash`. Default code-daemon needs ONNX weights.
+**Prerequisites:** `discover`, then **`semantic index`** (separate artifact). Offline: `--embedder vocab` or `hash`. `--embedder onnx` needs `--model` (+ optional `--tokenizer` for SentencePiece). Default `code-daemon` needs ONNX weights (bundled via `git lfs pull`).
+
+**Index tuning:** `--dimensions` (default 256, multiple of 8) trades index size for precision. `--incremental` (default true) reuses embeddings for unchanged `code_hash`. `--diffuse` blends each embedding toward its call-graph neighbors' mean (Jacobi iterations via `--diffuse-alpha`/`--diffuse-iters`; `--diffuse-bidirectional` includes callers, not just callees) — useful when bare-name/docstring signal is weak and callers/callees disambiguate intent; `--no-diffuse` forces it off.
+
+**Query expansion:** `--expand neighbors` pulls CALLS neighbors of top hits, `--expand blast` runs blast-radius on top hits, `--expand gql` returns a ready GQL query, `--expand all` does all three — use when the user's NL query implies "and show me what's connected," so you skip a manual follow-up call. `--expand-depth` controls hop depth for `neighbors`/`gql` expansion (default 1). `--no-fusion` returns pure Hamming top-k (skip late-fusion re-ranking — rarely needed). `--candidate-pool` widens/narrows the pre-fusion candidate set (default 256). `--keyword-and` requires all query keywords to match entry metadata (stricter than default OR).
 
 **Sample** (`--embedder vocab`, query `checkout cart`):
 
@@ -403,9 +415,9 @@ rbuilder -f json semantic query "…" [--limit N] [--scope community]
 
 ### `communities`
 
-**Command:** `rbuilder -f json communities list` (and refresh subcommands per `--help`)
+**Command:** `rbuilder -f json communities list` | `rbuilder communities label [--write]`
 
-**Purpose:** Named community overlay (subsystems).
+**Purpose:** Named community overlay (subsystems). `label` recomputes heuristic labels (e.g. after renames shift what a cluster "is about") and persists them into `analysis_results.bin` (`--write` defaults to `true`; response's `written` field confirms).
 
 **Prerequisites:** `discover` (community detection during analysis).
 
@@ -456,7 +468,7 @@ rbuilder -f json cpg calls '<Symbol>'
 #### `cpg pdg` / `cpg slice` / `cpg flows`
 
 ```bash
-rbuilder -f json cpg pdg '<Symbol>'
+rbuilder -f json cpg pdg '<Symbol>' [--edge-layer all|data|control] [--def-use]
 rbuilder -f json cpg slice …   # wraps slice; see slice flags
 rbuilder -f json cpg flows FILE --line N --variable V --function F \
   [--direction forward|backward] [--with-alias]
@@ -471,12 +483,14 @@ rbuilder -f json cpg flows FILE --line N --variable V --function F \
 #### `cpg mutations`
 
 ```bash
-rbuilder -f json cpg mutations --type ShoppingCart [--exclude-ctors]
+rbuilder -f json cpg mutations --type ShoppingCart [--exclude-ctors] [--member fieldName] [--include-unresolved]
 ```
 
 **Purpose:** Field mutations on a type (cart / DTO safety).
 
 **Prerequisites:** `discover --with-cfg`.
+
+**Other flags:** `--member` narrows to one field (e.g. "who writes `items`?" instead of the whole type). `--include-unresolved` also reports writes whose receiver type couldn't be statically resolved (dynamic dispatch) — noisier but catches mutations `blast-radius`/CALLS would miss.
 
 **Agent should report:** which fields are written, by which functions.
 
@@ -495,10 +509,13 @@ rbuilder -f json cpg ast '<Symbol>'
 #### `cpg export`
 
 ```bash
-rbuilder cpg export --format graphson --output cpg.json [--path-contains src/]
+rbuilder cpg export --format graphson --output cpg.json [--path-contains src/] \
+  [--include-l-proc] [--include-field-writes]
 ```
 
 **Purpose:** Export hybrid CPG view (GraphML / GraphSON).
+
+**Other flags:** `--include-l-proc` and `--include-field-writes` both default to **on** (merging PDG DATA_FLOW edges and mutation-index field-write sites respectively) — there's no CLI switch to turn them off; they're primarily documentation of what a plain `cpg export` already includes.
 
 **Agent should report:** output path + format.
 
@@ -541,11 +558,13 @@ rbuilder cpg export --format graphson --output cpg.json [--path-contains src/]
 
 ### `serve`
 
-**Command:** `rbuilder serve [--open] [--host] [--port] [--query-only|--dashboard-only]`
+**Command:** `rbuilder serve [--open] [--host H] [--port N] [--dashboard-dir DIR] [--query-only|--dashboard-only]`
 
 **Purpose:** HTTP dashboard + `POST /api/query` (and semantic routes). Preferred for many interactive queries.
 
 **Prerequisites:** `discover` (dashboard bundle with `--with-dashboard` for full UI).
+
+**Legacy daemon mode:** `rbuilder serve --daemon [--socket PATH] [--idle-secs N]` — Unix-socket (or Windows port-file) blast-radius-only daemon; conflicts with all HTTP flags (`--host`/`--port`/`--open`/`--query-only`/`--dashboard-only`/`--dashboard-dir`). `--idle-secs` (default 300) auto-exits after inactivity.
 
 **Pitfalls:** `serve --daemon` is the **legacy** Unix-socket blast-radius daemon — prefer HTTP `serve`. Only use `--daemon` if the user explicitly asks for the old socket.
 
@@ -563,11 +582,12 @@ Run the commands as shown; parse encyclopedia sample shapes. Summarize — don�
 
 ```bash
 rbuilder discover . --with-cfg --with-security --with-taint \
-  --with-dashboard --with-harmonic --export-migration-hints
+  --with-dashboard --with-harmonic --export-migration-hints \
+  --migration-preset hybrid_default --migration-order scheduled
 # read .rbuilder/migration_plan.json (and/or dashboard Migration tab via serve --open)
 ```
 
-Discover stdout (`-f json`) is **telemetry** — not the plan body. Report path + top `packages[]` by priority/step.
+Discover stdout (`-f json`) is **telemetry** — not the plan body. Report path + preset/order used + top `packages[]` by priority/step. Pick `--migration-preset` from the cheat sheet below to match the user's stated migration strategy.
 
 **2. Hotspots** — *“Which core functions are bottlenecks / central dependencies?”*
 
@@ -723,16 +743,21 @@ Blast-radius policy schema (`max_impact_nodes`, `forbidden_crossings`, …) — 
 | `--export-migration-hints` | Write `migration_plan.json` |
 | `--with-ast-skeleton` | AST skeleton for `cpg ast` |
 | `--with-dfg-loops` | Tag loop-carried data deps on PDG |
+| `--migration-preset <name>` | Strategy for migration plan export: `hybrid_default` (default), `foundational_first`, `dense_cluster`, `risk_mitigation` |
+| `--migration-order <name>` | Roadmap sort for migration plan export: `scheduled` (dependency-aware, default) or `priority` (score rank) |
 
 Migration-oriented discover (heavy):
 
 ```bash
 rbuilder discover . --with-cfg --with-security --with-taint \
-  --with-dashboard --with-harmonic --export-migration-hints
+  --with-dashboard --with-harmonic --export-migration-hints \
+  --migration-preset foundational_first --migration-order scheduled
 # then read .rbuilder/migration_plan.json (or dashboard copy)
 ```
 
-**Agent should report:** path to plan + top scheduled packages — not the entire JSON.
+Choose `--migration-preset` to match user intent: `foundational_first` for "migrate the core/base first," `dense_cluster` for "tackle tightly-coupled modules together," `risk_mitigation` for "minimize blast radius per step," else leave the `hybrid_default`. Use `--migration-order priority` when the user wants highest-impact packages first instead of a dependency-safe sequence.
+
+**Agent should report:** path to plan + preset/order used + top scheduled packages — not the entire JSON.
 
 ---
 
