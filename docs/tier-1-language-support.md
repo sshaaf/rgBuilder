@@ -117,18 +117,20 @@ Required for high-quality `cpg mutations` / typed field writes. Reference: Java 
 | Python | `__init__` → `Class.<init>`; harvest `self.x` fields | Annotations when present |
 | C | No language ctors; struct fields + typed params required | Strong on structs |
 
-**Java extract honesty (java-extract-gaps + java-grammar-remainder):**
+**Java extract honesty (java-extract-gaps + java-grammar-remainder + java-gql-remainder-gates):**
 
 - Annotation types are `:Annotation` nodes (not `:Interface`). Usages emit `AnnotatedWith`; no classpath/FQN resolution beyond imports/package best-effort.
 - Records are `Class` with `metadata.is_record`; compact ctors and `<clinit>` / `<initblock>N` are CFG entry points.
 - Annotation elements are Functions with `is_annotation_element`; interface `constant_declaration` becomes fields.
-- Generics/`throws` are symbol metadata (`type_params`, `throws`); not TypeParameter nodes.
+- Generics/`throws` are symbol metadata (`type_params`, `throws`); not TypeParameter nodes. GQL JSON projects allowlisted properties (`type_params`, `throws`, `is_lambda`, `is_external_stub`, …).
 - Lambdas are synthetic Functions (`$lambda$N`, `is_lambda`); direct CFG `$lambda$N` lookup is file-global (prefer enclosing-method CFG).
 - Anonymous classes use synthetic `Outer.$AnonymousN` owners.
 - Expression refs: field reads → `References`; array `new` → `Instantiates`; `.class` → `References`. No full points-to.
-- Type-use annotations (`annotated_type`) attach to nearest symbol; locals may attach to the enclosing method.
+- Type-use annotations (`annotated_type`) and declaration-site parameter annotations attach to the **owning method/constructor** (parameter encodings are not graph nodes). Field type-use attaches to the field symbol.
+- Unresolved Instantiates / DependsOn / Uses / AnnotatedWith / References / Calls targets become deduplicated **external stub** nodes (`is_external_stub`, file `<external>`) so GQL edges survive; stubs are placeholders, not a JDK model.
 - Pattern-matching (`record_pattern` / `type_pattern`) not first-class symbols.
 - No full reflection / retention-policy analysis.
+- GQL gates: `cargo test --test java_langfeatures` (fixture `tests/fixtures/java/langfeatures`).
 
 ---
 
