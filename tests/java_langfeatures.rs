@@ -100,6 +100,24 @@ fn target_names(v: &Value, binding: &str) -> Vec<String> {
     out
 }
 
+fn binding_qualified_names(v: &Value, binding: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let Some(rows) = v.get("rows").and_then(|r| r.as_array()) else {
+        return out;
+    };
+    for row in rows {
+        let cells = row.as_array().cloned().unwrap_or_default();
+        for cell in cells {
+            if cell.get("binding").and_then(|b| b.as_str()) == Some(binding) {
+                if let Some(qn) = cell.get("qualified_name").and_then(|n| n.as_str()) {
+                    out.push(qn.to_string());
+                }
+            }
+        }
+    }
+    out
+}
+
 #[test]
 fn jf01_instantiates_string() {
     let repo = repo();
@@ -207,5 +225,65 @@ fn jf06_generic_throws_properties() {
     assert!(
         props.iter().any(|p| p.get("type_params").is_some() || p.get("throws").is_some()),
         "expected type_params and/or throws in projected properties, got {props:?} in {v}"
+    );
+}
+
+/// Issue #49: Java class FQN queries via `qualified_name` (not `name`).
+#[test]
+fn jf07_class_fqn_qualified_name() {
+    let repo = repo();
+    ensure_discovered();
+
+    let wrong = gql(
+        &repo,
+        "MATCH (n:Class) WHERE n.name = 'demo.LangFeatures' RETURN n",
+    );
+    assert_eq!(
+        row_count(&wrong),
+        0,
+        "FQN on n.name must be empty (simple name only), got {wrong}"
+    );
+
+    let by_simple = gql(
+        &repo,
+        "MATCH (n:Class) WHERE n.name = 'LangFeatures' RETURN n",
+    );
+    assert!(
+        row_count(&by_simple) >= 1,
+        "simple name LangFeatures should match, got {by_simple}"
+    );
+    let names = target_names(&by_simple, "n");
+    assert!(
+        names.iter().any(|n| n == "LangFeatures"),
+        "expected LangFeatures node name, got {names:?}"
+    );
+    let qns = binding_qualified_names(&by_simple, "n");
+    assert!(
+        qns.iter().any(|q| q == "demo.LangFeatures"),
+        "JSON row should project qualified_name, got {qns:?} in {by_simple}"
+    );
+
+    let by_qn = gql(
+        &repo,
+        "MATCH (n:Class) WHERE n.qualified_name = 'demo.LangFeatures' RETURN n",
+    );
+    assert!(
+        row_count(&by_qn) >= 1,
+        "expected Class via n.qualified_name = 'demo.LangFeatures' (issue #49), got {by_qn}"
+    );
+    assert!(
+        binding_qualified_names(&by_qn, "n")
+            .iter()
+            .any(|q| q == "demo.LangFeatures"),
+        "FQN filter row should include qualified_name, got {by_qn}"
+    );
+
+    let by_like = gql(
+        &repo,
+        "MATCH (n:Class) WHERE n.qualified_name LIKE 'demo.*' RETURN n",
+    );
+    assert!(
+        row_count(&by_like) >= 1,
+        "expected LIKE on qualified_name, got {by_like}"
     );
 }

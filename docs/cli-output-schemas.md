@@ -315,10 +315,12 @@ rbuilder -f json gql "<QUERY>" [--explain] [--macro NAME]
         "binding": "string",
         "node": "string",
         "type": "string",
+        "qualified_name": "string (optional)",
         "file": "string | null",
         "community_id": "number (optional)",
         "label": "string (optional)",
-        "member_count": "number (optional)"
+        "member_count": "number (optional)",
+        "properties": "object (optional, allowlisted keys)"
       }
     ]
   ],
@@ -335,10 +337,12 @@ rbuilder -f json gql "<QUERY>" [--explain] [--macro NAME]
 | `binding` | string | Variable name from the `MATCH` pattern |
 | `node` | string | Matched node bare name (or community label) |
 | `type` | string | `NodeType` debug name, or `"Community"` for virtual overlay nodes |
+| `qualified_name` | string \| omitted | Graph FQN when present; filter with `WHERE n.qualified_name = '...'` (not `n.name`) |
 | `file` | string \| null | Source path when present on the node |
 | `community_id` | number \| omitted | Community id on `:Community` rows |
 | `label` | string \| omitted | Heuristic community label |
 | `member_count` | number \| omitted | Community size |
+| `properties` | object \| omitted | Allowlisted extract properties (`is_lambda`, `throws`, …) |
 
 **Note:** The explain **plan** is not included in JSON; it prints to text mode only. Virtual `:Community` / `community_id` require `.rbuilder/analysis_results.bin` after `discover`.
 

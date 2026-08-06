@@ -18,6 +18,9 @@ pub struct GqlRowBinding {
     /// Node type label (`Community` for virtual overlay nodes).
     #[serde(rename = "type")]
     pub node_type: String,
+    /// Fully-qualified name when present on the graph node (issue #49).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub qualified_name: Option<String>,
     /// Source file path when present.
     pub file: Option<String>,
     /// Community id when available (virtual property or community node).
@@ -93,6 +96,7 @@ pub fn gql_response_from_result(result: &QueryResult, explain: bool) -> GqlJsonR
                         } else {
                             format!("{:?}", node.node_type)
                         },
+                        qualified_name: node.qualified_name.clone(),
                         file: node.file_path.clone(),
                         community_id: node
                             .get_property("community_id")
@@ -132,6 +136,7 @@ pub fn fixture_gql_response() -> GqlJsonResponse {
             binding: "f".into(),
             node: "main".into(),
             node_type: "Function".into(),
+            qualified_name: None,
             file: Some("src/main.rs".into()),
             community_id: None,
             label: None,
@@ -175,5 +180,29 @@ mod tests {
         assert_eq!(props.get("is_lambda").map(String::as_str), Some("true"));
         assert_eq!(props.get("type_params").map(String::as_str), Some("<T>"));
         assert!(!props.contains_key("unrelated_noise"));
+    }
+
+    #[test]
+    fn projects_qualified_name_when_present() {
+        let node = Node::new(NodeType::Class, "Context".into())
+            .with_qualified_name("org.openmrs.api.context.Context".into());
+        let mut row = HashMap::new();
+        row.insert("n".to_string(), node);
+        let response = gql_response_from_result(
+            &QueryResult {
+                rows: vec![row],
+                plan: None,
+            },
+            false,
+        );
+        assert_eq!(
+            response.rows[0][0].qualified_name.as_deref(),
+            Some("org.openmrs.api.context.Context")
+        );
+        let doc = serde_json::to_value(&response).unwrap();
+        assert_eq!(
+            doc["rows"][0][0]["qualified_name"].as_str(),
+            Some("org.openmrs.api.context.Context")
+        );
     }
 }
