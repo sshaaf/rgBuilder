@@ -11,6 +11,8 @@ on:
     branches: [main, docs]
     paths:
       - "website/**"
+      - "docs/**"
+      - "AGENTS.md"
       - ".github/workflows/website.yml"
   workflow_dispatch:
 

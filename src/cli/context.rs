@@ -97,7 +97,7 @@ impl CliContext {
             return CodeGraph::import_json(&json).map_err(Into::into);
         }
         bail!(
-            "Graph not found at {} (run `rgbuilder discover` first)",
+            "Graph not found at {} (run `rg-build discover` first)",
             self.db.display()
         );
     }

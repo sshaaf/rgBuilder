@@ -109,7 +109,7 @@ rust-version.workspace = true
 authors = ["rgBuilder Contributors"]
 description = "A Code knowledge graph system"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/sshaaf/rgbuilder"
+repository = "https://github.com/sshaaf/rgBuilder"
 readme = "README.md"
 keywords = ["code-analysis", "graph", "ai", "knowledge-graph"]
 categories = ["development-tools", "command-line-utilities"]
@@ -208,7 +208,7 @@ debug = false
 strip = false
 
 [[bin]]
-name = "rgbuilder"
+name = "rg-build"
 path = "src/main.rs"
 
 [[test]]
@@ -338,6 +338,10 @@ path = "tests/go_langfeatures.rs"
 [[test]]
 name = "java_langfeatures"
 path = "tests/java_langfeatures.rs"
+
+[[test]]
+name = "user_guide_scenarios"
+path = "tests/user_guide_scenarios.rs"
 
 [[test]]
 name = "dashboard_metasfresh"

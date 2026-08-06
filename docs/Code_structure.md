@@ -9,7 +9,7 @@ Guide for navigating the rgBuilder workspace: how crates are segmented, how they
 ```mermaid
 flowchart TB
     subgraph entry["Entry & CLI"]
-        RB["rgbuilder<br/>(binary + src/cli)"]
+        RB["rg-build<br/>(binary + src/cli)"]
     end
 
     subgraph facade["Facade"]
@@ -133,7 +133,7 @@ flowchart TB
 
 ### Layer responsibilities
 
-#### Entry (`rgbuilder` root crate)
+#### Entry (`rg-build` root crate)
 
 - **`src/main.rs`** — process entry, dispatches to CLI.
 - **`src/cli/`** — subcommands: `discover`, `blast-radius`, `serve`, `gql`, `slice`, `inspect`, `metrics`, `semantic`, `communities`, `cpg`, `check`, `export`.
@@ -141,7 +141,7 @@ flowchart TB
 - **`src/cli/query_daemon.rs`** — `serve --daemon`; optional blast-radius client when `.rgbuilder/query.sock` exists (`RGBUILDER_NO_QUERY_DAEMON=1` to disable).
 - **`src/cli/*_output.rs`** — typed JSON serializers (`blast_radius_output`, `discover_output`, `gql_output`, …). Commands assemble domain results from workspace crates and serialize here; **do not** embed algorithm logic in output modules.
 - **`src/languages/`** — wires the active language **bundle** into a `LanguageRegistry` at runtime.
-- Re-exports **`rgbuilder-core`** for library users (`use rgbuilder::analysis`, etc.).
+- Re-exports **`rgbuilder-core`** for library users (`use rg-build::analysis`, etc.).
 
 Put new **user-facing commands** here; implement behavior in the appropriate workspace crate.
 
@@ -149,7 +149,7 @@ Put new **user-facing commands** here; implement behavior in the appropriate wor
 
 Stable “library surface” for embedders: re-exports graph, analysis, pipeline, export, gql, incremental, registry, rules, semantic, security, project-config. Also hosts **`memory`** monitoring helpers used during discover.
 
-If you add a new workspace crate that external tools should use, export it through `rgbuilder-core` (and optionally the root `rgbuilder` crate).
+If you add a new workspace crate that external tools should use, export it through `rgbuilder-core` (and optionally the root `rg-build` crate).
 
 #### Plugin system
 
@@ -257,7 +257,7 @@ Alphabetical list of workspace crates **excluding** individual `rgbuilder-lang-*
 
 | Crate | Path | Purpose |
 |---|---|---|
-| **rgbuilder** | `.` | CLI binary, command dispatch, language bundle wiring, public library root. |
+| **rg-build** | `.` | CLI binary, command dispatch, language bundle wiring, public library root. |
 | **rgbuilder-analysis** | `crates/rgbuilder-analysis` | Graph algorithms: blast radius, centrality, community, CFG/PDG, slicing, taint, policies, caches, `PetGraphView`. |
 | **rgbuilder-languages** | `crates/rgbuilder-languages` | Registers all Tier 1 language plugins (Rust, Python, JS/TS, Go, Java, C#, C, C++). |
 | **rgbuilder-config-formats** | `crates/rgbuilder-config-formats` | Config file plugins (YAML, JSON, TOML, properties, markdown). |
@@ -310,4 +310,4 @@ When adding or fixing language support:
 
 ---
 
-*Related docs: [`user-guide.md`](user-guide.md), [`json-api.md`](json-api.md), [`dashboard-design.md`](dashboard-design.md), [`cli-output-schemas.md`](cli-output-schemas.md), [`cli-io-sanity-qe.md`](cli-io-sanity-qe.md), [`graph-storage-architecture.md`](graph-storage-architecture.md), [`CLI_STRUCTURE.txt`](CLI_STRUCTURE.txt), [`cli-getting-started.md`](cli-getting-started.md).*
+*Related docs: [`user-guide.md`](user-guide.md), [`json-api.md`](json-api.md), [`dashboard-design.md`](dashboard-design.md), [`cli-io-sanity-qe.md`](cli-io-sanity-qe.md), [`graph-storage-architecture.md`](graph-storage-architecture.md), [`CLI_STRUCTURE.txt`](CLI_STRUCTURE.txt).*

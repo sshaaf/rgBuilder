@@ -1,4 +1,4 @@
-//! `rgbuilder blast-radius` — SCC macro impact analysis.
+//! `rg-build blast-radius` — SCC macro impact analysis.
 
 use super::args::OutputFormat;
 use super::blast_radius_output::{

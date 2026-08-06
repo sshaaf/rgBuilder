@@ -33,15 +33,15 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 # Prefer a freshly built release binary
-if [[ -x "$ROOT/target/release/rgbuilder" ]]; then
+if [[ -x "$ROOT/target/release/rg-build" ]]; then
   export PATH="$ROOT/target/release:$PATH"
-elif ! command -v rgbuilder >/dev/null 2>&1; then
-  echo "error: rgbuilder not on PATH — run: cargo build --release" >&2
+elif ! command -v rg-build >/dev/null 2>&1; then
+  echo "error: rg-build not on PATH — run: cargo build --release" >&2
   exit 1
 fi
 
-echo "==> rgbuilder: $(command -v rgbuilder)"
-rgbuilder --version
+echo "==> rg-build: $(command -v rg-build)"
+rg-build --version
 echo "==> validating tape"
 vhs validate "$TAPE"
 echo "==> recording (this runs discover + the full walkthrough)"

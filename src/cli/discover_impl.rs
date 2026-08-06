@@ -1044,10 +1044,10 @@ pub(crate) fn run_full_analysis(
 
         info!("");
         info!("[i] Next steps:");
-        info!("   rgbuilder gql \"MATCH (n:Function) RETURN n\"  # Query the graph");
-        info!("   rgbuilder slice <file> --line <N> --variable <VAR>");
+        info!("   rg-build gql \"MATCH (n:Function) RETURN n\"  # Query the graph");
+        info!("   rg-build slice <file> --line <N> --variable <VAR>");
         if dashboard_dir.join("manifest.json").is_file() {
-            info!("   rgbuilder serve --open   # Dashboard + query API at http://127.0.0.1:8080");
+            info!("   rg-build serve --open   # Dashboard + query API at http://127.0.0.1:8080");
         }
     }
 

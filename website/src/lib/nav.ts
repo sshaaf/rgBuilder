@@ -8,31 +8,15 @@ export const primaryNav = [
 export const footerLearn = [
   { href: "/docs/", label: "Documentation" },
   { href: "/install/", label: "Install" },
-  { href: "/demo/", label: "Interactive demos" },
-  {
-    href: "https://github.com/sshaaf/rgBuilder/blob/main/docs/faq.md",
-    label: "FAQ",
-    external: true,
-  },
+  { href: "/docs/user-guide/", label: "User Guide" },
+  { href: "/docs/faq/", label: "FAQ" },
 ] as const;
 
 export const footerAgents = [
   { href: "/agents/", label: "Agent overview" },
-  {
-    href: "https://github.com/sshaaf/rgBuilder/blob/main/AGENTS.md",
-    label: "AGENTS.md",
-    external: true,
-  },
-  {
-    href: "https://github.com/sshaaf/rgBuilder/blob/main/docs/agent-recipes.md",
-    label: "Recipes",
-    external: true,
-  },
-  {
-    href: "https://github.com/sshaaf/rgBuilder/blob/main/docs/json-api.md",
-    label: "JSON API",
-    external: true,
-  },
+  { href: "/docs/AGENTS/", label: "AGENTS.md" },
+  { href: "/docs/agent-recipes/", label: "Recipes" },
+  { href: "/docs/json-api/", label: "JSON API" },
 ] as const;
 
 export const footerContribute = [

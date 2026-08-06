@@ -22,7 +22,7 @@ Optional: **Playwright** (dashboard browser tests) — installed via `dashboard/
 git clone https://github.com/sshaaf/rgBuilder.git
 cd rgBuilder
 cargo build --release
-./target/release/rgbuilder --version
+./target/release/rg-build --version
 ```
 
 ### Dashboard (when changing `dashboard/`)
@@ -91,7 +91,7 @@ Full map: [docs/Code_structure.md](docs/Code_structure.md)
 
 ## Adding or improving a language
 
-Follow [docs/tier-1-language-support.md](docs/tier-1-language-support.md) and update [docs/LANGUAGE_GUIDE.md](docs/LANGUAGE_GUIDE.md).
+Follow [docs/tier-1-language-support.md](docs/tier-1-language-support.md) and update [docs/languages.md](docs/languages.md).
 
 ---
 

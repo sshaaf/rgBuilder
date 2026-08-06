@@ -19,10 +19,10 @@ fn repo() -> PathBuf {
 }
 
 fn bin() -> PathBuf {
-    if let Ok(p) = std::env::var("CARGO_BIN_EXE_rgbuilder") {
+    if let Ok(p) = std::env::var("CARGO_BIN_EXE_rg_build") {
         return PathBuf::from(p);
     }
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/release/rgbuilder")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/release/rg-build")
 }
 
 fn ensure_discovered() {

@@ -116,10 +116,10 @@ pub fn ecommerce_typescript_repo_path() -> PathBuf {
 }
 
 pub fn rgbuilder_bin() -> PathBuf {
-    if let Ok(p) = std::env::var("CARGO_BIN_EXE_rgbuilder") {
+    if let Ok(p) = std::env::var("CARGO_BIN_EXE_rg_build") {
         return PathBuf::from(p);
     }
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/release/rgbuilder")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/release/rg-build")
 }
 
 pub fn run_discover(repo: &Path, languages: &str) -> Output {
@@ -142,7 +142,7 @@ fn run_discover_with_flags(repo: &Path, languages: Option<&str>, deep: bool) -> 
     let bin = rgbuilder_bin();
     assert!(
         bin.is_file(),
-        "rgbuilder binary not found at {} — run cargo build --release",
+        "rg-build binary not found at {} — run cargo build --release",
         bin.display()
     );
     let mut cmd = Command::new(&bin);
@@ -161,7 +161,7 @@ fn run_discover_with_flags(repo: &Path, languages: Option<&str>, deep: bool) -> 
     if let Some(langs) = languages {
         cmd.args(["--languages", langs]);
     }
-    cmd.output().expect("spawn rgbuilder discover")
+    cmd.output().expect("spawn rg-build discover")
 }
 
 /// Default metasfresh example checkout (override with env).

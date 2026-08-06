@@ -21,7 +21,7 @@ fn fixture_repo() -> PathBuf {
 }
 
 fn rgbuilder_bin() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_rgbuilder"))
+    PathBuf::from(env!("CARGO_BIN_EXE_rg_build"))
 }
 
 fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
@@ -61,7 +61,7 @@ impl Sandbox {
         let mut cmd = Command::new(rgbuilder_bin());
         cmd.arg("-r").arg(&self.repo);
         cmd.args(args);
-        cmd.output().expect("spawn rgbuilder")
+        cmd.output().expect("spawn rg-build")
     }
 
     fn parse_json(&self, output: &Output) -> Value {

@@ -71,7 +71,7 @@ export function DemoPlayground() {
           <div className="space-y-2">
             <Badge>Agent tool call</Badge>
             <TerminalBlock
-              lines={active.commands.map((c) => `rgbuilder ${c}`)}
+              lines={active.commands.map((c) => `rg-build ${c}`)}
             />
           </div>
 

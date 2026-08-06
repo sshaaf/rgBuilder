@@ -172,9 +172,9 @@ fn handle_connection<S: Read + Write>(state: &Arc<DaemonState>, mut stream: S) -
 fn load_daemon_state(ctx: &CliContext) -> Result<Arc<DaemonState>> {
     let session = ctx
         .snapshot_session()?
-        .context("graph snapshot not found (run `rgbuilder discover` first)")?;
+        .context("graph snapshot not found (run `rg-build discover` first)")?;
     let engine = try_load_engine(&ctx.repo, session.digest.as_ref())?.context(
-        "blast engine snapshot not found or digest mismatch (run `rgbuilder discover` first)",
+        "blast engine snapshot not found or digest mismatch (run `rg-build discover` first)",
     )?;
     Ok(Arc::new(DaemonState {
         repo: ctx.repo.clone(),
@@ -217,7 +217,7 @@ mod transport {
         let listener = UnixListener::bind(&socket_path)
             .with_context(|| format!("bind query socket {}", socket_path.display()))?;
         eprintln!(
-            "rgbuilder query daemon listening on {} (idle exit {}s)",
+            "rg-build query daemon listening on {} (idle exit {}s)",
             socket_path.display(),
             idle_secs
         );
@@ -264,7 +264,7 @@ mod transport {
 
         loop {
             if last_activity.elapsed() >= idle_limit {
-                eprintln!("rgbuilder query daemon exiting after idle timeout");
+                eprintln!("rg-build query daemon exiting after idle timeout");
                 break;
             }
             match listener.accept() {
@@ -307,7 +307,7 @@ mod transport {
             .with_context(|| format!("write query port file {}", port_file.display()))?;
 
         eprintln!(
-            "rgbuilder query daemon listening on 127.0.0.1:{port} (port file {}, idle exit {}s)",
+            "rg-build query daemon listening on 127.0.0.1:{port} (port file {}, idle exit {}s)",
             port_file.display(),
             idle_secs
         );
@@ -362,7 +362,7 @@ mod transport {
 
         loop {
             if last_activity.elapsed() >= idle_limit {
-                eprintln!("rgbuilder query daemon exiting after idle timeout");
+                eprintln!("rg-build query daemon exiting after idle timeout");
                 break;
             }
             match listener.accept() {

@@ -38,7 +38,7 @@ use clap::{Parser, Subcommand};
 use context::CliContext;
 
 #[derive(Parser)]
-#[command(name = "rgbuilder")]
+#[command(name = "rg-build")]
 #[command(about = "AI-powered code knowledge graph", version = BUILD_INFO)]
 pub struct Cli {
     /// Path to the graph cache database
@@ -817,7 +817,7 @@ fn init_logging(verbose: bool, discover_json: bool) {
         tracing_subscriber::fmt()
             .with_env_filter(
                 EnvFilter::try_from_default_env()
-                    .unwrap_or_else(|_| EnvFilter::new("info,rgbuilder=debug,profile=info")),
+                    .unwrap_or_else(|_| EnvFilter::new("info,rg-build=debug,profile=info")),
             )
             .with_target(true)
             .with_level(true)
@@ -836,7 +836,7 @@ fn init_logging(verbose: bool, discover_json: bool) {
     } else {
         tracing_subscriber::fmt()
             .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                EnvFilter::new("warn,rgbuilder=info,rgbuilder_extraction=warn,rgbuilder_analysis=warn")
+                EnvFilter::new("warn,rg-build=info,rgbuilder_extraction=warn,rgbuilder_analysis=warn")
             }))
             .with_target(false)
             .with_level(false)

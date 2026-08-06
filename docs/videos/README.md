@@ -38,7 +38,7 @@ cargo build --release
 cargo build --release
 ./docs/videos/record-feature-demo.sh
 # or step-by-step:
-#   rgbuilder -r rgbuilder-tests/ecommerce-java serve --port 8080
+#   rg-build -r rgbuilder-tests/ecommerce-java serve --port 8080
 #   DASHBOARD_URL=http://127.0.0.1:8080/ node dashboard/scripts/record-feature-demo.mjs
 #   ./docs/videos/burn-feature-demo-captions.sh
 ```

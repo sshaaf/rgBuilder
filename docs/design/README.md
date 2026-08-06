@@ -1,6 +1,8 @@
 # Feature design documents
 
-Engineering designs for rgBuilder capabilities listed in [README § Where most tools stop](../README.md#where-most-tools-stop). Each doc follows the [migration planner](migration-planner-design.md) pattern: goals, architecture, implementation map, CLI, testing, and **dashboard screenshots** (gbuilder @ 1440×900).
+**Audience: contributors / maintainers** — not the default agent reading path. Start at [docs/README.md](../README.md) (For contributors).
+
+Engineering designs for rgBuilder capabilities. Each doc follows the [migration planner](migration-planner-design.md) pattern: goals, architecture, implementation map, CLI, testing, and optional **dashboard screenshots**.
 
 ## Index
 
@@ -29,8 +31,8 @@ Regenerate after UI changes:
 ```bash
 cd dashboard && npm run build
 cargo build --release
-rgbuilder -r /path/to/gbuilder discover . --with-cfg --with-security --with-taint
-rgbuilder -r /path/to/gbuilder serve --port 8080
+rg-build -r /path/to/gbuilder discover . --with-cfg --with-security --with-taint
+rg-build -r /path/to/gbuilder serve --port 8080
 
 DASHBOARD_URL=http://127.0.0.1:8080/ node dashboard/scripts/capture-design-screenshots.mjs
 ```

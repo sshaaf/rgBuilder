@@ -1,4 +1,4 @@
-//! `rgbuilder discover` — index and analyze a repository.
+//! `rg-build discover` — index and analyze a repository.
 
 use super::context::CliContext;
 use anyhow::Result;

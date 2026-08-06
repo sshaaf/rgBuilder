@@ -18,7 +18,7 @@ Bump all workspace versions together before tagging.
 
 Pushing a tag matching `v*` triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml):
 
-1. **Build** `rgbuilder` release binaries for:
+1. **Build** `rg-build` release binaries for:
    - `x86_64-unknown-linux-gnu`
    - `aarch64-apple-darwin`
    - `x86_64-apple-darwin`
@@ -72,7 +72,7 @@ From [GitHub Releases](https://github.com/sshaaf/rgBuilder/releases):
 | Linux x86_64 | `rgbuilder-*-x86_64-unknown-linux-gnu.tar.gz` |
 | Windows | `rgbuilder-*-x86_64-pc-windows-msvc.zip` |
 
-Extract and run `rgbuilder --version`. See [User Guide §1](user-guide.md#1-installation).
+Extract and run `rg-build --version`. See [User Guide §1](user-guide.md#1-installation).
 
 ---
 
@@ -84,19 +84,15 @@ Extract and run `rgbuilder --version`. See [User Guide §1](user-guide.md#1-inst
 
 ---
 
-## Ops checkpoint: GitHub repository rename (rgbuilder)
+## Naming
 
-The in-repo identity is **rgbuilder** / **rgBuilder**. Renaming the GitHub repository is a **manual ops step** coordinated with a release:
+| Thing | Name |
+|-------|------|
+| Project / crates / GitHub repo | **rgbuilder** / **rgBuilder** (`sshaaf/rgBuilder`) |
+| CLI binary users run | **`rg-build`** |
+| On-disk index directory | **`.rgbuilder/`** |
 
-| Item | Target |
-|------|--------|
-| GitHub repo slug | Prefer `sshaaf/rgbuilder` (URL-stable); display name may remain **rgBuilder** |
-| Pages / site | `NEXT_PUBLIC_BASE_PATH=/rgBuilder` (or `/rgbuilder` if Paths are lowercased in the same change) — update `website/` + DNS/Pages settings |
-| Clone / badge URLs | Already point at `sshaaf/rgBuilder` or `sshaaf/rgbuilder` in-tree; fix redirects after rename |
-| External `rgbuilder-tests` dispatch | Rename or retarget `sshaaf/rgbuilder-tests` when that sibling repo is renamed |
-| crates.io | Publish as `rgbuilder` only if/when intentionally published |
-
-Until the GitHub rename lands, clones of `sshaaf/rBuilder` still work; document the redirect in the release BREAKING notes.
+Release archives stay `rgbuilder-${VERSION}-${target}.tar.gz` (project name) and contain the `rg-build` binary.
 
 ---
 

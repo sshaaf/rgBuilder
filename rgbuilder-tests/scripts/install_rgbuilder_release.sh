@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Download and install rgbuilder from a GitHub Release (default: latest).
+# Download and install rg-build from a GitHub Release (default: latest).
 #
 # Usage:
 #   ./scripts/install_rgbuilder_release.sh
@@ -9,7 +9,7 @@
 # Writes the install directory to stdout (last line) and sets GITHUB_ENV when run in Actions.
 set -euo pipefail
 
-REPO="${RGBUILDER_REPO:-sshaaf/rgbuilder}"
+REPO="${RGBUILDER_REPO:-sshaaf/rgBuilder}"
 TAG="${RGBUILDER_TAG:-}"
 TARGET="${RGBUILDER_TARGET:-}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -88,17 +88,17 @@ trap 'rm -f "$TMP"' EXIT
 echo "Downloading ${ASSET} …" >&2
 curl -fsSL "${AUTH[@]}" -o "$TMP" "$URL"
 tar -xzf "$TMP" -C "$INSTALL_DIR"
-chmod +x "$INSTALL_DIR/rgbuilder"
+chmod +x "$INSTALL_DIR/rg-build"
 
-if ! "$INSTALL_DIR/rgbuilder" --version >/dev/null 2>&1; then
-  "$INSTALL_DIR/rgbuilder" -h >/dev/null 2>&1 || true
+if ! "$INSTALL_DIR/rg-build" --version >/dev/null 2>&1; then
+  "$INSTALL_DIR/rg-build" -h >/dev/null 2>&1 || true
 fi
 
-echo "Installed rgbuilder ${TAG_NAME} (${TARGET}) → ${INSTALL_DIR}/rgbuilder" >&2
+echo "Installed rg-build ${TAG_NAME} (${TARGET}) → ${INSTALL_DIR}/rg-build" >&2
 
 if [[ -n "${GITHUB_ENV:-}" && -w "${GITHUB_ENV}" ]]; then
   {
-    echo "RGBUILDER=${INSTALL_DIR}/rgbuilder"
+    echo "RGBUILDER=${INSTALL_DIR}/rg-build"
     echo "RGBUILDER_VERSION=${TAG_NAME}"
     echo "RGBUILDER_TARGET=${TARGET}"
   } >> "$GITHUB_ENV"

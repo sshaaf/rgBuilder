@@ -34,10 +34,10 @@ export default function InstallPage() {
           >
             Releases
           </a>
-          , put <code className="font-mono text-[var(--body-strong)]">rgbuilder</code>{" "}
+          , put <code className="font-mono text-[var(--body-strong)]">rg-build</code>{" "}
           on your <code className="font-mono">PATH</code>, then:
         </p>
-        <TerminalBlock lines={["rgbuilder --version"]} />
+        <TerminalBlock lines={["rg-build --version"]} />
         <Button variant="ghost" asChild>
           <a href={GITHUB_RELEASES} target="_blank" rel="noreferrer">
             Open releases
@@ -55,7 +55,7 @@ export default function InstallPage() {
             "# Skip if you only use: semantic index --embedder vocab|hash",
             "git lfs pull",
             "cargo build --release",
-            "./target/release/rgbuilder --version",
+            "./target/release/rg-build --version",
           ]}
         />
       </section>
@@ -72,9 +72,9 @@ export default function InstallPage() {
         <TerminalBlock
           lines={[
             "cd rgbuilder-tests/ecommerce-java",
-            "rgbuilder discover .",
-            "rgbuilder -f json gql --macro-name all_functions unused | jq '.count'",
-            'rgbuilder -f json blast-radius "priceShoppingCart" --depth 2',
+            "rg-build discover .",
+            "rg-build -f json gql --macro-name all_functions unused | jq '.count'",
+            'rg-build -f json blast-radius "priceShoppingCart" --depth 2',
           ]}
         />
         <p className="text-sm text-[var(--mute)]">

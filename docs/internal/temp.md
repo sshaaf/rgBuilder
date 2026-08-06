@@ -36,7 +36,7 @@ HLL precision `p = 14` (adaptive below).
 This avoids multi-million-entry `HashMap<Uuid, CentralityScores>` allocations that previously
 spiked peak RSS on kernel-scale graphs.
 
-`rgbuilder metrics` still uses **`analyze_with_view`** (HashMap report) but shares the same flat
+`rg-build metrics` still uses **`analyze_with_view`** (HashMap report) but shares the same flat
 compute core and adaptive gating.
 
 ---
@@ -53,7 +53,7 @@ Policy and migration use **relative rank order** and community aggregates — no
 PageRank convergence on multi-million-node call graphs. Explicit CLI tuning remains available:
 
 ```bash
-rgbuilder -f json metrics --pagerank --iterations 50
+rg-build -f json metrics --pagerank --iterations 50
 ```
 
 ---
@@ -142,7 +142,7 @@ discover → analyze_columnar → FlatGraphIndex
 
 ### Configuration (future)
 
-Planned `rgbuilder.toml` keys:
+Planned `rg-build.toml` keys:
 
 ```toml
 [centrality]
@@ -243,7 +243,7 @@ because k=512 is fixed.
 
 ```bash
 # Stage timings + centrality sub-phases
-RUST_LOG=info,profile=info rgbuilder discover . -v 2>&1 | tee discover-profile.log
+RUST_LOG=info,profile=info rg-build discover . -v 2>&1 | tee discover-profile.log
 grep '\[profile\]' discover-profile.log
 ```
 

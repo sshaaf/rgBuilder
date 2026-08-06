@@ -19,18 +19,18 @@ export interface CliWorkflowSection {
 export const GUIDE_PREREQUISITES = `export REPO="$PWD"   # repository root after discover
 
 # Fast index (graph, blast scores, metrics)
-rgbuilder discover .
+rg-build discover .
 
 # Dashboard UI + CFG/PDG (Dataflow, CFG, Slice overlays, CPG mutations)
-rgbuilder discover . --with-cfg --with-dashboard
+rg-build discover . --with-cfg --with-dashboard
 
 # Richer pass used by the feature demo / migration tab
-rgbuilder discover . -l java -e target \\
+rg-build discover . -l java -e target \\
   --with-cfg --with-security --with-taint --with-dashboard --with-harmonic \\
   --export-migration-hints
 
 # Optional: semantic Search tab (after discover)
-rgbuilder semantic index --embedder vocab --dimensions 256`;
+rg-build semantic index --embedder vocab --dimensions 256`;
 
 /**
  * Examples target rgbuilder-tests/ecommerce-java (JWT /api/* + CoolStore /services/*).
@@ -42,43 +42,43 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
     tabLabel: "Graph visualization",
     summary:
       "Explore package/community structure, drill into call neighborhoods, and export subgraphs for external tools.",
-    prerequisite: "rgbuilder discover .",
+    prerequisite: "rg-build discover .",
     blocks: [
       {
         comment: "List functions and orient by name",
         commands: [
-          'rgbuilder -r "$REPO" gql --macro-name all_functions unused',
-          'rgbuilder -r "$REPO" gql "MATCH (n:Function) WHERE n.name LIKE \'*Service*\' RETURN n LIMIT 20"',
+          'rg-build -r "$REPO" gql --macro-name all_functions unused',
+          'rg-build -r "$REPO" gql "MATCH (n:Function) WHERE n.name LIKE \'*Service*\' RETURN n LIMIT 20"',
         ],
       },
       {
         comment: "Named communities (dashboard metagraph labels)",
         commands: [
-          'rgbuilder -r "$REPO" -f json gql --macro-name all_communities unused | jq ".rows[:5]"',
-          'rgbuilder -r "$REPO" communities list | head -15',
+          'rg-build -r "$REPO" -f json gql --macro-name all_communities unused | jq ".rows[:5]"',
+          'rg-build -r "$REPO" communities list | head -15',
         ],
       },
       {
         comment: "Call chains (1–3 hops) — same edges the metagraph summarizes",
         commands: [
-          'rgbuilder -r "$REPO" gql "MATCH (a:Function)-[:CALLS*1..3]->(b:Function) RETURN a,b LIMIT 50"',
-          'rgbuilder -r "$REPO" gql --macro-name call_chain unused',
-          'rgbuilder -r "$REPO" gql "MATCH (a:Function)-[:CALLS]->(b:Function) WHERE b.name = \'clearCart\' RETURN a,b"',
+          'rg-build -r "$REPO" gql "MATCH (a:Function)-[:CALLS*1..3]->(b:Function) RETURN a,b LIMIT 50"',
+          'rg-build -r "$REPO" gql --macro-name call_chain unused',
+          'rg-build -r "$REPO" gql "MATCH (a:Function)-[:CALLS]->(b:Function) WHERE b.name = \'clearCart\' RETURN a,b"',
         ],
       },
       {
         comment: "Export a subgraph (GraphML, Mermaid) for offline layout",
         commands: [
-          'rgbuilder -r "$REPO" export --export-format graphml --export-output subgraph.graphml \\',
+          'rg-build -r "$REPO" export --export-format graphml --export-output subgraph.graphml \\',
           '  --query "name:priceShoppingCart"',
-          'rgbuilder -r "$REPO" export --export-format mermaid --export-output clearCart.mmd \\',
+          'rg-build -r "$REPO" export --export-format mermaid --export-output clearCart.mmd \\',
           "  --query 'name:clearCart'",
         ],
       },
       {
         comment: "Many queries in one session — HTTP dashboard + GQL API",
         commands: [
-          'rgbuilder -r "$REPO" serve --open',
+          'rg-build -r "$REPO" serve --open',
           'curl -sS -X POST http://127.0.0.1:8080/api/query \\',
           "  -H 'Content-Type: application/json' \\",
           "  -d '{\"macro\":\"all_functions\"}' | jq '.count'",
@@ -96,29 +96,29 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
     tabLabel: "Semantic search",
     summary:
       "Natural-language function search (and community-scoped search) — same as the Search tab after `semantic index`.",
-    prerequisite: "rgbuilder discover . && rgbuilder semantic index --embedder vocab",
+    prerequisite: "rg-build discover . && rg-build semantic index --embedder vocab",
     blocks: [
       {
         comment: "Build the Hamming index (offline vocab embedder)",
-        commands: ['rgbuilder -r "$REPO" semantic index --embedder vocab --dimensions 256'],
+        commands: ['rg-build -r "$REPO" semantic index --embedder vocab --dimensions 256'],
       },
       {
         comment: "Query functions",
         commands: [
-          'rgbuilder -r "$REPO" -f json semantic query "shopping cart checkout" --limit 5 \\',
+          'rg-build -r "$REPO" -f json semantic query "shopping cart checkout" --limit 5 \\',
           "  | jq '.hits[:3] | map({name, score})'",
         ],
       },
       {
         comment: "Scope to communities (Search tab community mode)",
         commands: [
-          'rgbuilder -r "$REPO" -f json semantic query "shopping cart" --scope community --limit 3 \\',
+          'rg-build -r "$REPO" -f json semantic query "shopping cart" --scope community --limit 3 \\',
           "  | jq '.hits | map({name, ranking, score})'",
         ],
       },
     ],
     notes: [
-      "With `rgbuilder serve`, the Search tab hits `POST /api/semantic/query` on the same index.",
+      "With `rg-build serve`, the Search tab hits `POST /api/semantic/query` on the same index.",
     ],
   },
   {
@@ -126,28 +126,28 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
     tabLabel: "Function inventory",
     summary:
       "Browse symbols with PageRank, betweenness, harmonic centrality, and blast scores — same columns as the Functions table.",
-    prerequisite: "rgbuilder discover .",
+    prerequisite: "rg-build discover .",
     blocks: [
       {
         comment: "Inventory all functions",
         commands: [
-          'rgbuilder -r "$REPO" gql --macro-name all_functions unused',
-          'rgbuilder -r "$REPO" -f json gql --macro-name all_functions unused | jq ".count"',
+          'rg-build -r "$REPO" gql --macro-name all_functions unused',
+          'rg-build -r "$REPO" -f json gql --macro-name all_functions unused | jq ".count"',
         ],
       },
       {
         comment: "Centrality reports (Functions table PR / BC columns)",
         commands: [
-          'rgbuilder -r "$REPO" metrics --pagerank',
-          'rgbuilder -r "$REPO" metrics --betweenness',
-          'rgbuilder -r "$REPO" -f json metrics --pagerank | jq ".pagerank.top[:10]"',
+          'rg-build -r "$REPO" metrics --pagerank',
+          'rg-build -r "$REPO" metrics --betweenness',
+          'rg-build -r "$REPO" -f json metrics --pagerank | jq ".pagerank.top[:10]"',
         ],
       },
       {
         comment: "Filter by type or file path",
         commands: [
-          'rgbuilder -r "$REPO" gql "MATCH (n:Class) RETURN n LIMIT 30"',
-          'rgbuilder -r "$REPO" gql "MATCH (n:Function) WHERE n.file_path LIKE \'*coolstore*\' RETURN n"',
+          'rg-build -r "$REPO" gql "MATCH (n:Class) RETURN n LIMIT 30"',
+          'rg-build -r "$REPO" gql "MATCH (n:Function) WHERE n.file_path LIKE \'*coolstore*\' RETURN n"',
         ],
       },
     ],
@@ -161,26 +161,26 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
     tabLabel: "CFG / PDG analysis",
     summary:
       "Inspect control-flow blocks, branches, and dominance inside one function — equivalent to the CFG graph + dominance panel.",
-    prerequisite: "rgbuilder discover . --with-cfg",
+    prerequisite: "rg-build discover . --with-cfg",
     blocks: [
       {
         comment: "CFG for CoolStore pricing (ecommerce-java)",
         commands: [
-          'rgbuilder -r "$REPO" inspect priceShoppingCart cfg',
-          'rgbuilder -r "$REPO" -f mermaid inspect priceShoppingCart cfg',
-          'rgbuilder -r "$REPO" inspect priceShoppingCart cfg --prune',
+          'rg-build -r "$REPO" inspect priceShoppingCart cfg',
+          'rg-build -r "$REPO" -f mermaid inspect priceShoppingCart cfg',
+          'rg-build -r "$REPO" inspect priceShoppingCart cfg --prune',
         ],
       },
       {
         comment: "JWT /api checkout method",
         commands: [
-          'rgbuilder -r "$REPO" inspect checkout cfg',
-          'rgbuilder -r "$REPO" -f json inspect checkout cfg | jq "{blocks: (.nodes|length), edges: (.edges|length)}"',
+          'rg-build -r "$REPO" inspect checkout cfg',
+          'rg-build -r "$REPO" -f json inspect checkout cfg | jq "{blocks: (.nodes|length), edges: (.edges|length)}"',
         ],
       },
       {
         comment: "Dominator tree + frontiers",
-        commands: ['rgbuilder -r "$REPO" inspect priceShoppingCart dom --frontiers'],
+        commands: ['rg-build -r "$REPO" inspect priceShoppingCart dom --frontiers'],
       },
     ],
     notes: [
@@ -193,33 +193,33 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
     tabLabel: "Dataflow",
     summary:
       "Statement-level PDG / dominator views, plus the Field mutations (CPG) panel for typed writes such as ShoppingCart.",
-    prerequisite: "rgbuilder discover . --with-cfg --with-dashboard",
+    prerequisite: "rg-build discover . --with-cfg --with-dashboard",
     blocks: [
       {
         comment: "CPG status + field mutations (Dataflow → Field mutations panel)",
         commands: [
-          'rgbuilder -r "$REPO" cpg status',
-          'rgbuilder -r "$REPO" cpg mutations --type ShoppingCart --exclude-ctors',
-          'rgbuilder -r "$REPO" -f json cpg mutations --type ShoppingCart --exclude-ctors',
+          'rg-build -r "$REPO" cpg status',
+          'rg-build -r "$REPO" cpg mutations --type ShoppingCart --exclude-ctors',
+          'rg-build -r "$REPO" -f json cpg mutations --type ShoppingCart --exclude-ctors',
         ],
       },
       {
         comment: "PDG / dataflow edges for pricing",
         commands: [
-          'rgbuilder -r "$REPO" inspect priceShoppingCart pdg --edge-layer data',
-          'rgbuilder -r "$REPO" inspect priceShoppingCart pdg --def-use',
-          'rgbuilder -r "$REPO" -f mermaid inspect priceShoppingCart pdg --edge-layer data',
+          'rg-build -r "$REPO" inspect priceShoppingCart pdg --edge-layer data',
+          'rg-build -r "$REPO" inspect priceShoppingCart pdg --def-use',
+          'rg-build -r "$REPO" -f mermaid inspect priceShoppingCart pdg --edge-layer data',
         ],
       },
       {
         comment: "Dominator tree (Dataflow → Dominator Tree view)",
-        commands: ['rgbuilder -r "$REPO" inspect priceShoppingCart dom --frontiers'],
+        commands: ['rg-build -r "$REPO" inspect priceShoppingCart dom --frontiers'],
       },
       {
         comment: "CALL neighborhood via CPG façade",
         commands: [
-          'rgbuilder -r "$REPO" cpg function priceShoppingCart',
-          'rgbuilder -r "$REPO" cpg calls \'ShoppingCartService::priceShoppingCart\'',
+          'rg-build -r "$REPO" cpg function priceShoppingCart',
+          'rg-build -r "$REPO" cpg calls \'ShoppingCartService::priceShoppingCart\'',
         ],
       },
     ],
@@ -233,12 +233,12 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
     tabLabel: "Program slicing",
     summary:
       "Backward or forward line-level slice for a variable at a line — same as Compute slice in the dashboard.",
-    prerequisite: "rgbuilder discover . --with-cfg",
+    prerequisite: "rg-build discover . --with-cfg",
     blocks: [
       {
         comment: "Backward slice — JWT cart addItem (ecommerce-java)",
         commands: [
-          'rgbuilder -r "$REPO" slice \\',
+          'rg-build -r "$REPO" slice \\',
           "  src/main/java/com/example/ecommerce/service/CartService.java \\",
           "  --line 53 --variable item --function addItem",
         ],
@@ -246,7 +246,7 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
       {
         comment: "Forward slice",
         commands: [
-          'rgbuilder -r "$REPO" slice \\',
+          'rg-build -r "$REPO" slice \\',
           "  src/main/java/com/example/ecommerce/service/CartService.java \\",
           "  --line 53 --variable item --function addItem --direction forward",
         ],
@@ -254,7 +254,7 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
       {
         comment: "JSON for automation",
         commands: [
-          'rgbuilder -r "$REPO" -f json slice \\',
+          'rg-build -r "$REPO" -f json slice \\',
           "  src/main/java/com/example/ecommerce/service/CartService.java \\",
           "  --line 53 --variable item --function addItem | jq .",
         ],
@@ -269,33 +269,33 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
     tabLabel: "Blast radius",
     summary:
       "Upstream impact if you change a symbol — impact score, direct callers, and impact zone (dashboard table is depth-limited).",
-    prerequisite: "rgbuilder discover .",
+    prerequisite: "rg-build discover .",
     blocks: [
       {
         comment: "JWT /api cart clear",
         commands: [
-          'rgbuilder -r "$REPO" blast-radius \'CartService::clearCart\'',
-          'rgbuilder -r "$REPO" -f json blast-radius \'CartService::clearCart\' | jq "{score: .metrics.score, callers: .topology.direct_callers}"',
+          'rg-build -r "$REPO" blast-radius \'CartService::clearCart\'',
+          'rg-build -r "$REPO" -f json blast-radius \'CartService::clearCart\' | jq "{score: .metrics.score, callers: .topology.direct_callers}"',
         ],
       },
       {
         comment: "CoolStore /services pricing",
         commands: [
-          'rgbuilder -r "$REPO" blast-radius \'ShoppingCartService::priceShoppingCart\'',
-          'rgbuilder -r "$REPO" -f json blast-radius \'ShoppingCartService::priceShoppingCart\' | jq ".metrics"',
+          'rg-build -r "$REPO" blast-radius \'ShoppingCartService::priceShoppingCart\'',
+          'rg-build -r "$REPO" -f json blast-radius \'ShoppingCartService::priceShoppingCart\' | jq ".metrics"',
         ],
       },
       {
         comment: "Limit caller depth (matches dashboard depth slider)",
         commands: [
-          'rgbuilder -r "$REPO" blast-radius \'CartService::clearCart\' --depth 1',
-          'rgbuilder -r "$REPO" blast-radius \'CartService::clearCart\' --depth 5',
+          'rg-build -r "$REPO" blast-radius \'CartService::clearCart\' --depth 1',
+          'rg-build -r "$REPO" blast-radius \'CartService::clearCart\' --depth 5',
         ],
       },
       {
         comment: "CI policy gate on changed functions",
         commands: [
-          'rgbuilder -r "$REPO" -f json check --policy-file "$REPO/../rgbuilder-policy.json" \\',
+          'rg-build -r "$REPO" -f json check --policy-file "$REPO/../rgbuilder-policy.json" \\',
           "  | jq '{schema_version, violations: (.violations|length)}'",
         ],
       },
@@ -310,12 +310,12 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
     tabLabel: "Taint analysis",
     summary:
       "Source-to-sink flows and sanitizer checks per function — requires CFG/PDG from discover.",
-    prerequisite: "rgbuilder discover . --with-cfg --with-taint --with-dashboard",
+    prerequisite: "rg-build discover . --with-cfg --with-taint --with-dashboard",
     blocks: [
       {
         comment: "On-demand taint at a program point",
         commands: [
-          'rgbuilder -r "$REPO" slice \\',
+          'rg-build -r "$REPO" slice \\',
           "  src/main/java/com/example/ecommerce/service/CartService.java \\",
           "  --line 53 --variable item --function addItem --taint",
         ],
@@ -323,8 +323,8 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
       {
         comment: "Find CoolStore / JWT endpoints, then trace",
         commands: [
-          'rgbuilder -r "$REPO" gql "MATCH (n:Function) WHERE n.name LIKE \'*checkout*\' OR n.name LIKE \'*Endpoint*\' RETURN n LIMIT 20"',
-          'rgbuilder -r "$REPO" slice <file> --line <N> --variable <VAR> --function <method> --taint',
+          'rg-build -r "$REPO" gql "MATCH (n:Function) WHERE n.name LIKE \'*checkout*\' OR n.name LIKE \'*Endpoint*\' RETURN n LIMIT 20"',
+          'rg-build -r "$REPO" slice <file> --line <N> --variable <VAR> --function <method> --taint',
         ],
       },
     ],
@@ -338,23 +338,23 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
     summary:
       "Package-level extraction roadmap from communities, centrality, and blast — export plan JSON for agents or CI.",
     prerequisite:
-      "rgbuilder discover . --with-cfg --with-dashboard --with-harmonic --export-migration-hints",
+      "rg-build discover . --with-cfg --with-dashboard --with-harmonic --export-migration-hints",
     blocks: [
       {
         comment: "Default hybrid strategy",
         commands: [
-          'rgbuilder discover . --with-cfg --with-dashboard --with-harmonic --export-migration-hints',
+          'rg-build discover . --with-cfg --with-dashboard --with-harmonic --export-migration-hints',
           'jq ".packages[:5]" .rgbuilder/dashboard/migration_plan.json',
         ],
       },
       {
         comment: "Strategy presets (dashboard α/β/γ presets)",
         commands: [
-          'rgbuilder discover . --with-cfg --with-harmonic --export-migration-hints \\',
+          'rg-build discover . --with-cfg --with-harmonic --export-migration-hints \\',
           "  --migration-preset risk_mitigation",
-          'rgbuilder discover . --with-cfg --with-harmonic --export-migration-hints \\',
+          'rg-build discover . --with-cfg --with-harmonic --export-migration-hints \\',
           "  --migration-preset hotspot_first",
-          'rgbuilder discover . --with-cfg --with-harmonic --export-migration-hints \\',
+          'rg-build discover . --with-cfg --with-harmonic --export-migration-hints \\',
           "  --migration-order priority",
         ],
       },
@@ -369,23 +369,23 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
     tabId: "guide",
     tabLabel: "GQL reference",
     summary: "Core graph queries used across tabs — patterns, macros, and JSON output.",
-    prerequisite: "rgbuilder discover .",
+    prerequisite: "rg-build discover .",
     blocks: [
       {
         comment: "Macros (shortcuts)",
         commands: [
-          'rgbuilder -r "$REPO" gql --macro-name all_functions unused',
-          'rgbuilder -r "$REPO" gql --macro-name all_communities unused',
-          'rgbuilder -r "$REPO" gql --macro-name direct_calls unused',
-          'rgbuilder -r "$REPO" gql --macro-name call_chain unused',
+          'rg-build -r "$REPO" gql --macro-name all_functions unused',
+          'rg-build -r "$REPO" gql --macro-name all_communities unused',
+          'rg-build -r "$REPO" gql --macro-name direct_calls unused',
+          'rg-build -r "$REPO" gql --macro-name call_chain unused',
         ],
       },
       {
         comment: "Patterns",
         commands: [
-          'rgbuilder -r "$REPO" -f json gql "MATCH (n:Function) RETURN n LIMIT 5" | jq ".count"',
-          'rgbuilder -r "$REPO" gql "MATCH (a:Function)-[:CALLS]->(b:Function) RETURN a,b LIMIT 25"',
-          'rgbuilder -r "$REPO" gql --explain "MATCH (n:Function) WHERE n.name = \'clearCart\' RETURN n"',
+          'rg-build -r "$REPO" -f json gql "MATCH (n:Function) RETURN n LIMIT 5" | jq ".count"',
+          'rg-build -r "$REPO" gql "MATCH (a:Function)-[:CALLS]->(b:Function) RETURN a,b LIMIT 25"',
+          'rg-build -r "$REPO" gql --explain "MATCH (n:Function) WHERE n.name = \'clearCart\' RETURN n"',
         ],
       },
       {

@@ -21,7 +21,7 @@ Title: [QE] <short failure summary>
 ```bash
 cargo test --test <target> <filter>
 # or
-rgbuilder -r <repo> -f json <command>
+rg-build -r <repo> -f json <command>
 ```
 
 ## Expected

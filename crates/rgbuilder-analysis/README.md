@@ -30,7 +30,7 @@ See [docs/analysis-architecture.md](../../docs/analysis-architecture.md) for the
 | `semantic_diffuse` | `CallGraph` + dense `f32` | Jacobi neighbor blend before quantize | O(K·E·D) |
 | `semantic_fusion` | Index + `AnalysisResults` | Late fusion re-rank | O(pool) |
 
-Semantic search is **opt-in** (`rgbuilder semantic index`). Prefer `--embedder vocab` when building without ONNX. Profile queries with `--release`; see [semantic-search-design.md](../../docs/design/semantic-search-design.md).
+Semantic search is **opt-in** (`rg-build semantic index`). Prefer `--embedder vocab` when building without ONNX. Profile queries with `--release`; see [semantic-search-design.md](../../docs/design/semantic-search-design.md).
 
 ## Community detection naming
 

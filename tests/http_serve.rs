@@ -1,4 +1,4 @@
-//! Integration tests for `rgbuilder serve` HTTP mode.
+//! Integration tests for `rg-build serve` HTTP mode.
 
 use std::net::TcpListener;
 use std::process::{Child, Command, Stdio};
@@ -13,10 +13,10 @@ fn pick_port() -> u16 {
 }
 
 fn rgbuilder_bin() -> std::path::PathBuf {
-    std::env::var_os("CARGO_BIN_EXE_rgbuilder")
+    std::env::var_os("CARGO_BIN_EXE_rg_build")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| {
-            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug/rgbuilder")
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug/rg-build")
         })
 }
 
@@ -62,7 +62,7 @@ fn http_serve_serves_dashboard_and_query_api() {
     let bin = rgbuilder_bin();
     assert!(
         bin.is_file(),
-        "missing rgbuilder binary at {}",
+        "missing rg-build binary at {}",
         bin.display()
     );
 
@@ -82,7 +82,7 @@ fn http_serve_serves_dashboard_and_query_api() {
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-        .expect("spawn rgbuilder serve");
+        .expect("spawn rg-build serve");
 
     let _guard = ServerGuard { child };
     assert!(

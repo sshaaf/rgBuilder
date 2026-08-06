@@ -11,24 +11,24 @@ REPO="${RGBUILDER_DEMO_REPO:-$ROOT/rgbuilder-tests/ecommerce-java}"
 PORT="${DASHBOARD_PORT:-8080}"
 URL="http://127.0.0.1:${PORT}/"
 
-if [[ -x "$ROOT/target/release/rgbuilder" ]]; then
+if [[ -x "$ROOT/target/release/rg-build" ]]; then
   export PATH="$ROOT/target/release:$PATH"
 fi
-if ! command -v rgbuilder >/dev/null 2>&1; then
-  echo "error: rgbuilder not on PATH — cargo build --release" >&2
+if ! command -v rg-build >/dev/null 2>&1; then
+  echo "error: rg-build not on PATH — cargo build --release" >&2
   exit 1
 fi
 
 echo "==> discover + dashboard bundle ($REPO)"
-rgbuilder -r "$REPO" discover . -l java -e target \
+rg-build -r "$REPO" discover . -l java -e target \
   --with-cfg --with-security --with-taint --with-dashboard --with-harmonic \
   --export-migration-hints
 
 echo "==> semantic index (vocab)"
-rgbuilder -r "$REPO" semantic index --embedder vocab --dimensions 256
+rg-build -r "$REPO" semantic index --embedder vocab --dimensions 256
 
 echo "==> serve on :$PORT"
-rgbuilder -r "$REPO" serve --port "$PORT" &
+rg-build -r "$REPO" serve --port "$PORT" &
 SERVE_PID=$!
 cleanup() { kill "$SERVE_PID" 2>/dev/null || true; }
 trap cleanup EXIT

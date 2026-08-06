@@ -37,7 +37,7 @@ pub enum PdgEdgeLayer {
     Control,
 }
 
-/// File serialization format for `rgbuilder export` (not the global `-f` output format).
+/// File serialization format for `rg-build export` (not the global `-f` output format).
 #[derive(ValueEnum, Clone, Debug)]
 pub enum ExportFormat {
     Json,

@@ -21,7 +21,7 @@ flowchart TB
 
   subgraph L2["Layer 2 — Golden-path subprocess"]
     G["subprocess_golden_path.rs"]
-    G --> B["CARGO_BIN_EXE_rgbuilder"]
+    G --> B["CARGO_BIN_EXE_rg_build"]
   end
 
   subgraph L3["Layer 3 — Full-platform subprocess"]
@@ -67,7 +67,7 @@ cargo test --test all_commands_sanity     # comprehensive subprocess audit
 
 1. **Never touch a developer tree** — each test copies `tests/fixtures/tiny_polyglot_repo` into a `tempfile::TempDir`.
 2. **Explicit sandbox database** — graph writes go to `{temp}/sandbox_graph.db` via `-d`, not `{repo}/.rgbuilder/`.
-3. **Real binary** — uses `env!("CARGO_BIN_EXE_rgbuilder")` so `cargo test` always runs the binary built for the current profile.
+3. **Real binary** — uses `env!("CARGO_BIN_EXE_rg_build")` so `cargo test` always runs the binary built for the current profile.
 4. **Shared repo root** — `-r {temp_repo}` keeps paths stable for slice/inspect file arguments.
 
 ### `Sandbox` helper
@@ -77,7 +77,7 @@ cargo test --test all_commands_sanity     # comprehensive subprocess audit
 | `Sandbox::new()` | Copies fixture into temp dir; sets `db = {temp}/sandbox_graph.db` |
 | `sandbox.repo` | Root of the copied polyglot repo (Java + Rust) |
 | `sandbox.db` | Isolated legacy JSON graph path (`-d`; not SQLite) |
-| `sandbox.run(args)` | Spawns `rgbuilder -r {repo} -d {db} …args` and returns `Output` |
+| `sandbox.run(args)` | Spawns `rg-build -r {repo} -d {db} …args` and returns `Output` |
 | `parse_stdout_json(output)` | Parses stdout as JSON; panics with stdout/stderr on failure |
 
 ### Assertion helpers
@@ -167,7 +167,7 @@ These tests call **serializer fixtures** in `src/cli/*_output.rs` directly. They
 - Topology caller entries expose `id`, `fqn`, `file_path`
 - Target v2: `language`, `canonical_fqn`; `signature` omitted when `None`
 - `metrics.caller_depth_limit` present only when `--depth N` passed; `impact_zone_size` matches filtered zone
-- `--depth N` post-filters cached/engine impact zones by incoming call hops (see [cli-output-schemas.md](cli-output-schemas.md) §1)
+- `--depth N` post-filters cached/engine impact zones by incoming call hops (see [json-api.md](json-api.md) blast-radius catalog)
 - Unresolved UUIDs in cache → caller dropped from topology (nil-UUID guardrail)
 
 #### `gql`
@@ -265,7 +265,7 @@ Future optional expansions (not required for baseline compliance):
 1. Create `src/cli/<cmd>_output.rs` with `SCHEMA_VERSION` constant and fixture.
 2. Add `tests/cli_output/<cmd>.rs` and `mod <cmd>;` in `main.rs`.
 3. Append a step to `test_all_cli_commands_json_schema_sanity`.
-4. Document the schema in [cli-output-schemas.md](cli-output-schemas.md).
+4. Document the schema in [json-api.md](json-api.md) field catalogs.
 
 ### Added a subprocess-only flag
 
@@ -275,7 +275,7 @@ Prefer asserting in `all_commands_sanity.rs` if the flag affects JSON shape or e
 
 ## Related docs
 
-- [cli-output-schemas.md](cli-output-schemas.md) — field-by-field JSON reference (blast-radius §1)
+- [json-api.md](json-api.md) — field-by-field JSON reference (blast-radius + catalogs)
 - [json-api.md](json-api.md) — programmatic parsing guide
 - [graph-storage-architecture.md](graph-storage-architecture.md) — snapshot layout, blast lookup cache
 - [Code_structure.md](Code_structure.md) — where to put CLI vs analysis changes

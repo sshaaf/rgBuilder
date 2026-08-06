@@ -47,7 +47,7 @@ pub fn semantic_status(repo: &Path) -> SemanticStatusResponse {
             functions_indexed: None,
             graph_digest: None,
             message: Some(
-                "Semantic index not found — run `rgbuilder semantic index` then refresh.".into(),
+                "Semantic index not found — run `rg-build semantic index` then refresh.".into(),
             ),
         };
     }
@@ -104,7 +104,7 @@ pub fn execute_semantic_query(
     if args.scope == CliSemanticScope::Community {
         let analysis = analysis.ok_or_else(|| {
             anyhow::anyhow!(
-                "community semantic search requires analysis_results.bin (run `rgbuilder discover`)"
+                "community semantic search requires analysis_results.bin (run `rg-build discover`)"
             )
         })?;
         let backend = graph.backend();

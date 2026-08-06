@@ -1,4 +1,4 @@
-//! `rgbuilder export` — graph serialization.
+//! `rg-build export` — graph serialization.
 
 use super::args::ExportFormat;
 use super::context::CliContext;

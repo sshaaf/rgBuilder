@@ -26,10 +26,10 @@ Seeds **Electronics** category with **Wireless Headphones** and **USB-C Hub** on
 See [summary report](../rgbuilder-reports/REPORT.md) · [language report](../rgbuilder-reports/languages/rust.md) · [HTML](../rgbuilder-reports/languages/rust.html) (2026-07-22).
 
 ```bash
-rgbuilder -f json discover . --cfg -e target
-rgbuilder -f json blast-radius 'src/services/order.rs::checkout'
-rgbuilder -f json metrics --communities --pagerank
-rgbuilder -f json check --policy-file ../rgbuilder-policy.json
+rg-build -f json discover . --cfg -e target
+rg-build -f json blast-radius 'src/services/order.rs::checkout'
+rg-build -f json metrics --communities --pagerank
+rg-build -f json check --policy-file ../rgbuilder-policy.json
 ```
 
 | Metric | Value |

@@ -61,7 +61,7 @@ flowchart TB
 - **Impact zone**: transitive upstream callers; capped by `--depth N`
 - **Canonical identity**: `target.canonical_fqn` + UUIDs (not display `fqn` alone)
 
-CLI JSON: [cli-output-schemas.md](../cli-output-schemas.md) §1 · [json-api.md](../json-api.md) §6.
+CLI JSON: [json-api.md](../json-api.md) (blast-radius + field catalogs).
 
 ---
 
@@ -92,11 +92,11 @@ CLI JSON: [cli-output-schemas.md](../cli-output-schemas.md) §1 · [json-api.md]
 ## 6. CLI usage
 
 ```bash
-rgbuilder discover .
-rgbuilder -f json blast-radius ShoppingCartService
-rgbuilder -f json blast-radius process --class OrderService --depth 3
-rgbuilder -f json blast-radius Foo --policy-file policy.json   # exit 1 if VIOLATED
-rgbuilder serve --daemon   # optional blast socket warm path
+rg-build discover .
+rg-build -f json blast-radius ShoppingCartService
+rg-build -f json blast-radius process --class OrderService --depth 3
+rg-build -f json blast-radius Foo --policy-file policy.json   # exit 1 if VIOLATED
+rg-build serve --daemon   # optional blast socket warm path
 ```
 
 ---
@@ -113,7 +113,7 @@ rgbuilder serve --daemon   # optional blast socket warm path
 Regenerate screenshots:
 
 ```bash
-rgbuilder -r ~/git/java/gbuilder serve --port 8080
+rg-build -r ~/git/java/gbuilder serve --port 8080
 DASHBOARD_URL=http://127.0.0.1:8080/ node dashboard/scripts/capture-design-screenshots.mjs
 ```
 

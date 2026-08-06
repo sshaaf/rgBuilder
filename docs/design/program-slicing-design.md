@@ -13,7 +13,7 @@
 | Goal | How |
 |------|-----|
 | Minimal relevant code | PDG traversal from slice criterion |
-| CLI automation | `rgbuilder slice FILE --line N --variable V` |
+| CLI automation | `rg-build slice FILE --line N --variable V` |
 | Dashboard exploration | WASM `compute_slice` on exported PDG bundles |
 | Security cross-check | `--taint` mode shares taint engine paths |
 
@@ -87,10 +87,10 @@ flowchart LR
 ## 6. CLI usage
 
 ```bash
-rgbuilder discover . --cfg
-rgbuilder slice src/Foo.java --line 42 --variable cart --function checkOut
-rgbuilder -f json slice src/Foo.java --line 10 --variable req --direction forward
-rgbuilder slice src/Foo.java --line 8 --variable input --taint
+rg-build discover . --cfg
+rg-build slice src/Foo.java --line 42 --variable cart --function checkOut
+rg-build -f json slice src/Foo.java --line 10 --variable req --direction forward
+rg-build slice src/Foo.java --line 8 --variable input --taint
 ```
 
 ---

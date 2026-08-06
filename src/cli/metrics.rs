@@ -1,4 +1,4 @@
-//! `rgbuilder metrics` — PageRank, betweenness, and community detection.
+//! `rg-build metrics` — PageRank, betweenness, and community detection.
 
 use super::args::OutputFormat;
 use super::context::CliContext;

@@ -1,10 +1,17 @@
 # rgBuilder User Guide
 
-End-to-end guide for installing rgBuilder, indexing an in-tree example, and querying a codebase from the **command line**. Every command below includes sample output captured against **`rgbuilder-tests/ecommerce-java`** (Spring Boot e-commerce fixture).
+End-to-end guide for installing rgBuilder, indexing an in-tree example, and querying a codebase from the **command line**. Sample outputs target **`rgbuilder-tests/ecommerce-java`**. Runnable examples are backed by scenarios under [`user-guide/scenarios/`](user-guide/scenarios/) (see change `docs-agent-first-diataxis`).
 
-**New to code graphs?** Read **[Introduction](Introduction.md)** first — concepts, goals, and benefits for each feature, with links back here for commands.
+**Concepts:** [Introduction](Introduction.md). **Agents:** [AGENTS.md](../AGENTS.md). **JSON fields:** [json-api.md](json-api.md).
 
-For JSON field reference see [cli-output-schemas.md](cli-output-schemas.md) and [json-api.md](json-api.md).
+### How this guide is organized
+
+| Zone | Sections | Role |
+|------|----------|------|
+| **Tutorial spine** | §1–4, §16 | Install → fixture → discover → recommended workflow |
+| **How-to** | §5–14 | Flags and feature commands with sample output |
+| **Optional UI** | §15 | `serve` / dashboard — nice-to-have, not required for agents |
+| **Reference** | §17–18 | Command cheat sheet + troubleshooting |
 
 ---
 
@@ -24,7 +31,7 @@ For JSON field reference see [cli-output-schemas.md](cli-output-schemas.md) and 
 12. [Semantic search](#12-semantic-search)
 13. [Export graph projections](#13-export-graph-projections)
 14. [CI policy check](#14-ci-policy-check)
-15. [HTTP server (`serve`)](#15-http-server-serve)
+15. [HTTP server (`serve`) — optional](#15-http-server-serve--optional)
 16. [Recommended workflow](#16-recommended-workflow)
 17. [Command reference](#17-command-reference)
 18. [Troubleshooting](#18-troubleshooting)
@@ -49,18 +56,18 @@ Pre-built binaries are published on the project **Releases** page:
    | Linux (x86_64) | `rgbuilder-*-x86_64-unknown-linux-gnu.tar.gz` |
    | Windows | `rgbuilder-*-x86_64-pc-windows-msvc.zip` |
 
-3. Extract the archive. You should get a single `rgbuilder` executable (plus `rgbuilder.exe` on Windows).
+3. Extract the archive. You should get a single `rg-build` executable (plus `rg-build.exe` on Windows).
 
 ```bash
 # macOS / Linux example
 tar -xzf rgbuilder-*-aarch64-apple-darwin.tar.gz
-./rgbuilder --version
+./rg-build --version
 ```
 
 ```powershell
 # Windows example (PowerShell)
 Expand-Archive rgbuilder-*-x86_64-pc-windows-msvc.zip -DestinationPath .
-.\rgbuilder.exe --version
+.\rg-build.exe --version
 ```
 
 If no release is published yet for your platform, use [Option B](#option-b--build-from-source).
@@ -76,7 +83,7 @@ cd rgBuilder
 # Skip if you only use `semantic index --embedder vocab|hash`.
 git lfs pull
 cargo build --release
-./target/release/rgbuilder --version
+./target/release/rg-build --version
 ```
 
 All **nine** Tier 1 languages (Rust, Python, JavaScript, TypeScript, Go, Java, C#, C, C++) are always included in the binary.
@@ -91,8 +98,8 @@ Pick one approach for your shell.
 
 ```bash
 mkdir -p ~/.local/bin
-cp /path/to/rgbuilder ~/.local/bin/
-chmod +x ~/.local/bin/rgbuilder
+cp /path/to/rg-build ~/.local/bin/
+chmod +x ~/.local/bin/rg-build
 ```
 
 Add to `~/.zshrc` or `~/.bashrc`:
@@ -105,25 +112,25 @@ Reload and verify:
 
 ```bash
 source ~/.zshrc   # or ~/.bashrc
-rgbuilder --version
+rg-build --version
 ```
 
 ### macOS / Linux — system-wide (optional)
 
 ```bash
-sudo cp /path/to/rgbuilder /usr/local/bin/
-rgbuilder --version
+sudo cp /path/to/rg-build /usr/local/bin/
+rg-build --version
 ```
 
 ### Windows
 
-1. Copy `rgbuilder.exe` to a folder such as `C:\Tools\rgbuilder\`.
+1. Copy `rg-build.exe` to a folder such as `C:\Tools\rg-build\`.
 2. Open **Settings → System → About → Advanced system settings → Environment Variables**.
-3. Under **User variables**, edit `Path` and add `C:\Tools\rgbuilder`.
+3. Under **User variables**, edit `Path` and add `C:\Tools\rg-build`.
 4. Open a new terminal:
 
 ```powershell
-rgbuilder --version
+rg-build --version
 ```
 
 ### Per-project usage (no PATH change)
@@ -131,7 +138,7 @@ rgbuilder --version
 Pass the full path or use a repo-local alias:
 
 ```bash
-alias rgbuilder='/path/to/rgbuilder'
+alias rg-build='/path/to/rg-build'
 ```
 
 ---
@@ -192,7 +199,7 @@ All commands below assume `REPO` points at `ecommerce-java`, or that you run fro
 
 ```bash
 cd "$REPO"
-rgbuilder discover . -l java -e target
+rg-build discover . -l java -e target
 ```
 
 Example output:
@@ -209,9 +216,9 @@ Example output:
 [✓] Completed in 0.0s (peak memory: 21 MB)
 
 [i] Next steps:
-   rgbuilder gql "MATCH (n:Function) RETURN n"  # Query the graph
-   rgbuilder slice <file> --line <N> --variable <VAR>
-   rgbuilder serve --open   # Dashboard + query API at http://127.0.0.1:8080
+   rg-build gql "MATCH (n:Function) RETURN n"  # Query the graph
+   rg-build slice <file> --line <N> --variable <VAR>
+   rg-build serve --open   # Dashboard + query API at http://127.0.0.1:8080
 ```
 
 Typical runtime on this fixture: **well under a second**.
@@ -219,34 +226,36 @@ Typical runtime on this fixture: **well under a second**.
 **CI / automation** — structured metrics on stdout:
 
 ```bash
-rgbuilder -f json discover . -l java -e target | jq .
+rg-build -f json discover . -l java -e target | jq .
 ```
 
+<!-- ug-scenario:04-discover-json -->
 Example:
 
 ```json
 {
   "command": "discover",
   "metrics": {
-    "duration_ms": 32,
-    "edges_generated": 1122,
-    "files_discovered": 51,
-    "files_indexed": 51,
+    "duration_ms": "…",
+    "edges_generated": 3293,
+    "files_discovered": 65,
+    "files_indexed": 65,
     "files_skipped": 0,
-    "nodes_generated": 518
+    "nodes_generated": 1088
   },
   "schema_version": 2
 }
 ```
+<!-- /ug-scenario:04-discover-json -->
 
 ### Language and path filters
 
 ```bash
 # Java only, skip Maven output
-rgbuilder discover . -l java -e target
+rg-build discover . -l java -e target
 
 # Multiple languages (polyglot monorepo)
-rgbuilder discover . -l java,typescript -e target,node_modules,dist
+rg-build discover . -l java,typescript -e target,node_modules,dist
 ```
 
 ### Default pipeline (always on)
@@ -268,10 +277,10 @@ Harmonic, dashboard, migration export, security, CFG/PDG, and discover-time tain
 
 ```bash
 # CFG so inspect / slice have rich PDG context
-rgbuilder discover . -l java -e target --with-cfg
+rg-build discover . -l java -e target --with-cfg
 
 # Full walkthrough set used for the samples below
-rgbuilder discover . -l java -e target \
+rg-build discover . -l java -e target \
   --with-cfg --with-dashboard --with-harmonic --export-migration-hints
 ```
 
@@ -291,13 +300,13 @@ Use `--with-cfg` when you need `inspect` / slice overlays; add `--with-taint` fo
 ### Verbose logging and stage profiling
 
 ```bash
-rgbuilder discover . -v
+rg-build discover . -v
 ```
 
 With `-v`, discover emits a **`[profile] discover summary`** line (wall time, peak RSS, node count) and per-stage timings.
 
 ```bash
-RUST_LOG=info,profile=info rgbuilder discover . --with-cfg -v -l java -e target 2>&1 \
+RUST_LOG=info,profile=info rg-build discover . --with-cfg -v -l java -e target 2>&1 \
   | tee discover-profile.log
 grep '\[profile\]' discover-profile.log
 ```
@@ -321,7 +330,7 @@ See [analysis-architecture.md](analysis-architecture.md) and [internal/temp.md](
 By default, rgBuilder writes a **binary snapshot** (`graph.snapshot.bin`). Legacy `graph.db` / `graph.json` are only written when requested:
 
 ```bash
-rgbuilder discover . --write-json-graph
+rg-build discover . --write-json-graph
 ```
 
 ### What `discover` creates
@@ -353,7 +362,7 @@ Point every subsequent command at this repo:
 ```bash
 export REPO="$PWD"
 # or pass -r on each command:
-rgbuilder -r "$REPO" gql 'MATCH (n:Function) RETURN n LIMIT 5'
+rg-build -r "$REPO" gql 'MATCH (n:Function) RETURN n LIMIT 5'
 ```
 
 ---
@@ -373,10 +382,10 @@ Examples:
 
 ```bash
 # JSON for scripting
-rgbuilder -r "$REPO" -f json gql 'MATCH (n:Class) RETURN n LIMIT 10'
+rg-build -r "$REPO" -f json gql 'MATCH (n:Class) RETURN n LIMIT 10'
 
 # Mermaid diagram to a file
-rgbuilder -r "$REPO" -f mermaid -o checkout-cfg.mmd inspect checkout cfg
+rg-build -r "$REPO" -f mermaid -o checkout-cfg.mmd inspect checkout cfg
 ```
 
 ---
@@ -388,23 +397,25 @@ rgbuilder -r "$REPO" -f mermaid -o checkout-cfg.mmd inspect checkout cfg
 ### Inventory macros
 
 ```bash
-rgbuilder -r "$REPO" gql --macro-name all_functions unused
+rg-build -r "$REPO" gql --macro-name all_functions unused
 ```
 
-Text mode prints one function name per line (187 on this fixture). JSON is better for scripts:
+Text mode prints one function name per line (count varies with fixture size). JSON is better for scripts:
 
 ```bash
-rgbuilder -r "$REPO" -f json gql --macro-name all_functions unused | jq '.count'
+rg-build -r "$REPO" -f json gql --macro-name all_functions unused | jq '.count'
 ```
 
+<!-- ug-scenario:06-gql-all-functions -->
 ```text
-187
+317
 ```
+<!-- /ug-scenario:06-gql-all-functions -->
 
 ### Exact name match
 
 ```bash
-rgbuilder -r "$REPO" gql \
+rg-build -r "$REPO" gql \
   "MATCH (n:Function) WHERE n.name = 'clearCart' RETURN n"
 ```
 
@@ -418,7 +429,7 @@ clearCart
 JSON shows file paths:
 
 ```bash
-rgbuilder -r "$REPO" -f json gql \
+rg-build -r "$REPO" -f json gql \
   "MATCH (n:Function) WHERE n.name = 'clearCart' RETURN n" | jq '.rows'
 ```
 
@@ -446,7 +457,7 @@ rgbuilder -r "$REPO" -f json gql \
 ### Classes
 
 ```bash
-rgbuilder -r "$REPO" -f json gql \
+rg-build -r "$REPO" -f json gql \
   "MATCH (n:Class) WHERE n.name = 'CartService' RETURN n" | jq '.rows[0]'
 ```
 
@@ -466,7 +477,7 @@ rgbuilder -r "$REPO" -f json gql \
 Who calls `clearCart`?
 
 ```bash
-rgbuilder -r "$REPO" gql \
+rg-build -r "$REPO" gql \
   "MATCH (a:Function)-[:CALLS]->(b:Function) WHERE b.name = 'clearCart' RETURN a,b"
 ```
 
@@ -503,7 +514,7 @@ JSON (trimmed):
 
 ```bash
 # Macro: list communities (id, heuristic label, member_count)
-rgbuilder -r "$REPO" -f json gql --macro-name all_communities unused | jq '.rows[:3]'
+rg-build -r "$REPO" -f json gql --macro-name all_communities unused | jq '.rows[:3]'
 ```
 
 ```json
@@ -524,12 +535,12 @@ rgbuilder -r "$REPO" -f json gql --macro-name all_communities unused | jq '.rows
 
 ```bash
 # Members of one community (use an id from the list above)
-rgbuilder -r "$REPO" -f json gql \
+rg-build -r "$REPO" -f json gql \
   "MATCH (f:Function) WHERE f.community_id = '385' RETURN f LIMIT 10" | jq '.count'
 
 # CLI helpers (same labels; --write refreshes analysis_results.bin)
-rgbuilder -r "$REPO" communities list
-rgbuilder -r "$REPO" communities label --write
+rg-build -r "$REPO" communities list
+rg-build -r "$REPO" communities label --write
 ```
 
 Labels are **heuristic** (package path, top PageRank symbol, token majority, infrastructure hubs).
@@ -547,7 +558,7 @@ Virtual type `:Community` is query-only; there is no `MEMBER_OF` edge in the sna
 Bare names are often ambiguous. Prefer **FQN** (`Class::method`):
 
 ```bash
-rgbuilder -r "$REPO" blast-radius 'CartService::clearCart'
+rg-build -r "$REPO" blast-radius 'CartService::clearCart'
 ```
 
 ```text
@@ -562,7 +573,7 @@ Blast radius for 'CartService::clearCart'
 Ambiguous bare name shows remediation:
 
 ```bash
-rgbuilder -r "$REPO" blast-radius clearCart
+rg-build -r "$REPO" blast-radius clearCart
 ```
 
 ```text
@@ -572,8 +583,8 @@ UUID                                   | Class Context  | Source File Path
 …                                      | CartController | …/CartController.java
 
 Remediation: Refine your search query using a fully qualified namespace syntax:
-  rgbuilder blast-radius "ClassName::clearCart"
-  rgbuilder blast-radius "path/to/file.java::clearCart"
+  rg-build blast-radius "ClassName::clearCart"
+  rg-build blast-radius "path/to/file.java::clearCart"
 ```
 
 ### Symbol forms
@@ -587,16 +598,16 @@ Remediation: Refine your search query using a fully qualified namespace syntax:
 Disambiguate with filters:
 
 ```bash
-rgbuilder -r "$REPO" blast-radius clearCart --class CartService
-rgbuilder -r "$REPO" blast-radius clearCart \
+rg-build -r "$REPO" blast-radius clearCart --class CartService
+rg-build -r "$REPO" blast-radius clearCart \
   --file src/main/java/com/example/ecommerce/service/CartService.java
 ```
 
 ### Limit caller depth
 
 ```bash
-rgbuilder -r "$REPO" blast-radius 'CartService::clearCart' --depth 1
-rgbuilder -r "$REPO" blast-radius 'CartService::clearCart' --depth 5
+rg-build -r "$REPO" blast-radius 'CartService::clearCart' --depth 1
+rg-build -r "$REPO" blast-radius 'CartService::clearCart' --depth 5
 ```
 
 Omit `--depth` for full transitive upstream closure.
@@ -604,29 +615,31 @@ Omit `--depth` for full transitive upstream closure.
 ### JSON output
 
 ```bash
-rgbuilder -r "$REPO" -f json blast-radius 'CartService::clearCart' \
+rg-build -r "$REPO" -f json blast-radius 'CartService::clearCart' \
   | jq '{score: .metrics.score, callers: .topology.direct_callers}'
 ```
 
+<!-- ug-scenario:07-blast-clearCart -->
 ```json
 {
   "score": 25.05,
   "callers": [
     {
       "file_path": "…/OrderService.java",
-      "fqn": "OrderService.checkout",
+      "fqn": "com.example.ecommerce.service.OrderService.checkout",
       "id": "…"
     }
   ]
 }
 ```
+<!-- /ug-scenario:07-blast-clearCart -->
 
-Schema: [cli-output-schemas.md](cli-output-schemas.md) §1 and [json-api.md](json-api.md) §6.
+Schema: [json-api.md](json-api.md) (blast-radius + field catalogs).
 
 ### Statement-level slice hand-offs (slow)
 
 ```bash
-rgbuilder -r "$REPO" blast-radius 'CartService::clearCart' --with-slices
+rg-build -r "$REPO" blast-radius 'CartService::clearCart' --with-slices
 ```
 
 Requires `discover --with-cfg` for rich PDG context.
@@ -642,7 +655,7 @@ Requires `discover --with-cfg` for rich PDG context.
 “What code influences this variable at this line?” — in `OrderService.checkout`, `cart` is assigned on line 52:
 
 ```bash
-rgbuilder -r "$REPO" slice \
+rg-build -r "$REPO" slice \
   src/main/java/com/example/ecommerce/service/OrderService.java \
   --line 52 \
   --variable cart \
@@ -658,7 +671,7 @@ Reduction: 92.3%
 A denser example from `CartService.addItem` (line 53, local `item`):
 
 ```bash
-rgbuilder -r "$REPO" slice \
+rg-build -r "$REPO" slice \
   src/main/java/com/example/ecommerce/service/CartService.java \
   --line 53 \
   --variable item \
@@ -674,7 +687,7 @@ Reduction: 92.9%
 ### Forward slice
 
 ```bash
-rgbuilder -r "$REPO" slice \
+rg-build -r "$REPO" slice \
   src/main/java/com/example/ecommerce/service/CartService.java \
   --line 38 \
   --variable cart \
@@ -685,7 +698,7 @@ rgbuilder -r "$REPO" slice \
 ### Taint trace
 
 ```bash
-rgbuilder -r "$REPO" slice \
+rg-build -r "$REPO" slice \
   src/main/java/com/example/ecommerce/service/OrderService.java \
   --line 83 \
   --variable cartService \
@@ -702,7 +715,7 @@ rgbuilder -r "$REPO" slice \
 | `pdg` | PDG overlay |
 
 ```bash
-rgbuilder -r "$REPO" -f mermaid slice \
+rg-build -r "$REPO" -f mermaid slice \
   src/main/java/com/example/ecommerce/service/CartService.java \
   --line 53 --variable item --function addItem --view cfg
 ```
@@ -712,7 +725,7 @@ rgbuilder -r "$REPO" -f mermaid slice \
 `--function` must be the **method/function name** in the source file (as parsed by tree-sitter), not the enclosing class name:
 
 ```bash
-rgbuilder -r "$REPO" gql \
+rg-build -r "$REPO" gql \
   "MATCH (n:Function) WHERE n.name = 'checkout' RETURN n"
 ```
 
@@ -723,7 +736,7 @@ rgbuilder -r "$REPO" gql \
 `inspect` dumps semantic layers for an **indexed function symbol** (no `--class` flag — use a unique symbol or GQL to pick the right function). Run `discover --with-cfg` first.
 
 ```bash
-rgbuilder -r "$REPO" inspect checkout cfg
+rg-build -r "$REPO" inspect checkout cfg
 ```
 
 ```text
@@ -731,7 +744,7 @@ CFG for checkout: 5 blocks, 5 edges
 ```
 
 ```bash
-rgbuilder -r "$REPO" -f json inspect checkout cfg | jq '{layer, blocks: (.nodes|length), edges: (.edges|length)}'
+rg-build -r "$REPO" -f json inspect checkout cfg | jq '{layer, blocks: (.nodes|length), edges: (.edges|length)}'
 ```
 
 ```json
@@ -745,7 +758,7 @@ rgbuilder -r "$REPO" -f json inspect checkout cfg | jq '{layer, blocks: (.nodes|
 Mermaid CFG:
 
 ```bash
-rgbuilder -r "$REPO" -f mermaid inspect checkout cfg
+rg-build -r "$REPO" -f mermaid inspect checkout cfg
 ```
 
 ```text
@@ -761,14 +774,14 @@ Other layers:
 
 ```bash
 # Prune unreachable blocks
-rgbuilder -r "$REPO" inspect checkout cfg --prune
+rg-build -r "$REPO" inspect checkout cfg --prune
 
 # Program dependence graph (data edges)
-rgbuilder -r "$REPO" inspect checkout pdg --edge-layer data
+rg-build -r "$REPO" inspect checkout pdg --edge-layer data
 # → PDG for checkout: 13 nodes, 22 data deps, 0 control deps
 
-rgbuilder -r "$REPO" inspect checkout pdg --def-use
-rgbuilder -r "$REPO" inspect checkout dom --frontiers
+rg-build -r "$REPO" inspect checkout pdg --def-use
+rg-build -r "$REPO" inspect checkout dom --frontiers
 ```
 
 ---
@@ -782,12 +795,12 @@ Requires a prior `discover … --with-cfg` (the ecommerce walkthrough already us
 ### Status and CALL neighborhood
 
 ```bash
-rgbuilder -r "$REPO" cpg status
+rg-build -r "$REPO" cpg status
 # → CPG L_proc: ready (… functions) at …/cfg_pdg.archive.bin
 # → CPG field writes: N indexed (cpg mutations)
 
-rgbuilder -r "$REPO" cpg function priceShoppingCart
-rgbuilder -r "$REPO" cpg calls 'ShoppingCartService::priceShoppingCart'
+rg-build -r "$REPO" cpg function priceShoppingCart
+rg-build -r "$REPO" cpg calls 'ShoppingCartService::priceShoppingCart'
 ```
 
 ### Field mutations (CoolStore `ShoppingCart`)
@@ -795,7 +808,7 @@ rgbuilder -r "$REPO" cpg calls 'ShoppingCartService::priceShoppingCart'
 Find non-constructor writes to a type — useful before converting a mutable DTO/cart model to an immutable record, or to prove pricing still mutates totals:
 
 ```bash
-rgbuilder -r "$REPO" cpg mutations --type ShoppingCart --exclude-ctors
+rg-build -r "$REPO" cpg mutations --type ShoppingCart --exclude-ctors
 ```
 
 Example (paths shortened):
@@ -810,7 +823,7 @@ Mutations of ShoppingCart [excl. ctors] (7 hits):
 Pair with blast-radius on the CoolStore pricing entrypoint:
 
 ```bash
-rgbuilder -r "$REPO" blast-radius 'ShoppingCartService::priceShoppingCart'
+rg-build -r "$REPO" blast-radius 'ShoppingCartService::priceShoppingCart'
 # → Callers include CartEndpoint.add / delete / checkout and checkOutShoppingCart
 ```
 
@@ -819,7 +832,7 @@ rgbuilder -r "$REPO" blast-radius 'ShoppingCartService::priceShoppingCart'
 JSON for agents:
 
 ```bash
-rgbuilder -r "$REPO" -f json cpg mutations --type ShoppingCart --exclude-ctors
+rg-build -r "$REPO" -f json cpg mutations --type ShoppingCart --exclude-ctors
 ```
 
 Empty result means no **typed** non-ctor writes were recovered (receivers without a resolved type are omitted unless `--include-unresolved`). On C fixtures, query the struct typedef name (e.g. `shopping_cart_t`). See [agent-recipes.md](agent-recipes.md) Recipe 11 and [hybrid-cpg-plan.md](design/hybrid-cpg-plan.md).
@@ -828,14 +841,14 @@ Empty result means no **typed** non-ctor writes were recovered (receivers withou
 
 ```bash
 # Forward flows from a variable at a line (wraps slice; optional --with-alias)
-rgbuilder -r "$REPO" -f json cpg flows \
+rg-build -r "$REPO" -f json cpg flows \
   src/main/java/com/example/ecommerce/coolstore/service/ShoppingCartService.java \
   --line 75 --variable sc --function priceShoppingCart --direction forward
 
 # Optional: discover --with-ast-skeleton then:
-rgbuilder -r "$REPO" -f json cpg ast priceShoppingCart
+rg-build -r "$REPO" -f json cpg ast priceShoppingCart
 
-rgbuilder -r "$REPO" cpg export --format graphson --output /tmp/ecommerce-cpg.json \
+rg-build -r "$REPO" cpg export --format graphson --output /tmp/ecommerce-cpg.json \
   --path-contains coolstore/
 ```
 
@@ -846,7 +859,7 @@ rgbuilder -r "$REPO" cpg export --format graphson --output /tmp/ecommerce-cpg.js
 `metrics` reports network analytics on the indexed call graph. Prefer **JSON** for scripting (text mode prints debug-style structs).
 
 ```bash
-rgbuilder -r "$REPO" -f json metrics --communities | jq .
+rg-build -r "$REPO" -f json metrics --communities | jq .
 ```
 
 ```json
@@ -864,7 +877,7 @@ That summary is counts only. For **named** communities and membership, use GQL /
 ([§6](#6-query-the-graph-with-gql)) or `.rgbuilder/dashboard/communities.json` after `--with-dashboard`.
 
 ```bash
-rgbuilder -r "$REPO" -f json metrics --pagerank | jq '.pagerank | {iterations, converged, top: .top[:3]}'
+rg-build -r "$REPO" -f json metrics --pagerank | jq '.pagerank | {iterations, converged, top: .top[:3]}'
 ```
 
 ```json
@@ -880,8 +893,8 @@ rgbuilder -r "$REPO" -f json metrics --pagerank | jq '.pagerank | {iterations, c
 ```
 
 ```bash
-rgbuilder -r "$REPO" metrics --betweenness
-rgbuilder -r "$REPO" -f json metrics --pagerank --iterations 50 | jq .
+rg-build -r "$REPO" metrics --betweenness
+rg-build -r "$REPO" -f json metrics --pagerank --iterations 50 | jq .
 ```
 
 ---
@@ -894,26 +907,26 @@ Semantic search is **opt-in** — it does not run during `discover`. Build a sep
 
 ```bash
 # Build semantic index (default: code-daemon, 256-d)
-rgbuilder -r "$REPO" semantic index
+rg-build -r "$REPO" semantic index
 
 # Incremental rebuild — reuse rows when body hash unchanged
-rgbuilder -r "$REPO" semantic index --incremental
+rg-build -r "$REPO" semantic index --incremental
 
 # Query (JSON for agents). Late fusion is ON by default.
-rgbuilder -r "$REPO" -f json semantic query "shopping cart checkout" --limit 10
-rgbuilder -r "$REPO" -f json semantic query "OrderService" --keyword-and
+rg-build -r "$REPO" -f json semantic query "shopping cart checkout" --limit 10
+rg-build -r "$REPO" -f json semantic query "OrderService" --keyword-and
 # Pure Hamming (disable fusion):
-rgbuilder -r "$REPO" -f json semantic query "OrderService" --no-fusion --limit 10
+rg-build -r "$REPO" -f json semantic query "OrderService" --no-fusion --limit 10
 
 # Community-scoped search — pool member embeddings (needs discover analysis + semantic index)
-rgbuilder -r "$REPO" -f json semantic query "shopping cart" --scope community --limit 5
+rg-build -r "$REPO" -f json semantic query "shopping cart" --scope community --limit 5
 
 # Hash embedder (no ONNX) — e.g. CI
-rgbuilder -r "$REPO" semantic index --embedder hash
+rg-build -r "$REPO" semantic index --embedder hash
 
 # Vocab embedder (compiled token table, offline) + optional call-graph diffusion
-rgbuilder -r "$REPO" semantic index --embedder vocab
-rgbuilder -r "$REPO" semantic index --embedder vocab --diffuse \
+rg-build -r "$REPO" semantic index --embedder vocab
+rg-build -r "$REPO" semantic index --embedder vocab --diffuse \
   --diffuse-alpha 0.25 --diffuse-iters 2
 ```
 
@@ -932,7 +945,7 @@ Passing `--diffuse` recomputes dense vectors and mixes call-graph neighbors **be
 | `--diffuse-alpha` / `--diffuse-iters` | Diffusion blend weight and iterations [defaults: 0.25, 2] |
 | `--diffuse-bidirectional` | Include callers as well as callees |
 
-**Dashboard:** `rgbuilder serve --open` → **Search** tab uses the same index via `/api/semantic/*`. The UI does not choose the embedder — build the index with CLI first, then restart `serve`. Status shows `model_id` (e.g. `vocab-accumulate-v1`).
+**Dashboard:** `rg-build serve --open` → **Search** tab uses the same index via `/api/semantic/*`. The UI does not choose the embedder — build the index with CLI first, then restart `serve`. Status shows `model_id` (e.g. `vocab-accumulate-v1`).
 
 **Perf note (linux-scale):** time queries with a **release** binary (`cargo build --release`). Debug builds can be ~100× slower on Hamming scan. Index load of `.rgbuilder/semantic_index.bin` is bincode into owned strings (~tens of seconds at ~1.8M functions); query itself is ~few ms in release.
 
@@ -952,7 +965,7 @@ Design → **[Semantic search design](design/semantic-search-design.md)** · tim
 | `functions` | Shortcut for function nodes |
 
 ```bash
-rgbuilder -r "$REPO" export \
+rg-build -r "$REPO" export \
   --export-format mermaid \
   --export-output cart-clear.mmd \
   --query "name:clearCart"
@@ -964,12 +977,12 @@ Exported 2 nodes, 1 edges -> cart-clear.mmd
 
 ```bash
 # Full graph as JSON / GraphML / DOT
-rgbuilder -r "$REPO" export --export-format json --export-output ecommerce-graph.json --query all
-rgbuilder -r "$REPO" export --export-format graphml --export-output ecommerce.graphml --query all
-rgbuilder -r "$REPO" export --export-format graphviz --export-output calls.dot --query all
+rg-build -r "$REPO" export --export-format json --export-output ecommerce-graph.json --query all
+rg-build -r "$REPO" export --export-format graphml --export-output ecommerce.graphml --query all
+rg-build -r "$REPO" export --export-format graphviz --export-output calls.dot --query all
 ```
 
-For GQL pattern matching, use `rgbuilder gql` — or `rgbuilder serve` + [HTTP API](http-api.md).
+For GQL pattern matching, use `rg-build gql` — or `rg-build serve` + [HTTP API](http-api.md).
 
 ---
 
@@ -980,7 +993,7 @@ For GQL pattern matching, use `rgbuilder gql` — or `rgbuilder serve` + [HTTP A
 Example policy files: [docs/examples/policy-strict.json](examples/policy-strict.json). Format: [policy-format.md](policy-format.md).
 
 ```bash
-rgbuilder -r "$REPO" check --policy-file policy.json
+rg-build -r "$REPO" check --policy-file policy.json
 ```
 
 Exit code **1** when violations are found — suitable for CI pipelines.
@@ -989,13 +1002,17 @@ The fixture also ships a shared policy at [`rgbuilder-tests/rgbuilder-policy.jso
 
 ---
 
-## 15. HTTP server (`serve`)
+## 15. HTTP server (`serve`) — optional
 
-`serve` starts a local HTTP server with the **dashboard** and **GQL query API** (default `http://127.0.0.1:8080/`). Discover with `--with-dashboard` first if you want the static UI assets.
+`serve` exposes an HTTP **query API** (and a **dashboard UI** only if you previously ran `discover --with-dashboard`). Agents should prefer CLI `-f json`; use `serve` when you want HTTP or a browser UI.
 
 ```bash
-rgbuilder -r "$REPO" discover . -l java -e target --with-dashboard
-rgbuilder -r "$REPO" serve --open
+# API-only is fine without dashboard assets
+rg-build -r "$REPO" serve --port 8080
+
+# Optional UI
+rg-build -r "$REPO" discover . -l java -e target --with-dashboard
+rg-build -r "$REPO" serve --open
 ```
 
 | Endpoint | Purpose |
@@ -1019,9 +1036,9 @@ Full reference: [http-api.md](http-api.md).
 For blast-radius auto-connect only (no HTTP):
 
 ```bash
-rgbuilder -r "$REPO" serve --daemon
+rg-build -r "$REPO" serve --daemon
 # Terminal 2 — auto-uses .rgbuilder/query.sock when present
-rgbuilder -r "$REPO" -f json blast-radius 'CartService::clearCart'
+rg-build -r "$REPO" -f json blast-radius 'CartService::clearCart'
 ```
 
 Disable auto-connect: `RGBUILDER_NO_QUERY_DAEMON=1`.
@@ -1037,39 +1054,39 @@ export REPO="$PWD/rgbuilder-tests/ecommerce-java"
 cd "$REPO"
 
 # 2. Index (add CFG + dashboard for the rest of this walkthrough)
-rgbuilder discover . -l java -e target \
+rg-build discover . -l java -e target \
   --with-cfg --with-dashboard --with-harmonic --export-migration-hints
 
 # 3. Explore structure
-rgbuilder -r "$REPO" -f json gql --macro-name all_functions unused | jq '.count'
-rgbuilder -r "$REPO" -f json gql --macro-name all_communities unused | jq '.rows[:5]'
-rgbuilder -r "$REPO" communities list | head -15
-rgbuilder -r "$REPO" gql \
+rg-build -r "$REPO" -f json gql --macro-name all_functions unused | jq '.count'
+rg-build -r "$REPO" -f json gql --macro-name all_communities unused | jq '.rows[:5]'
+rg-build -r "$REPO" communities list | head -15
+rg-build -r "$REPO" gql \
   "MATCH (a:Function)-[:CALLS]->(b:Function) WHERE b.name = 'clearCart' RETURN a,b"
 
 # 4. Change-impact before editing
-rgbuilder -r "$REPO" blast-radius 'CartService::clearCart'
-rgbuilder -r "$REPO" -f json blast-radius 'CartService::clearCart' | jq '.metrics'
+rg-build -r "$REPO" blast-radius 'CartService::clearCart'
+rg-build -r "$REPO" -f json blast-radius 'CartService::clearCart' | jq '.metrics'
 
 # 5. CoolStore dual API + hybrid CPG (field mutations)
-rgbuilder -r "$REPO" cpg status
-rgbuilder -r "$REPO" cpg mutations --type ShoppingCart --exclude-ctors
-rgbuilder -r "$REPO" blast-radius 'ShoppingCartService::priceShoppingCart'
+rg-build -r "$REPO" cpg status
+rg-build -r "$REPO" cpg mutations --type ShoppingCart --exclude-ctors
+rg-build -r "$REPO" blast-radius 'ShoppingCartService::priceShoppingCart'
 
 # 6. Architectural hotspots
-rgbuilder -r "$REPO" -f json metrics --communities | jq .
-rgbuilder -r "$REPO" -f json metrics --pagerank | jq '.pagerank.top[:5]'
+rg-build -r "$REPO" -f json metrics --communities | jq .
+rg-build -r "$REPO" -f json metrics --pagerank | jq '.pagerank.top[:5]'
 
 # 7. Deep dive on checkout
-rgbuilder -r "$REPO" inspect checkout cfg
-rgbuilder -r "$REPO" slice \
+rg-build -r "$REPO" inspect checkout cfg
+rg-build -r "$REPO" slice \
   src/main/java/com/example/ecommerce/service/CartService.java \
   --line 53 --variable item --function addItem
 
 # 8. Export / dashboard
-rgbuilder -r "$REPO" export --export-format mermaid \
+rg-build -r "$REPO" export --export-format mermaid \
   --export-output clearCart.mmd --query 'name:clearCart'
-rgbuilder -r "$REPO" serve --open
+rg-build -r "$REPO" serve --open
 ```
 
 Migration hints (with `--export-migration-hints`) land under `.rgbuilder/migration_plan.json` and `.rgbuilder/dashboard/migration_plan.json` — package-level steps such as `com.example.ecommerce.service`, `…repository`, `…controller`, and CoolStore `…coolstore.*`.
@@ -1121,9 +1138,9 @@ There is no umbrella `--all` flag — combine `--with-cfg --with-security --with
 ### `Graph not found` / `run discover first`
 
 ```bash
-rgbuilder discover . -l java -e target
+rg-build discover . -l java -e target
 # or
-rgbuilder -r "$REPO" gql 'MATCH (n:Function) RETURN n LIMIT 1'
+rg-build -r "$REPO" gql 'MATCH (n:Function) RETURN n LIMIT 1'
 ```
 
 ### Symbol not found / ambiguous (`blast-radius`, `inspect`)
@@ -1131,9 +1148,9 @@ rgbuilder -r "$REPO" gql 'MATCH (n:Function) RETURN n LIMIT 1'
 List exact names, then use FQN:
 
 ```bash
-rgbuilder -r "$REPO" gql "MATCH (n:Function) WHERE n.name = 'clearCart' RETURN n"
-rgbuilder -r "$REPO" blast-radius 'CartService::clearCart'
-rgbuilder -r "$REPO" blast-radius clearCart --class CartService
+rg-build -r "$REPO" gql "MATCH (n:Function) WHERE n.name = 'clearCart' RETURN n"
+rg-build -r "$REPO" blast-radius 'CartService::clearCart'
+rg-build -r "$REPO" blast-radius clearCart --class CartService
 ```
 
 `inspect` takes a **function** name (`checkout`, `addItem`), not a class name (`CartService`).
@@ -1143,7 +1160,7 @@ rgbuilder -r "$REPO" blast-radius clearCart --class CartService
 Ensure you ran `discover --with-cfg`, then pass the method name and a variable that exists on that line:
 
 ```bash
-rgbuilder -r "$REPO" slice \
+rg-build -r "$REPO" slice \
   src/main/java/com/example/ecommerce/service/CartService.java \
   --line 53 --variable item --function addItem --language java
 ```
@@ -1167,7 +1184,7 @@ Profile a cold run:
 
 ```bash
 rm -rf .rgbuilder
-RUST_LOG=info,profile=info rgbuilder discover . -v 2>&1 | grep '\[profile\]'
+RUST_LOG=info,profile=info rg-build discover . -v 2>&1 | grep '\[profile\]'
 ```
 
 ### Further reading
@@ -1175,6 +1192,6 @@ RUST_LOG=info,profile=info rgbuilder discover . -v 2>&1 | grep '\[profile\]'
 - [Introduction](Introduction.md) — concepts and feature goals
 - [cli-getting-started.md](cli-getting-started.md) — deprecated stub (use this User Guide)
 - [http-api.md](http-api.md) — dashboard HTTP API
-- [json-api.md](json-api.md) / [cli-output-schemas.md](cli-output-schemas.md) — machine-readable output
+- [json-api.md](json-api.md) — machine-readable output + field catalogs
 - [AGENTS.md](../AGENTS.md) — agent-oriented command recipes
 - [`rgbuilder-tests/README.md`](../rgbuilder-tests/README.md) — all language fixtures + correctness suite

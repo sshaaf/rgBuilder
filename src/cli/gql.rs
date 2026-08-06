@@ -1,4 +1,4 @@
-//! `rgbuilder gql` — graph query language execution.
+//! `rg-build gql` — graph query language execution.
 
 use super::args::OutputFormat;
 use super::context::CliContext;

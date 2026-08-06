@@ -1,6 +1,6 @@
-# HTTP query API (`rgbuilder serve`)
+# HTTP query API (`rg-build serve`)
 
-`rgbuilder serve` starts a local HTTP server that serves the **static dashboard** and a **GQL query API** on the same origin.
+`rg-build serve` starts a local HTTP server that serves the **static dashboard** and a **GQL query API** on the same origin.
 
 **CLI reference:** [User Guide §15](user-guide.md#15-http-server-serve)
 
@@ -9,8 +9,8 @@
 ## Default behavior
 
 ```bash
-rgbuilder -r "$REPO" discover .
-rgbuilder -r "$REPO" serve
+rg-build -r "$REPO" discover .
+rg-build -r "$REPO" serve
 ```
 
 | URL | Purpose |
@@ -25,7 +25,7 @@ rgbuilder -r "$REPO" serve
 Open browser automatically:
 
 ```bash
-rgbuilder -r "$REPO" serve --open
+rg-build -r "$REPO" serve --open
 ```
 
 ### Options
@@ -87,7 +87,7 @@ curl -sS -X POST http://127.0.0.1:8080/api/query \
 
 ### Response
 
-Same JSON shape as `rgbuilder -f json gql` on the CLI. See [json-api.md](json-api.md) §5.
+Same JSON shape as `rg-build -f json gql` on the CLI. See [json-api.md](json-api.md) §5.
 
 Errors return HTTP 400 with a plain-text message body.
 
@@ -95,7 +95,7 @@ Errors return HTTP 400 with a plain-text message body.
 
 ## Semantic search API
 
-Requires `rgbuilder semantic index` before `serve` (embedder chosen at index time: `code-daemon` default, or `vocab` / `hash` / `onnx`). Restart `serve` after rebuilding `.rgbuilder/semantic_index.bin`. Same origin as the dashboard.
+Requires `rg-build semantic index` before `serve` (embedder chosen at index time: `code-daemon` default, or `vocab` / `hash` / `onnx`). Restart `serve` after rebuilding `.rgbuilder/semantic_index.bin`. Same origin as the dashboard.
 
 ### `GET /api/semantic/status`
 
@@ -117,7 +117,7 @@ Returns JSON: `{ "available": true, "model_id": "...", "dimensions": N, "functio
 
 `scope` may be `"function"` (default) or `"community"` (pooled member embeddings; requires discover analysis).
 
-Response matches `rgbuilder -f json semantic query`. Errors return HTTP 503 when the index is missing.
+Response matches `rg-build -f json semantic query`. Errors return HTTP 503 when the index is missing.
 
 ```bash
 curl -sS http://127.0.0.1:8080/api/semantic/status | jq .
@@ -140,7 +140,7 @@ cd .rgbuilder/dashboard && python3 -m http.server 8765
 # open http://localhost:8765/
 ```
 
-WASM requires HTTP (not `file://`). The in-browser worker cannot run full GQL — use `rgbuilder serve` for live queries or the CLI.
+WASM requires HTTP (not `file://`). The in-browser worker cannot run full GQL — use `rg-build serve` for live queries or the CLI.
 
 ---
 
@@ -149,8 +149,8 @@ WASM requires HTTP (not `file://`). The in-browser worker cannot run full GQL �
 For backward compatibility only:
 
 ```bash
-rgbuilder -r "$REPO" serve --daemon
-rgbuilder -r "$REPO" serve --daemon --socket /tmp/rgbuilder.sock --idle-secs 600
+rg-build -r "$REPO" serve --daemon
+rg-build -r "$REPO" serve --daemon --socket /tmp/rg-build.sock --idle-secs 600
 ```
 
 Subsequent `blast-radius` commands may auto-connect to `.rgbuilder/query.sock` unless `RGBUILDER_NO_QUERY_DAEMON=1`.

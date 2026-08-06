@@ -1,4 +1,4 @@
-//! `rgbuilder inspect` — raw CFG / PDG / dominance debugging.
+//! `rg-build inspect` — raw CFG / PDG / dominance debugging.
 
 use super::args::{InspectLayer, OutputFormat, PdgEdgeLayer};
 use super::context::{language_from_path, CliContext};

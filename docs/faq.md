@@ -4,7 +4,7 @@ Short answers for common first-hour questions. Commands → [User Guide](user-gu
 
 ### Discover vs semantic index?
 
-`discover` builds the **code knowledge graph** and reachability caches. `semantic index` is a separate **opt-in** embedding index for natural-language / keyword search. Run discover first, then `rgbuilder semantic index` if you need Search / `semantic query`.
+`discover` builds the **code knowledge graph** and reachability caches. `semantic index` is a separate **opt-in** embedding index for natural-language / keyword search. Run discover first, then `rg-build semantic index` if you need Search / `semantic query`.
 
 ### When do I need `--with-cfg`?
 
@@ -12,12 +12,12 @@ For CFG/PDG archives used by `inspect`, `slice`, `cpg`, and discover-time taint 
 
 ### Why is the dashboard empty after `discover .`?
 
-Dashboard export is **off by default**. Pass `--with-dashboard`, then `rgbuilder serve --open`.
+Dashboard export is **off by default**. Pass `--with-dashboard`, then `rg-build serve --open`.
 
 ### How do I get a migration plan?
 
 ```bash
-rgbuilder discover . --with-cfg --with-security --with-taint \
+rg-build discover . --with-cfg --with-security --with-taint \
   --with-dashboard --with-harmonic --export-migration-hints
 ```
 

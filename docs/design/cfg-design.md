@@ -85,10 +85,10 @@ flowchart LR
 ## 6. CLI usage
 
 ```bash
-rgbuilder discover . --cfg
-rgbuilder inspect MyClass#myMethod cfg
-rgbuilder -f mermaid inspect MyClass#myMethod cfg --prune
-rgbuilder -f json inspect MyClass#myMethod cfg -o /tmp/cfg.json
+rg-build discover . --cfg
+rg-build inspect MyClass#myMethod cfg
+rg-build -f mermaid inspect MyClass#myMethod cfg --prune
+rg-build -f json inspect MyClass#myMethod cfg -o /tmp/cfg.json
 ```
 
 ---

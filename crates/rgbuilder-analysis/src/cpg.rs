@@ -324,7 +324,7 @@ pub fn cpg_mutations(repo_root: &Path, query: MutationQuery) -> Result<CpgMutati
     let path = FieldWriteIndex::default_path(repo_root);
     if !path.is_file() {
         return Err(Error::NotFound(format!(
-            "field_write index not found at {} (run `rgbuilder discover --with-cfg`)",
+            "field_write index not found at {} (run `rg-build discover --with-cfg`)",
             path.display()
         )));
     }

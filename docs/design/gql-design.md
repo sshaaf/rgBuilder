@@ -42,7 +42,7 @@ flowchart TB
   end
 
   subgraph surfaces["Surfaces"]
-    CLI[rgbuilder gql]
+    CLI[rg-build gql]
     HTTP[POST /api/query]
     WASM[WASM expand / list_nodes]
   end
@@ -103,12 +103,12 @@ There is no dedicated GQL tab. Exploration maps to:
 ## 6. CLI and HTTP usage
 
 ```bash
-rgbuilder discover .
-rgbuilder gql 'MATCH (n:Function) RETURN n LIMIT 5'
-rgbuilder -f json gql --macro-name all_functions unused
-rgbuilder gql --explain 'MATCH (n:Function) WHERE n.name = "Foo" RETURN n'
+rg-build discover .
+rg-build gql 'MATCH (n:Function) RETURN n LIMIT 5'
+rg-build -f json gql --macro-name all_functions unused
+rg-build gql --explain 'MATCH (n:Function) WHERE n.name = "Foo" RETURN n'
 
-rgbuilder serve --open
+rg-build serve --open
 curl -sS -X POST http://127.0.0.1:8080/api/query \
   -H 'Content-Type: application/json' \
   -d '{"macro":"all_functions"}' | jq '.count'

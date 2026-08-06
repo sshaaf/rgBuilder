@@ -33,9 +33,9 @@ run_discover_all() {
   log "discover --with-cfg --with-security --with-taint in $repo"
   local start=$SECONDS
   if [[ -n "$langs" ]]; then
-    "$ROOT/target/release/rgbuilder" -r "$repo" discover . --with-cfg --with-security --with-taint --languages "$langs"
+    "$ROOT/target/release/rg-build" -r "$repo" discover . --with-cfg --with-security --with-taint --languages "$langs"
   else
-    "$ROOT/target/release/rgbuilder" -r "$repo" discover . --with-cfg --with-security --with-taint
+    "$ROOT/target/release/rg-build" -r "$repo" discover . --with-cfg --with-security --with-taint
   fi
   local elapsed=$((SECONDS - start))
   echo "$elapsed"
@@ -55,7 +55,7 @@ else
   log "no build-dashboard.sh — assuming dashboard/dist already embedded"
 fi
 
-log "Building release rgbuilder..."
+log "Building release rg-build..."
 cargo build --release
 
 GBUILDER_DISCOVER_S=""
@@ -77,8 +77,8 @@ if [[ ! -d "$serve_repo/.rgbuilder/dashboard" && -d "$METASFRESH/.rgbuilder/dash
 fi
 
 if [[ -d "$serve_repo/.rgbuilder/dashboard" ]]; then
-  log "Starting rgbuilder serve on port ${SERVE_PORT} for ${serve_repo}"
-  "$ROOT/target/release/rgbuilder" -r "$serve_repo" serve --port "$SERVE_PORT" &
+  log "Starting rg-build serve on port ${SERVE_PORT} for ${serve_repo}"
+  "$ROOT/target/release/rg-build" -r "$serve_repo" serve --port "$SERVE_PORT" &
   SERVE_PID=$!
   cleanup() { kill "$SERVE_PID" 2>/dev/null || true; }
   trap cleanup EXIT

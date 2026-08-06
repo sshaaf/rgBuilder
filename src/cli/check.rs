@@ -1,4 +1,4 @@
-//! `rgbuilder check` — CI policy gateway.
+//! `rg-build check` — CI policy gateway.
 
 use super::args::OutputFormat;
 use super::check_output::{build_check_response, violations_from_json_values};

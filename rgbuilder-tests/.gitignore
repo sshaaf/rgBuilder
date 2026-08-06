@@ -3,7 +3,7 @@
 *.db-journal
 **/data/
 
-# rgBuilder cache (reproduce with `rgbuilder discover`)
+# rgBuilder cache (reproduce with `rg-build discover`)
 **/.rgbuilder/
 
 # Generated CI reports (download from GitHub Actions artifacts)

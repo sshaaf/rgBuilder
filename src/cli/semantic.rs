@@ -1,4 +1,4 @@
-//! `rgbuilder semantic` — opt-in function semantic index and Hamming search.
+//! `rg-build semantic` — opt-in function semantic index and Hamming search.
 
 use super::args::OutputFormat;
 use super::context::CliContext;
@@ -164,7 +164,7 @@ pub fn run_query(ctx: &CliContext, args: SemanticQueryArgs) -> Result<()> {
     let path = semantic_index_path(ctx);
     if !path.is_file() {
         bail!(
-            "Semantic index not found at {} (run `rgbuilder semantic index` first)",
+            "Semantic index not found at {} (run `rg-build semantic index` first)",
             path.display()
         );
     }

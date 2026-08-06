@@ -1,55 +1,45 @@
-## The rgBuilder-Driven Migration Plan
+# Building a migration plan
 
-### Phase 1: Landscape Inventory & Mapping
+CLI-oriented how-to. Scoring/ordering math: [migration-algorithms.md](migration-algorithms.md) · [design/migration-planner-design.md](design/migration-planner-design.md).
 
-**Goal:** Map out the existing repository to understand its boundaries and size before touching any code.
+## Phase 1 — Inventory
 
-* **Step 1:** Run `rgbuilder discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints` to index the repository and write the dashboard + migration artifacts under `.rgbuilder/`.
-* **Step 2:** Use **Graph Queries (GQL)** with macros like `all_functions` and `call_chain` to inventory modules, list cross-boundary dependencies, and get an accurate baseline of the current system architecture.
-* **Step 3:** Open the **Dashboard** with `rgbuilder serve --open` (or `cd .rgbuilder/dashboard && python3 -m http.server`) to explore package boundaries and coupling interactively.
+```bash
+rg-build discover . --with-cfg --with-security --with-taint --with-harmonic --export-migration-hints
+rg-build -f json gql --macro-name all_functions unused | jq '.count'
+rg-build -f json gql --macro-name all_communities unused | jq '.count'
+```
 
-### Phase 2: Hotspot & Risk Assessment
+Read `.rgbuilder/migration_plan.json`. Optional UI: add `--with-dashboard` and `rg-build serve --open` ([dashboard user guide](dashboard-user-guide.md)).
 
-**Goal:** Identify which parts of the codebase are safe to migrate first and which are highly dangerous "hotspots."
+## Phase 2 — Hotspots
 
-* **Step 1:** Run **Graph Metrics** to calculate **PageRank** and **Betweenness** centrality.
-* *Low PageRank/Betweenness:* Good targets for early, low-risk migration phases.
-* *High PageRank/Betweenness:* "Bridge" or core utility nodes that require maximum caution.
+```bash
+rg-build -f json metrics --pagerank --betweenness --communities
+```
 
+Low PageRank/betweenness → earlier migration candidates; high → core bridges. Communities (label propagation) suggest batch boundaries.
 
-* **Step 2:** Identify **Communities** (densely connected clusters) using the metrics tool to carve out logical microservices or migration batches.
+## Phase 3 — Blast radius
 
-### Phase 3: Impact ("Blast Radius") Analysis
+```bash
+rg-build -f json blast-radius <Symbol> --depth 2
+```
 
-**Goal:** For any specific component selected for migration, determine exactly what will break upstream.
+Use impact zone + score; deepen with `--depth` for wrappers/adapters. Prefer `-f json` for durable UUIDs/names.
 
-* **Step 1:** Run `rgbuilder blast-radius` on targeted functions or modules slated for changes.
-* **Step 2:** Evaluate the impact **score** and the **impact zone** list. If a function has a massive upstream impact zone, use the `--depth` flag to isolate immediate callers and plan incremental wrapper/adapter layers.
-* **Step 3:** Pipe the output via `-f json` to save a stable record of canonical names/UUIDs that must be tested post-migration.
+## Phase 4 — Extract carefully
 
-### Phase 4: Execution & Precision Extraction
+- `slice` / `slice --taint` for statement-level and security flows ([User Guide §8](user-guide.md#8-program-slicing-and-taint)).
+- `export --export-format mermaid|graphviz|…` for review subgraphs.
 
-**Goal:** Safely refactor, untangle, or extract the selected code.
+## Phase 5 — CI guardrails
 
-* **Step 1:** Use **Program Slicing** (`slice`) to isolate the exact data and control dependencies of variables within highly complex functions. This ensures you only move the lines of code that actually matter to that feature.
-* **Step 2:** Run **Taint Analysis** (`slice --taint`) on migrated code blocks to verify that moving components doesn't inadvertently introduce security vulnerabilities (e.g., exposing an unsanitized input sink in the new environment).
-* **Step 3:** Use **Export** to extract subgraphs for architectural documentation and peer reviews:
-  `rgbuilder export --export-format mermaid --export-output subgraph.mmd --query all`
-  (or `--export-format graphviz --export-output calls.dot`).
+Write a [policy file](policy-format.md) and run `rg-build -f json check --policy-file policy.json` in PRs (exit `1` on violations).
 
-### Phase 5: Governance & CI Guardrails
-
-**Goal:** Ensure that ongoing work does not violate the new migration boundaries or re-introduce legacy dependencies.
-
-* **Step 1:** Write an rgBuilder **Policy File** ([policy-format.md](policy-format.md)) outlining forbidden cross-domain impacts or preventing calls back to legacy modules.
-* **Step 2:** Integrate `rgbuilder check` into your **CI policy checks** (Pull Request pipeline). If a developer introduces a change that violates the migration architecture boundaries, the CI pipeline will return exit code `1` and block the merge.
-
-### Artifacts
+## Artifacts
 
 | Path | When |
 |------|------|
-| `.rgbuilder/dashboard/migration_graph.json` | `discover --with-dashboard` (when metrics allow) |
-| `.rgbuilder/dashboard/migration_plan.json` | `discover --with-dashboard` (default preset under dashboard) |
-| `.rgbuilder/migration_plan.json` | `discover --export-migration-hints` (custom preset via flags) |
-
-See [design/migration-planner-design.md](design/migration-planner-design.md) for scoring and ordering details.
+| `.rgbuilder/migration_plan.json` | `--export-migration-hints` |
+| `.rgbuilder/dashboard/migration_*.json` | also `--with-dashboard` |

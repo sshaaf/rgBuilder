@@ -1,53 +1,48 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { GITHUB_REPO } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Docs",
 };
 
-const cards = [
-  {
-    title: "Introduction",
-    blurb: "Concepts — graph, reachability, each capability.",
-    href: `${GITHUB_REPO}/blob/main/docs/Introduction.md`,
-  },
-  {
-    title: "User Guide",
-    blurb: "Install, ecommerce-java walkthrough, every CLI command.",
-    href: `${GITHUB_REPO}/blob/main/docs/user-guide.md`,
-  },
+const primary = [
   {
     title: "AGENTS.md",
     blurb: "Index once, query with -f json — agent contract.",
-    href: `${GITHUB_REPO}/blob/main/AGENTS.md`,
+    href: "/docs/AGENTS/",
   },
   {
     title: "Agent recipes",
-    blurb: "Copy-paste workflows for automation.",
-    href: `${GITHUB_REPO}/blob/main/docs/agent-recipes.md`,
+    blurb: "Copy-paste multi-step workflows.",
+    href: "/docs/agent-recipes/",
   },
   {
     title: "JSON API",
-    blurb: "schema_version fields for scripts and CI.",
-    href: `${GITHUB_REPO}/blob/main/docs/json-api.md`,
+    blurb: "schema_version and field catalogs for scripts.",
+    href: "/docs/json-api/",
   },
   {
-    title: "Dashboard guide",
-    blurb: "Browser UI after discover --with-dashboard.",
-    href: `${GITHUB_REPO}/blob/main/docs/dashboard-user-guide.md`,
+    title: "User Guide",
+    blurb: "Install, ecommerce-java walkthrough, CLI commands.",
+    href: "/docs/user-guide/",
   },
   {
-    title: "FAQ",
-    blurb: "Discover vs semantic, flags, embedders, exit codes.",
-    href: `${GITHUB_REPO}/blob/main/docs/faq.md`,
+    title: "Introduction",
+    blurb: "Concepts — graph, reachability, capability map.",
+    href: "/docs/Introduction/",
   },
+];
+
+const secondary = [
+  { title: "Languages", href: "/docs/languages/", blurb: "Tier 1 plugins and discover depth." },
+  { title: "FAQ", href: "/docs/faq/", blurb: "Flags, embedders, exit codes." },
+  { title: "Glossary", href: "/docs/glossary/", blurb: "Blast, CPG, communities, …" },
+  { title: "HTTP API", href: "/docs/http-api/", blurb: "serve /api/query." },
   {
-    title: "Glossary",
-    blurb: "Blast, CPG, communities, L_proc, Hamming…",
-    href: `${GITHUB_REPO}/blob/main/docs/glossary.md`,
+    title: "Migration how-to",
+    href: "/docs/building-migration-plan/",
+    blurb: "CLI-oriented migration phases.",
   },
 ];
 
@@ -59,52 +54,48 @@ export default function DocsPage() {
         Docs hub
       </h1>
       <p className="mt-3 max-w-2xl text-[var(--body)]">
-        Canonical markdown lives in the repository. Start here by persona, then
-        open the source on GitHub (always current with main).
+        Served from the repository <code className="text-sm">docs/</code> tree
+        (agent-first). Prefer CLI <code className="text-sm">-f json</code> over
+        the optional browser UI.
       </p>
 
-      <div className="mt-8 flex flex-wrap gap-3 text-sm">
-        <Link href="/agents/" className="text-[var(--ink)] underline">
-          Agents on this site
-        </Link>
-        <Link href="/install/" className="text-[var(--ink)] underline">
-          Install
-        </Link>
-        <Link href="/demo/" className="text-[var(--ink)] underline">
-          Demos
-        </Link>
-      </div>
-
-      <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map((c) => (
-          <a
+      <h2 className="mt-10 text-lg font-medium text-[var(--ink)]">Primary</h2>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {primary.map((c) => (
+          <Link
             key={c.title}
             href={c.href}
-            target="_blank"
-            rel="noreferrer"
             className="group flex flex-col rounded-[4px] border border-[var(--hairline)] bg-[var(--canvas-soft)]/50 p-5 transition-colors hover:border-[var(--mute)]"
           >
-            <div className="mb-2 flex items-start justify-between gap-2">
-              <h2 className="text-base font-medium text-[var(--ink)]">
-                {c.title}
-              </h2>
-              <ArrowUpRight className="h-4 w-4 text-[var(--mute)] group-hover:text-[var(--ink)]" />
-            </div>
-            <p className="text-sm text-[var(--body)]">{c.blurb}</p>
-          </a>
+            <h3 className="text-base font-medium text-[var(--ink)]">{c.title}</h3>
+            <p className="mt-2 text-sm text-[var(--body)]">{c.blurb}</p>
+          </Link>
+        ))}
+      </div>
+
+      <h2 className="mt-12 text-lg font-medium text-[var(--ink)]">Secondary</h2>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {secondary.map((c) => (
+          <Link
+            key={c.title}
+            href={c.href}
+            className="rounded-[4px] border border-[var(--hairline)] p-4 text-sm hover:border-[var(--mute)]"
+          >
+            <div className="font-medium text-[var(--ink)]">{c.title}</div>
+            <p className="mt-1 text-[var(--body)]">{c.blurb}</p>
+          </Link>
         ))}
       </div>
 
       <p className="mt-10 text-sm text-[var(--mute)]">
-        Full index:{" "}
-        <a
-          href={`${GITHUB_REPO}/blob/main/docs/README.md`}
-          className="text-[var(--body-strong)] underline"
-          target="_blank"
-          rel="noreferrer"
-        >
-          docs/README.md
-        </a>
+        Optional UI:{" "}
+        <Link href="/docs/dashboard-user-guide/" className="underline">
+          Dashboard user guide
+        </Link>
+        . Contributors:{" "}
+        <Link href="/docs/design/README/" className="underline">
+          design/
+        </Link>
         .
       </p>
     </div>

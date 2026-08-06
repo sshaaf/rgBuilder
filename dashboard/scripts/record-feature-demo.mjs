@@ -6,11 +6,11 @@
  * Encode stays near 1× so captions stay aligned.
  *
  * Prereq (ecommerce-java fixture recommended):
- *   rgbuilder -r rgbuilder-tests/ecommerce-java discover . -l java -e target \
+ *   rg-build -r rgbuilder-tests/ecommerce-java discover . -l java -e target \
  *     --with-cfg --with-security --with-taint --with-dashboard --with-harmonic \
  *     --export-migration-hints
- *   rgbuilder -r rgbuilder-tests/ecommerce-java semantic index --embedder vocab
- *   rgbuilder -r rgbuilder-tests/ecommerce-java serve --port 8080
+ *   rg-build -r rgbuilder-tests/ecommerce-java semantic index --embedder vocab
+ *   rg-build -r rgbuilder-tests/ecommerce-java serve --port 8080
  *
  * Usage:
  *   DASHBOARD_URL=http://127.0.0.1:8080/ node dashboard/scripts/record-feature-demo.mjs

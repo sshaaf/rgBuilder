@@ -111,9 +111,9 @@ export default function HomePage() {
           </div>
           <TerminalBlock
             lines={[
-              "rgbuilder discover .",
-              'rgbuilder -f json semantic query "checkout flow" --limit 5',
-              'rgbuilder -f json blast-radius "priceShoppingCart" --depth 2',
+              "rg-build discover .",
+              'rg-build -f json semantic query "checkout flow" --limit 5',
+              'rg-build -f json blast-radius "priceShoppingCart" --depth 2',
             ]}
           />
         </div>
