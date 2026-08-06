@@ -359,8 +359,9 @@ impl GraphBuilder {
             &symbol.name,
             symbol.qualified_name.as_deref(),
         );
-        if let Some(id) = self.symbol_index.get(&key) {
-            if let Some(node) = self.nodes.iter_mut().find(|n| n.id == *id) {
+        if let Some(id) = self.symbol_index.get(&key)
+            && let Some(node) = self.nodes.iter_mut().find(|n| n.id == *id)
+        {
                 node.properties
                     .insert("cyclomatic".to_string(), metrics.cyclomatic.to_string());
                 node.properties
@@ -371,7 +372,6 @@ impl GraphBuilder {
                     "nesting_depth".to_string(),
                     metrics.nesting_depth.to_string(),
                 );
-            }
         }
     }
 
@@ -518,15 +518,14 @@ impl GraphBuilder {
         {
             return id;
         }
-        if name != simple {
-            if let Some(id) = self
+        if name != simple
+            && let Some(id) = self
                 .symbols_by_suffix
                 .get(simple)
                 .and_then(|ids| unique_resolved(ids))
             {
                 return id;
             }
-        }
 
         const STUB_FILE: &str = "<external>";
         let key = symbol_key(STUB_FILE, simple, Some(qn.as_str()));
@@ -818,33 +817,32 @@ impl GraphBuilder {
             return Some(*id);
         }
 
-        if let Some(hint) = qualified_hint {
-            if let Some(id) = self
+        if let Some(hint) = qualified_hint
+            && let Some(id) = self
                 .symbols_by_qualified
                 .get(hint)
                 .and_then(|ids| unique_resolved(ids))
-            {
-                return Some(id);
-            }
-            if let Some(id) = self
+        {
+            return Some(id);
+        }
+        if let Some(hint) = qualified_hint
+            && let Some(id) = self
                 .symbols_by_suffix
                 .get(hint)
                 .and_then(|ids| unique_resolved(ids))
-            {
-                return Some(id);
-            }
+        {
+            return Some(id);
         }
 
-        if let Some(type_name) = type_hint {
-            let simple_name = name.split('.').next_back().unwrap_or(name);
-            let type_qualified = format!("{type_name}.{simple_name}");
-            if let Some(id) = self
+        if let Some(type_name) = type_hint
+            && let simple_name = name.split('.').next_back().unwrap_or(name)
+            && let type_qualified = format!("{type_name}.{simple_name}")
+            && let Some(id) = self
                 .symbols_by_suffix
                 .get(&type_qualified)
                 .and_then(|ids| unique_resolved(ids))
-            {
-                return Some(id);
-            }
+        {
+            return Some(id);
         }
 
         self.symbols_by_suffix

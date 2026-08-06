@@ -1,7 +1,8 @@
 [package]
 name = "rbuilder-macros"
 version = "0.4.2"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
 description = "Procedural macros for rBuilder language plugins"
 license = "MIT OR Apache-2.0"
 
