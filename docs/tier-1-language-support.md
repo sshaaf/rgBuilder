@@ -117,6 +117,14 @@ Required for high-quality `cpg mutations` / typed field writes. Reference: Java 
 | Python | `__init__` → `Class.<init>`; harvest `self.x` fields | Annotations when present |
 | C | No language ctors; struct fields + typed params required | Strong on structs |
 
+**Java extract honesty (java-extract-gaps):**
+
+- Annotation types are `:Annotation` nodes (not `:Interface`). Usages emit `AnnotatedWith`; no classpath/FQN resolution beyond imports/package best-effort.
+- Records are `Class` with `metadata.is_record`; compact ctors and `<clinit>` / `<initblock>N` are CFG entry points.
+- Lambdas are not separate Function symbols; anonymous classes use synthetic `Outer.$AnonymousN` owners.
+- Annotation type element methods (`value()`, etc.) are not emitted as Function nodes in v1.
+- No full reflection / retention-policy analysis.
+
 ---
 
 ## 3. Repository layout
@@ -389,7 +397,7 @@ Copy into your PR description:
 
 | Language | Tier | Calls | CFG | Taint | Dashboard gate | Layer F (CPG mutations) |
 |----------|------|-------|-----|-------|----------------|-------------------------|
-| Java | 1 custom | ✅ + Extends/Implements | ✅ | ✅ rich | gbuilder golden | ✅ F1–F6 |
+| Java | 1 custom | ✅ + Extends/Implements/AnnotatedWith/Permits/Instantiates | ✅ (+ compact ctor, `<clinit>`) | ✅ rich | gbuilder golden | ✅ F1–F6 |
 | Go | 1 custom | ✅ | ✅ deep | ✅ rich | `dashboard_ecommerce_go` | ✅ F1–F6 |
 | C# | 1 custom | ✅ | ✅ | ✅ | `dashboard_ecommerce_csharp` | ✅ F1–F6 |
 | C | 1 custom | ✅ | ✅ | ✅ | `dashboard_ecommerce_c` | ✅ F1/F3–F6 (no native ctors) |

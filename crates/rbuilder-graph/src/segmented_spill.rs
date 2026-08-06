@@ -382,7 +382,7 @@ impl PartialOrd for HeapEntry {
 fn k_way_merge(run_paths: &[PathBuf], output: &Path, key_len: usize) -> Result<()> {
     let mut readers: Vec<BufReader<File>> = run_paths
         .iter()
-        .map(|p| Ok(BufReader::with_capacity(1 * 1024 * 1024, File::open(p)?)))
+        .map(|p| Ok(BufReader::with_capacity(1024 * 1024, File::open(p)?)))
         .collect::<Result<Vec<_>>>()?;
 
     let mut heap = BinaryHeap::new();

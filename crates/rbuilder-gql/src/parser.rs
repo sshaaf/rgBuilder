@@ -381,6 +381,7 @@ fn parse_node_type_name(name: &str) -> Result<NodeType> {
         "struct" => Ok(NodeType::Struct),
         "enum" => Ok(NodeType::Enum),
         "interface" => Ok(NodeType::Interface),
+        "annotation" => Ok(NodeType::Annotation),
         "module" => Ok(NodeType::Module),
         "variable" => Ok(NodeType::Variable),
         "file" => Ok(NodeType::File),
@@ -428,6 +429,8 @@ fn parse_edge_type_name(name: &str) -> Result<EdgeType> {
         "USESCONFIG" => Ok(EdgeType::UsesConfig),
         "DEFINEDIN" => Ok(EdgeType::DefinedIn),
         "DEPENDSON" => Ok(EdgeType::DependsOn),
+        "ANNOTATEDWITH" | "ANNOTATED_WITH" => Ok(EdgeType::AnnotatedWith),
+        "PERMITS" => Ok(EdgeType::Permits),
         _ => Err(Error::InvalidQuery(format!("unknown edge type: {name}"))),
     }
 }
@@ -460,5 +463,16 @@ mod tests {
     fn test_parse_limit() {
         let q = parse("MATCH (n:Function) WHERE n.name = 'foo' RETURN n LIMIT 10").unwrap();
         assert_eq!(q.limit, Some(10));
+    }
+
+    #[test]
+    fn test_parse_annotation_and_annotated_with() {
+        let q = parse("MATCH (n:Annotation) RETURN n").unwrap();
+        assert_eq!(q.patterns[0].node.node_type, Some(NodeType::Annotation));
+        assert_eq!(
+            parse_edge_type_name("ANNOTATED_WITH").unwrap(),
+            EdgeType::AnnotatedWith
+        );
+        assert_eq!(parse_edge_type_name("PERMITS").unwrap(), EdgeType::Permits);
     }
 }

@@ -48,11 +48,16 @@ pub fn node_to_location(node: Node, file: &str) -> SourceLocation {
 
 /// Extract symbol name from common tree-sitter child patterns.
 pub fn extract_name_from_node(node: Node, source: &[u8]) -> Result<Option<String>> {
+    if node.kind() == "static_initializer" {
+        return Ok(Some("<clinit>".to_string()));
+    }
+
     if matches!(
         node.kind(),
         "method_declaration"
             | "local_function_statement"
             | "constructor_declaration"
+            | "compact_constructor_declaration"
             | "function_definition"
     ) {
         if let Some(name) = node.child_by_field_name("name") {

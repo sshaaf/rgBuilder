@@ -1,11 +1,136 @@
 //! Java language plugin
 //!
-//! Task 3.2.3: Extract classes, interfaces, enums, and methods from Java source.
+//! Extracts classes, interfaces, enums, annotations, records, modules/packages,
+//! constructors (including compact/record constructors), static/instance
+//! initializers, fields, and their relationships (calls, inheritance,
+//! annotations, instantiation, method references, ctor chaining, imports)
+//! from Java source using a single Tree-sitter CST walk per phase.
 
 use rbuilder_plugin_api::*;
 use rbuilder_plugin_api::{Error, Result};
+use rbuilder_plugin_helpers::ComplexityCalculator;
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::Path;
 use tree_sitter::{Node, Parser};
+
+/// Tree-sitter node kinds that introduce a new named type scope for
+/// qualified-name purposes (`Outer.Inner` nesting).
+const TYPE_DECL_KINDS: &[&str] = &[
+    "class_declaration",
+    "interface_declaration",
+    "record_declaration",
+    "enum_declaration",
+    "annotation_type_declaration",
+];
+
+/// Decision-point node kinds counted toward cyclomatic/cognitive complexity.
+const BRANCH_KINDS: &[&str] = &[
+    "if_statement",
+    "while_statement",
+    "for_statement",
+    "enhanced_for_statement",
+    "do_statement",
+    "catch_clause",
+];
+
+/// Node kinds that add one level of nesting depth for complexity purposes.
+const NESTING_CONTAINER_KINDS: &[&str] = &[
+    "if_statement",
+    "while_statement",
+    "for_statement",
+    "enhanced_for_statement",
+    "do_statement",
+    "block",
+];
+
+/// Per-file extraction context: package prefix, anonymous-class synthetic
+/// names, and instance-initializer counters. Rebuilt once per parse (symbols
+/// pass and relations pass each get their own, since each re-parses source).
+struct ExtractCtx {
+    package: Option<String>,
+    /// Maps an anonymous class's `class_body` node id to a synthetic owner
+    /// name (`$AnonymousN`), assigned in document order.
+    anon_names: HashMap<usize, String>,
+    /// Per-owner counters for instance initializer blocks (`Type.<initblock>N`).
+    initblock_counters: RefCell<HashMap<String, usize>>,
+}
+
+impl ExtractCtx {
+    fn new(root: Node, source: &[u8]) -> Self {
+        Self {
+            package: Self::find_package_name(root, source),
+            anon_names: Self::collect_anonymous_names(root),
+            initblock_counters: RefCell::new(HashMap::new()),
+        }
+    }
+
+    fn find_package_name(root: Node, source: &[u8]) -> Option<String> {
+        let mut cursor = root.walk();
+        let package_node = root
+            .children(&mut cursor)
+            .find(|c| c.kind() == "package_declaration")?;
+        let mut pcursor = package_node.walk();
+        let result = package_node
+            .children(&mut pcursor)
+            .find(|c| c.kind() == "identifier" || c.kind() == "scoped_identifier")
+            .and_then(|n| n.utf8_text(source).ok())
+            .map(str::to_string);
+        result
+    }
+
+    /// Pre-order scan assigning `$AnonymousN` to every anonymous class body
+    /// (the `class_body` of an `object_creation_expression`), keyed by node id
+    /// so later lookups don't need to re-derive numbering.
+    fn collect_anonymous_names(root: Node) -> HashMap<usize, String> {
+        let mut map = HashMap::new();
+        let mut counter = 0usize;
+        let mut stack = vec![root];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "object_creation_expression" {
+                let mut cursor = node.walk();
+                let anon_body = node.children(&mut cursor).find(|c| c.kind() == "class_body");
+                if let Some(body) = anon_body {
+                    counter += 1;
+                    map.insert(body.id(), format!("$Anonymous{counter}"));
+                }
+            }
+            let mut cursor = node.walk();
+            let children: Vec<Node> = node.children(&mut cursor).collect();
+            for child in children.into_iter().rev() {
+                stack.push(child);
+            }
+        }
+        map
+    }
+
+    fn qualify_type(&self, path: &str) -> String {
+        match &self.package {
+            Some(pkg) => format!("{pkg}.{path}"),
+            None => path.to_string(),
+        }
+    }
+}
+
+fn source_location(node: Node, file_path: &str) -> SourceLocation {
+    SourceLocation {
+        file: file_path.to_string(),
+        start_line: node.start_position().row + 1,
+        end_line: node.end_position().row + 1,
+        start_column: node.start_position().column,
+        end_column: node.end_position().column,
+    }
+}
+
+fn first_line_text(node: Node, source: &[u8]) -> Result<String> {
+    Ok(node
+        .utf8_text(source)?
+        .lines()
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_string())
+}
 
 /// Java language plugin using Tree-sitter.
 pub struct JavaPlugin {
@@ -22,66 +147,202 @@ impl JavaPlugin {
         Ok(Self { _parser: parser })
     }
 
-    fn extract_method(&self, node: Node, source: &[u8], file_path: &str) -> Result<Symbol> {
-        let mut cursor = node.walk();
-        let mut name = None;
-        let mut modifiers = Vec::new();
-        let mut return_type = None;
+    // ---------------------------------------------------------------
+    // Modifiers / annotations
+    // ---------------------------------------------------------------
 
-        for child in node.children(&mut cursor) {
+    /// Split a `modifiers` node's children into keyword strings (`public`,
+    /// `static`, `sealed`, ...) and annotation usage nodes (`annotation` /
+    /// `marker_annotation`), without any regex-on-source.
+    fn split_modifiers<'a>(&self, modifiers_node: Node<'a>, source: &[u8]) -> (Vec<String>, Vec<Node<'a>>) {
+        let mut keywords = Vec::new();
+        let mut annotations = Vec::new();
+        let mut cursor = modifiers_node.walk();
+        for child in modifiers_node.children(&mut cursor) {
             match child.kind() {
-                "identifier" if name.is_none() => {
-                    name = Some(child.utf8_text(source)?.to_string());
-                }
-                "type_identifier"
-                | "void_type"
-                | "integral_type"
-                | "floating_point_type"
-                | "boolean_type"
-                | "generic_type" => {
-                    if return_type.is_none() {
-                        return_type = Some(child.utf8_text(source)?.to_string());
+                "annotation" | "marker_annotation" => annotations.push(child),
+                _ => {
+                    if let Ok(text) = child.utf8_text(source) {
+                        keywords.push(text.to_string());
                     }
                 }
-                "modifiers" => {
-                    modifiers.push(child.utf8_text(source)?.to_string());
+            }
+        }
+        (keywords, annotations)
+    }
+
+    /// Collect the keyword-only modifiers directly attached to `node`
+    /// (annotations are excluded; see `split_modifiers`).
+    fn collect_keyword_modifiers(&self, node: Node, source: &[u8]) -> Vec<String> {
+        let mut cursor = node.walk();
+        let modifiers_node = node.children(&mut cursor).find(|c| c.kind() == "modifiers");
+        modifiers_node
+            .map(|m| self.split_modifiers(m, source).0)
+            .unwrap_or_default()
+    }
+
+    fn annotation_name_and_args(&self, ann_node: Node, source: &[u8]) -> (String, Option<String>) {
+        let raw_name = ann_node
+            .child_by_field_name("name")
+            .and_then(|n| n.utf8_text(source).ok())
+            .unwrap_or("");
+        let simple = raw_name.rsplit('.').next().unwrap_or(raw_name).to_string();
+        let args = ann_node
+            .child_by_field_name("arguments")
+            .and_then(|n| n.utf8_text(source).ok())
+            .map(str::to_string);
+        (simple, args)
+    }
+
+    fn push_annotated_with(
+        &self,
+        from: &str,
+        ann_node: Node,
+        source: &[u8],
+        file_path: &Path,
+        relations: &mut Vec<Relation>,
+    ) {
+        let (name, args) = self.annotation_name_and_args(ann_node, source);
+        if name.is_empty() {
+            return;
+        }
+        let mut metadata = serde_json::json!({ "language": "java" });
+        if let Some(args) = args {
+            metadata["arguments"] = serde_json::Value::String(args);
+        }
+        relations.push(Relation {
+            from: from.to_string(),
+            to: name,
+            relation_type: RelationType::AnnotatedWith,
+            location: source_location(ann_node, &file_path.to_string_lossy()),
+            metadata,
+            to_qualified_hint: None,
+            to_type_hint: None,
+        });
+    }
+
+    // ---------------------------------------------------------------
+    // Qualified-name helpers (nesting, anonymous classes, packages)
+    // ---------------------------------------------------------------
+
+    /// Walk ancestors of `node`, collecting enclosing type names
+    /// (`Outer.Inner`) and synthesizing `$AnonymousN` levels for anonymous
+    /// class bodies, innermost first then reversed to source order.
+    fn find_containing_type_name(&self, node: Node, source: &[u8], ctx: &ExtractCtx) -> Option<String> {
+        let mut names = Vec::new();
+        let mut current = node;
+        while let Some(parent) = current.parent() {
+            if TYPE_DECL_KINDS.contains(&parent.kind()) {
+                if let Some(name) = parent
+                    .child_by_field_name("name")
+                    .and_then(|n| n.utf8_text(source).ok())
+                {
+                    names.push(name.to_string());
+                }
+            } else if parent.kind() == "class_body" {
+                if let Some(anon) = ctx.anon_names.get(&parent.id()) {
+                    names.push(anon.clone());
+                }
+            }
+            current = parent;
+        }
+        if names.is_empty() {
+            None
+        } else {
+            names.reverse();
+            Some(names.join("."))
+        }
+    }
+
+    /// Fully qualified name of a type declaration node itself (not an
+    /// ancestor query): `pkg.Outer.Inner`.
+    fn type_node_qualified_name(&self, node: Node, source: &[u8], ctx: &ExtractCtx) -> String {
+        let name = node
+            .child_by_field_name("name")
+            .and_then(|n| n.utf8_text(source).ok())
+            .unwrap_or("");
+        let path = match self.find_containing_type_name(node, source, ctx) {
+            Some(owner) => format!("{owner}.{name}"),
+            None => name.to_string(),
+        };
+        ctx.qualify_type(&path)
+    }
+
+    fn method_qualified_name(&self, method_node: Node, name: &str, source: &[u8], ctx: &ExtractCtx) -> Option<String> {
+        self.find_containing_type_name(method_node, source, ctx)
+            .map(|owner| ctx.qualify_type(&format!("{owner}.{name}")))
+    }
+
+    /// Find the nearest enclosing type declaration node (for resolving
+    /// e.g. a superclass hint for `super(...)`).
+    fn find_enclosing_type_node<'a>(&self, node: Node<'a>) -> Option<Node<'a>> {
+        let mut current = node;
+        while let Some(parent) = current.parent() {
+            if TYPE_DECL_KINDS.contains(&parent.kind()) {
+                return Some(parent);
+            }
+            current = parent;
+        }
+        None
+    }
+
+    /// Qualified name of the nearest enclosing callable (method, constructor,
+    /// compact constructor, or static initializer) containing `node`.
+    fn find_containing_callable_qn(&self, node: Node, source: &[u8], ctx: &ExtractCtx) -> Option<String> {
+        let mut current = node;
+        while let Some(parent) = current.parent() {
+            match parent.kind() {
+                "method_declaration" => {
+                    let name = parent
+                        .child_by_field_name("name")
+                        .and_then(|n| n.utf8_text(source).ok())?
+                        .to_string();
+                    return self
+                        .method_qualified_name(parent, &name, source, ctx)
+                        .or(Some(name));
+                }
+                "constructor_declaration" | "compact_constructor_declaration" => {
+                    let owner = self.find_containing_type_name(parent, source, ctx)?;
+                    return Some(format!("{}.<init>", ctx.qualify_type(&owner)));
+                }
+                "static_initializer" => {
+                    let owner = self.find_containing_type_name(parent, source, ctx)?;
+                    return Some(format!("{}.<clinit>", ctx.qualify_type(&owner)));
                 }
                 _ => {}
             }
+            current = parent;
         }
+        None
+    }
 
-        let name = name.ok_or_else(|| Error::ParseError {
+    // ---------------------------------------------------------------
+    // Symbol extraction: methods, constructors, static/instance init
+    // ---------------------------------------------------------------
+
+    fn extract_method(&self, node: Node, source: &[u8], file_path: &str, ctx: &ExtractCtx) -> Result<Symbol> {
+        let name_node = node.child_by_field_name("name").ok_or_else(|| Error::ParseError {
             file: file_path.into(),
             line: node.start_position().row + 1,
             message: "Method missing name".to_string(),
         })?;
+        let name = name_node.utf8_text(source)?.to_string();
 
-        // Try to find the containing class for qualified name
-        let qualified_name = self
-            .find_containing_class_name(node, source)
-            .map(|class| format!("{}.{}", class, name));
+        let return_type = node
+            .child_by_field_name("type")
+            .and_then(|n| n.utf8_text(source).ok())
+            .map(str::to_string);
 
+        let modifiers = self.collect_keyword_modifiers(node, source);
+        let qualified_name = self.method_qualified_name(node, &name, source, ctx);
         let parameters = self.extract_parameters(node, source)?;
 
         Ok(Symbol {
-            name: name.clone(),
+            name,
             symbol_type: SymbolType::Function,
             qualified_name,
-            location: SourceLocation {
-                file: file_path.to_string(),
-                start_line: node.start_position().row + 1,
-                end_line: node.end_position().row + 1,
-                start_column: node.start_position().column,
-                end_column: node.end_position().column,
-            },
-            signature: Some(
-                node.utf8_text(source)?
-                    .lines()
-                    .next()
-                    .unwrap_or("")
-                    .trim()
-                    .to_string(),
-            ),
+            location: source_location(node, file_path),
+            signature: Some(first_line_text(node, source)?),
             return_type,
             parameters,
             fields: vec![],
@@ -91,45 +352,32 @@ impl JavaPlugin {
         })
     }
 
-    fn extract_constructor(&self, node: Node, source: &[u8], file_path: &str) -> Result<Symbol> {
-        let class_name = self
-            .find_containing_class_name(node, source)
+    fn extract_constructor(&self, node: Node, source: &[u8], file_path: &str, ctx: &ExtractCtx) -> Result<Symbol> {
+        let name_node = node.child_by_field_name("name").ok_or_else(|| Error::ParseError {
+            file: file_path.into(),
+            line: node.start_position().row + 1,
+            message: "Constructor missing name".to_string(),
+        })?;
+        let name = name_node.utf8_text(source)?.to_string();
+
+        let owner = self
+            .find_containing_type_name(node, source, ctx)
             .ok_or_else(|| Error::ParseError {
                 file: file_path.into(),
                 line: node.start_position().row + 1,
                 message: "Constructor missing containing class".to_string(),
             })?;
 
-        let mut modifiers = Vec::new();
-        let mut cursor = node.walk();
-        for child in node.children(&mut cursor) {
-            if child.kind() == "modifiers" {
-                modifiers.push(child.utf8_text(source)?.to_string());
-            }
-        }
-
+        let modifiers = self.collect_keyword_modifiers(node, source);
         let parameters = self.extract_parameters(node, source)?;
-        let qualified_name = format!("{class_name}.<init>");
+        let qualified_name = format!("{}.<init>", ctx.qualify_type(&owner));
 
         Ok(Symbol {
-            name: class_name.clone(),
+            name,
             symbol_type: SymbolType::Function,
             qualified_name: Some(qualified_name),
-            location: SourceLocation {
-                file: file_path.to_string(),
-                start_line: node.start_position().row + 1,
-                end_line: node.end_position().row + 1,
-                start_column: node.start_position().column,
-                end_column: node.end_position().column,
-            },
-            signature: Some(
-                node.utf8_text(source)?
-                    .lines()
-                    .next()
-                    .unwrap_or("")
-                    .trim()
-                    .to_string(),
-            ),
+            location: source_location(node, file_path),
+            signature: Some(first_line_text(node, source)?),
             return_type: None,
             parameters,
             fields: vec![],
@@ -142,6 +390,105 @@ impl JavaPlugin {
         })
     }
 
+    /// `compact_constructor_declaration` (records): `record Point(int x, int y) { public Point { ... } }`.
+    fn extract_compact_constructor(&self, node: Node, source: &[u8], file_path: &str, ctx: &ExtractCtx) -> Result<Symbol> {
+        let name_node = node.child_by_field_name("name").ok_or_else(|| Error::ParseError {
+            file: file_path.into(),
+            line: node.start_position().row + 1,
+            message: "Compact constructor missing name".to_string(),
+        })?;
+        let name = name_node.utf8_text(source)?.to_string();
+
+        let owner = self
+            .find_containing_type_name(node, source, ctx)
+            .ok_or_else(|| Error::ParseError {
+                file: file_path.into(),
+                line: node.start_position().row + 1,
+                message: "Compact constructor missing containing record".to_string(),
+            })?;
+
+        let modifiers = self.collect_keyword_modifiers(node, source);
+        let qualified_name = format!("{}.<init>", ctx.qualify_type(&owner));
+
+        Ok(Symbol {
+            name,
+            symbol_type: SymbolType::Function,
+            qualified_name: Some(qualified_name),
+            location: source_location(node, file_path),
+            signature: Some(first_line_text(node, source)?),
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers,
+            documentation: None,
+            metadata: serde_json::json!({
+                "language": "java",
+                "is_constructor": true,
+                "is_compact_constructor": true,
+            }),
+        })
+    }
+
+    fn extract_static_initializer(&self, node: Node, source: &[u8], file_path: &str, ctx: &ExtractCtx) -> Result<Symbol> {
+        let owner = self.find_containing_type_name(node, source, ctx);
+        let qualified_name = owner.map(|o| format!("{}.<clinit>", ctx.qualify_type(&o)));
+
+        Ok(Symbol {
+            name: "<clinit>".to_string(),
+            symbol_type: SymbolType::Function,
+            qualified_name,
+            location: source_location(node, file_path),
+            signature: Some(first_line_text(node, source)?),
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({
+                "language": "java",
+                "is_static_initializer": true,
+            }),
+        })
+    }
+
+    /// Instance initializer block: a bare `block` that is a direct child of a
+    /// `class_body` (tree-sitter-java has no dedicated node kind for these).
+    fn extract_instance_initializer(&self, node: Node, source: &[u8], file_path: &str, ctx: &ExtractCtx) -> Result<Symbol> {
+        let owner_qn = self
+            .find_containing_type_name(node, source, ctx)
+            .map(|o| ctx.qualify_type(&o));
+
+        let idx = {
+            let key = owner_qn.clone().unwrap_or_else(|| "<unknown>".to_string());
+            let mut counters = ctx.initblock_counters.borrow_mut();
+            let counter = counters.entry(key).or_insert(0);
+            *counter += 1;
+            *counter
+        };
+        let name = format!("<initblock>{idx}");
+        let qualified_name = owner_qn.map(|o| format!("{o}.{name}"));
+
+        Ok(Symbol {
+            name,
+            symbol_type: SymbolType::Function,
+            qualified_name,
+            location: source_location(node, file_path),
+            signature: Some(first_line_text(node, source)?),
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({
+                "language": "java",
+                "is_instance_initializer": true,
+            }),
+        })
+    }
+
+    /// Extract parameters from `formal_parameters`, handling both
+    /// `formal_parameter` and `spread_parameter` (varargs). Varargs names
+    /// live under `variable_declarator`'s `name` field, not a top-level field.
     fn extract_parameters(&self, node: Node, source: &[u8]) -> Result<Vec<Parameter>> {
         let mut parameters = Vec::new();
         let params_node = if let Some(p) = node.child_by_field_name("parameters") {
@@ -159,27 +506,61 @@ impl JavaPlugin {
 
         let mut cursor = params_node.walk();
         for child in params_node.children(&mut cursor) {
-            if child.kind() != "formal_parameter" && child.kind() != "spread_parameter" {
-                continue;
-            }
-            let name = child
-                .child_by_field_name("name")
-                .and_then(|n| n.utf8_text(source).ok())
-                .map(|s| s.to_string());
-            let param_type = child
-                .child_by_field_name("type")
-                .and_then(|n| n.utf8_text(source).ok())
-                .map(|s| s.to_string());
-            if let Some(name) = name {
-                parameters.push(Parameter {
-                    name,
-                    param_type,
-                    default_value: None,
-                });
+            match child.kind() {
+                "formal_parameter" => {
+                    let name = child
+                        .child_by_field_name("name")
+                        .and_then(|n| n.utf8_text(source).ok())
+                        .map(str::to_string);
+                    let param_type = child
+                        .child_by_field_name("type")
+                        .and_then(|n| n.utf8_text(source).ok())
+                        .map(str::to_string);
+                    if let Some(name) = name {
+                        parameters.push(Parameter {
+                            name,
+                            param_type,
+                            default_value: None,
+                        });
+                    }
+                }
+                "spread_parameter" => {
+                    let mut var_name = None;
+                    let mut type_text = None;
+                    let mut vcursor = child.walk();
+                    for gc in child.children(&mut vcursor) {
+                        match gc.kind() {
+                            "variable_declarator" => {
+                                var_name = gc
+                                    .child_by_field_name("name")
+                                    .and_then(|n| n.utf8_text(source).ok())
+                                    .map(str::to_string);
+                            }
+                            "modifiers" | "annotation" | "marker_annotation" | "..." => {}
+                            _ => {
+                                if type_text.is_none() {
+                                    type_text = gc.utf8_text(source).ok().map(str::to_string);
+                                }
+                            }
+                        }
+                    }
+                    if let Some(name) = var_name {
+                        parameters.push(Parameter {
+                            name,
+                            param_type: type_text.map(|t| format!("{t}...")),
+                            default_value: None,
+                        });
+                    }
+                }
+                _ => {}
             }
         }
         Ok(parameters)
     }
+
+    // ---------------------------------------------------------------
+    // Symbol extraction: types (class/interface/enum/annotation/record)
+    // ---------------------------------------------------------------
 
     fn extract_class_fields(&self, class_node: Node, source: &[u8]) -> Result<Vec<Field>> {
         let mut fields = Vec::new();
@@ -196,89 +577,111 @@ impl JavaPlugin {
             if child.kind() != "field_declaration" {
                 continue;
             }
-            let mut visibility = None;
-            let mut field_type = None;
+            let field_type = child
+                .child_by_field_name("type")
+                .and_then(|n| n.utf8_text(source).ok())
+                .map(str::to_string);
+            let visibility = {
+                let kw = self.collect_keyword_modifiers(child, source);
+                if kw.is_empty() {
+                    None
+                } else {
+                    Some(kw.join(" "))
+                }
+            };
+
             let mut decl_cursor = child.walk();
             for field_child in child.children(&mut decl_cursor) {
-                match field_child.kind() {
-                    "modifiers" => {
-                        let text = field_child.utf8_text(source)?.to_string();
-                        visibility = Some(text);
+                if field_child.kind() == "variable_declarator" {
+                    if let Some(name_node) = field_child.child_by_field_name("name") {
+                        let name = name_node.utf8_text(source)?.to_string();
+                        fields.push(Field {
+                            name,
+                            field_type: field_type.clone(),
+                            visibility: visibility.clone(),
+                        });
                     }
-                    "type_identifier"
-                    | "generic_type"
-                    | "integral_type"
-                    | "floating_point_type"
-                    | "boolean_type"
-                    | "array_type"
-                    | "void_type" => {
-                        if field_type.is_none() {
-                            field_type = Some(field_child.utf8_text(source)?.to_string());
-                        }
-                    }
-                    "variable_declarator" => {
-                        if let Some(name_node) = field_child.child_by_field_name("name") {
-                            let name = name_node.utf8_text(source)?.to_string();
-                            fields.push(Field {
-                                name,
-                                field_type: field_type.clone(),
-                                visibility: visibility.clone(),
-                            });
-                        }
-                    }
-                    _ => {}
                 }
             }
         }
         Ok(fields)
     }
 
+    /// Each `enum_constant` becomes a field on the owning Enum symbol.
+    fn extract_enum_fields(&self, enum_node: Node, source: &[u8]) -> Result<Vec<Field>> {
+        let mut fields = Vec::new();
+        let mut cursor = enum_node.walk();
+        let Some(body) = enum_node
+            .children(&mut cursor)
+            .find(|c| c.kind() == "enum_body")
+        else {
+            return Ok(fields);
+        };
+
+        let mut body_cursor = body.walk();
+        for child in body.children(&mut body_cursor) {
+            if child.kind() != "enum_constant" {
+                continue;
+            }
+            if let Some(name_node) = child.child_by_field_name("name") {
+                if let Ok(name) = name_node.utf8_text(source) {
+                    fields.push(Field {
+                        name: name.to_string(),
+                        field_type: None,
+                        visibility: Some("enum_constant".to_string()),
+                    });
+                }
+            }
+        }
+        Ok(fields)
+    }
+
+    /// Record components (declared in the record's `parameters` field, just
+    /// like a method/constructor parameter list) become fields.
+    fn extract_record_fields(&self, record_node: Node, source: &[u8]) -> Result<Vec<Field>> {
+        let params = self.extract_parameters(record_node, source)?;
+        Ok(params
+            .into_iter()
+            .map(|p| Field {
+                name: p.name,
+                field_type: p.param_type,
+                visibility: None,
+            })
+            .collect())
+    }
+
+    /// Generic extractor for `class_declaration` / `interface_declaration` /
+    /// `enum_declaration` / `annotation_type_declaration`.
     fn extract_type(
         &self,
         node: Node,
         source: &[u8],
         file_path: &str,
         symbol_type: SymbolType,
+        ctx: &ExtractCtx,
     ) -> Result<Symbol> {
-        let mut cursor = node.walk();
-        let mut name = None;
-        let mut modifiers = Vec::new();
-
-        for child in node.children(&mut cursor) {
-            match child.kind() {
-                "identifier" if name.is_none() => {
-                    name = Some(child.utf8_text(source)?.to_string());
-                }
-                "modifiers" => {
-                    modifiers.push(child.utf8_text(source)?.to_string());
-                }
-                _ => {}
-            }
-        }
-
-        let name = name.ok_or_else(|| Error::ParseError {
+        let name_node = node.child_by_field_name("name").ok_or_else(|| Error::ParseError {
             file: file_path.into(),
             line: node.start_position().row + 1,
             message: "Type missing name".to_string(),
         })?;
+        let name = name_node.utf8_text(source)?.to_string();
 
-        let fields = if symbol_type == SymbolType::Class {
-            self.extract_class_fields(node, source)?
-        } else {
-            vec![]
+        let modifiers = self.collect_keyword_modifiers(node, source);
+
+        let fields = match symbol_type {
+            SymbolType::Class => self.extract_class_fields(node, source)?,
+            SymbolType::Enum => self.extract_enum_fields(node, source)?,
+            _ => vec![],
         };
 
+        let qualified_name = Some(self.type_node_qualified_name(node, source, ctx));
+
         Ok(Symbol {
-            name: name.clone(),
+            name,
             symbol_type,
-            qualified_name: None,
-            location: SourceLocation {
-                file: file_path.to_string(),
-                start_line: node.start_position().row + 1,
-                end_line: node.end_position().row + 1,
-                start_column: node.start_position().column,
-                end_column: node.end_position().column,
-            },
+            qualified_name,
+            location: source_location(node, file_path),
             signature: None,
             return_type: None,
             parameters: vec![],
@@ -289,26 +692,191 @@ impl JavaPlugin {
         })
     }
 
+    /// `record_declaration`: extracted as `SymbolType::Class` with
+    /// `metadata.is_record: true` per D3 (records are JVM classes).
+    fn extract_record(&self, node: Node, source: &[u8], file_path: &str, ctx: &ExtractCtx) -> Result<Symbol> {
+        let name_node = node.child_by_field_name("name").ok_or_else(|| Error::ParseError {
+            file: file_path.into(),
+            line: node.start_position().row + 1,
+            message: "Record missing name".to_string(),
+        })?;
+        let name = name_node.utf8_text(source)?.to_string();
+
+        let modifiers = self.collect_keyword_modifiers(node, source);
+        let fields = self.extract_record_fields(node, source)?;
+        let qualified_name = Some(self.type_node_qualified_name(node, source, ctx));
+
+        Ok(Symbol {
+            name,
+            symbol_type: SymbolType::Class,
+            qualified_name,
+            location: source_location(node, file_path),
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields,
+            modifiers,
+            documentation: None,
+            metadata: serde_json::json!({ "language": "java", "is_record": true }),
+        })
+    }
+
+    fn extract_package_symbol(&self, node: Node, source: &[u8], file_path: &str) -> Result<Symbol> {
+        let mut cursor = node.walk();
+        let name = node
+            .children(&mut cursor)
+            .find(|c| c.kind() == "identifier" || c.kind() == "scoped_identifier")
+            .and_then(|n| n.utf8_text(source).ok())
+            .unwrap_or("")
+            .to_string();
+
+        Ok(Symbol {
+            name: name.clone(),
+            symbol_type: SymbolType::Module,
+            qualified_name: Some(name),
+            location: source_location(node, file_path),
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({ "language": "java", "java_kind": "package" }),
+        })
+    }
+
+    /// `module-info.java`'s `module_declaration`. Directives (`requires`,
+    /// `exports`, `opens`, `uses`, `provides`) are recorded as best-effort
+    /// string lists in metadata for GQL inspection (per D4).
+    fn extract_module_symbol(&self, node: Node, source: &[u8], file_path: &str) -> Result<Symbol> {
+        let name = node
+            .child_by_field_name("name")
+            .and_then(|n| n.utf8_text(source).ok())
+            .unwrap_or("")
+            .to_string();
+
+        let mut requires = Vec::new();
+        let mut exports = Vec::new();
+        let mut opens = Vec::new();
+        let mut uses = Vec::new();
+        let mut provides = Vec::new();
+
+        if let Some(body) = node.child_by_field_name("body") {
+            let mut cursor = body.walk();
+            for directive in body.children(&mut cursor) {
+                match directive.kind() {
+                    "requires_module_directive" => {
+                        if let Some(m) = directive
+                            .child_by_field_name("module")
+                            .and_then(|n| n.utf8_text(source).ok())
+                        {
+                            requires.push(m.to_string());
+                        }
+                    }
+                    "exports_module_directive" => {
+                        if let Some(p) = directive
+                            .child_by_field_name("package")
+                            .and_then(|n| n.utf8_text(source).ok())
+                        {
+                            exports.push(p.to_string());
+                        }
+                    }
+                    "opens_module_directive" => {
+                        if let Some(p) = directive
+                            .child_by_field_name("package")
+                            .and_then(|n| n.utf8_text(source).ok())
+                        {
+                            opens.push(p.to_string());
+                        }
+                    }
+                    "uses_module_directive" => {
+                        if let Some(t) = directive
+                            .child_by_field_name("type")
+                            .and_then(|n| n.utf8_text(source).ok())
+                        {
+                            uses.push(t.to_string());
+                        }
+                    }
+                    "provides_module_directive" => {
+                        if let Some(p) = directive
+                            .child_by_field_name("provided")
+                            .and_then(|n| n.utf8_text(source).ok())
+                        {
+                            provides.push(p.to_string());
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        Ok(Symbol {
+            name: name.clone(),
+            symbol_type: SymbolType::Module,
+            qualified_name: Some(name),
+            location: source_location(node, file_path),
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({
+                "language": "java",
+                "java_kind": "jpms",
+                "requires": requires,
+                "exports": exports,
+                "opens": opens,
+                "uses": uses,
+                "provides": provides,
+            }),
+        })
+    }
+
     fn traverse(
         &self,
         node: Node,
         source: &[u8],
         file_path: &str,
+        ctx: &ExtractCtx,
         symbols: &mut Vec<Symbol>,
     ) -> Result<()> {
         match node.kind() {
-            "method_declaration" => symbols.push(self.extract_method(node, source, file_path)?),
+            "method_declaration" => symbols.push(self.extract_method(node, source, file_path, ctx)?),
             "constructor_declaration" => {
-                symbols.push(self.extract_constructor(node, source, file_path)?)
+                symbols.push(self.extract_constructor(node, source, file_path, ctx)?)
+            }
+            "compact_constructor_declaration" => {
+                symbols.push(self.extract_compact_constructor(node, source, file_path, ctx)?)
             }
             "class_declaration" => {
-                symbols.push(self.extract_type(node, source, file_path, SymbolType::Class)?)
+                symbols.push(self.extract_type(node, source, file_path, SymbolType::Class, ctx)?)
             }
-            "interface_declaration" => {
-                symbols.push(self.extract_type(node, source, file_path, SymbolType::Interface)?)
-            }
+            "interface_declaration" => symbols.push(self.extract_type(
+                node,
+                source,
+                file_path,
+                SymbolType::Interface,
+                ctx,
+            )?),
             "enum_declaration" => {
-                symbols.push(self.extract_type(node, source, file_path, SymbolType::Enum)?)
+                symbols.push(self.extract_type(node, source, file_path, SymbolType::Enum, ctx)?)
+            }
+            "annotation_type_declaration" => symbols.push(self.extract_type(
+                node,
+                source,
+                file_path,
+                SymbolType::Annotation,
+                ctx,
+            )?),
+            "record_declaration" => symbols.push(self.extract_record(node, source, file_path, ctx)?),
+            "package_declaration" => symbols.push(self.extract_package_symbol(node, source, file_path)?),
+            "module_declaration" => symbols.push(self.extract_module_symbol(node, source, file_path)?),
+            "static_initializer" => {
+                symbols.push(self.extract_static_initializer(node, source, file_path, ctx)?)
+            }
+            "block" if node.parent().map(|p| p.kind()) == Some("class_body") => {
+                symbols.push(self.extract_instance_initializer(node, source, file_path, ctx)?)
             }
             "import_declaration" => {
                 let text = node.utf8_text(source)?.trim().to_string();
@@ -337,7 +905,7 @@ impl JavaPlugin {
 
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
-            self.traverse(child, source, file_path, symbols)?;
+            self.traverse(child, source, file_path, ctx, symbols)?;
         }
         Ok(())
     }
@@ -370,13 +938,10 @@ impl LanguagePlugin for JavaPlugin {
                 message: "Failed to parse Java source".to_string(),
             })?;
 
+        let root = tree.root_node();
+        let ctx = ExtractCtx::new(root, source);
         let mut symbols = Vec::new();
-        self.traverse(
-            tree.root_node(),
-            source,
-            &file_path.to_string_lossy(),
-            &mut symbols,
-        )?;
+        self.traverse(root, source, &file_path.to_string_lossy(), &ctx, &mut symbols)?;
         Ok(symbols)
     }
 
@@ -399,25 +964,142 @@ impl LanguagePlugin for JavaPlugin {
                 message: "Failed to parse Java source".to_string(),
             })?;
 
+        let root = tree.root_node();
+        let ctx = ExtractCtx::new(root, source);
         let mut relations = Vec::new();
 
-        // Extract method calls, inheritance, and implementations
-        self.extract_calls(tree.root_node(), source, file_path, symbols, &mut relations)?;
-        self.extract_inheritance(tree.root_node(), source, file_path, symbols, &mut relations)?;
+        self.extract_calls(root, source, file_path, symbols, &mut relations)?;
+        self.extract_inheritance(root, source, file_path, symbols, &mut relations)?;
+        self.extract_annotated_with(root, source, file_path, &ctx, &mut relations)?;
+        self.extract_object_creation(root, source, file_path, &ctx, &mut relations)?;
+        self.extract_method_references(root, source, file_path, &ctx, &mut relations)?;
+        self.extract_ctor_chaining(root, source, file_path, &ctx, &mut relations)?;
+        self.extract_import_uses(root, source, file_path, &ctx, &mut relations)?;
 
         Ok(relations)
     }
 
-    fn calculate_complexity(
-        &self,
-        _symbol: &Symbol,
-        _source: &[u8],
-    ) -> Result<Option<ComplexityMetrics>> {
-        Ok(None)
+    fn calculate_complexity(&self, symbol: &Symbol, source: &[u8]) -> Result<Option<ComplexityMetrics>> {
+        if symbol.symbol_type != SymbolType::Function {
+            return Ok(None);
+        }
+
+        let mut parser = Parser::new();
+        parser
+            .set_language(&tree_sitter_java::LANGUAGE.into())
+            .map_err(|e| Error::PluginError(format!("Failed to set Java grammar: {e}")))?;
+
+        let Some(tree) = parser.parse(source, None) else {
+            return Ok(None);
+        };
+        let root = tree.root_node();
+        let target_row = symbol.location.start_line.saturating_sub(1);
+
+        fn find_at_row(node: Node, row: usize) -> Option<Node> {
+            if matches!(
+                node.kind(),
+                "method_declaration"
+                    | "constructor_declaration"
+                    | "compact_constructor_declaration"
+                    | "static_initializer"
+            ) && node.start_position().row == row
+            {
+                return Some(node);
+            }
+            let mut cursor = node.walk();
+            for child in node.children(&mut cursor) {
+                if let Some(found) = find_at_row(child, row) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+
+        let Some(func_node) = find_at_row(root, target_row) else {
+            return Ok(None);
+        };
+
+        Ok(Some(ComplexityMetrics {
+            cyclomatic: self.java_cyclomatic(func_node),
+            cognitive: self.java_cognitive(func_node),
+            loc: ComplexityCalculator::loc(func_node),
+            parameters: symbol.parameters.len(),
+            nesting_depth: ComplexityCalculator::nesting_depth(func_node, NESTING_CONTAINER_KINDS),
+            returns: ComplexityCalculator::return_count(func_node, "return_statement"),
+        }))
     }
 }
 
 impl JavaPlugin {
+    /// Cyclomatic complexity: decision points (if/while/for/do/catch, `&&`,
+    /// `||`, `case` labels) + 1.
+    fn java_cyclomatic(&self, node: Node) -> usize {
+        let mut complexity = 1;
+
+        fn walk(node: Node, complexity: &mut usize) {
+            match node.kind() {
+                k if BRANCH_KINDS.contains(&k) => *complexity += 1,
+                "binary_expression" => {
+                    if let Some(op) = node.child_by_field_name("operator") {
+                        if matches!(op.kind(), "&&" | "||") {
+                            *complexity += 1;
+                        }
+                    }
+                }
+                "switch_label" => {
+                    let mut cursor = node.walk();
+                    if node.children(&mut cursor).next().is_some() {
+                        // Has an expression/pattern child => a `case`, not `default`.
+                        *complexity += 1;
+                    }
+                }
+                _ => {}
+            }
+            let mut cursor = node.walk();
+            for child in node.children(&mut cursor) {
+                walk(child, complexity);
+            }
+        }
+
+        walk(node, &mut complexity);
+        complexity
+    }
+
+    /// Cognitive complexity: like cyclomatic but weighted by nesting depth.
+    fn java_cognitive(&self, node: Node) -> usize {
+        let mut cognitive = 0;
+
+        fn walk(node: Node, cognitive: &mut usize, nesting: usize) {
+            let next_nesting = match node.kind() {
+                "if_statement" | "while_statement" | "for_statement" | "enhanced_for_statement"
+                | "do_statement" => {
+                    *cognitive += 1 + nesting;
+                    nesting + 1
+                }
+                "catch_clause" => {
+                    *cognitive += 1 + nesting;
+                    nesting
+                }
+                "binary_expression" => {
+                    if let Some(op) = node.child_by_field_name("operator") {
+                        if matches!(op.kind(), "&&" | "||") {
+                            *cognitive += 1;
+                        }
+                    }
+                    nesting
+                }
+                _ => nesting,
+            };
+            let mut cursor = node.walk();
+            for child in node.children(&mut cursor) {
+                walk(child, cognitive, next_nesting);
+            }
+        }
+
+        walk(node, &mut cognitive, 0);
+        cognitive
+    }
+
     /// Extract method call relationships
     fn extract_calls(
         &self,
@@ -486,7 +1168,9 @@ impl JavaPlugin {
         Ok(())
     }
 
-    /// Extract inheritance relationships (implements and extends)
+    /// Extract inheritance relationships: `extends`/`implements` (classes),
+    /// `extends` (interfaces, via `extends_interfaces`), and `permits`
+    /// (sealed classes/interfaces).
     fn extract_inheritance(
         &self,
         node: Node,
@@ -588,6 +1272,55 @@ impl JavaPlugin {
                     }
                 }
             }
+
+            self.extract_permits_from(node, &class_name, source, file_path, relations)?;
+        }
+
+        // Handle interface declarations: `extends_interfaces` (child, not
+        // field) wraps a `type_list`, and `permits` for sealed interfaces.
+        if node.kind() == "interface_declaration" {
+            let iface_name = self.find_class_name(node, source)?;
+
+            let mut icursor = node.walk();
+            if let Some(ext) = node
+                .children(&mut icursor)
+                .find(|c| c.kind() == "extends_interfaces")
+            {
+                let mut ecursor = ext.walk();
+                let type_list_node = ext.children(&mut ecursor).find(|c| c.kind() == "type_list");
+                if let Some(type_list) = type_list_node {
+                    let mut tcursor = type_list.walk();
+                    for t in type_list.children(&mut tcursor) {
+                        if matches!(
+                            t.kind(),
+                            "type_identifier" | "generic_type" | "scoped_type_identifier"
+                        ) {
+                            if let Ok(raw) = t.utf8_text(source) {
+                                let name = raw.split('<').next().unwrap_or(raw).to_string();
+                                if !name.is_empty() {
+                                    relations.push(Relation {
+                                        from: iface_name.clone(),
+                                        to: name,
+                                        relation_type: RelationType::Extends,
+                                        location: SourceLocation {
+                                            file: file_path.to_string_lossy().to_string(),
+                                            start_line: t.start_position().row + 1,
+                                            end_line: t.end_position().row + 1,
+                                            start_column: t.start_position().column,
+                                            end_column: t.end_position().column,
+                                        },
+                                        metadata: serde_json::json!({ "language": "java" }),
+                                        to_qualified_hint: None,
+                                        to_type_hint: None,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            self.extract_permits_from(node, &iface_name, source, file_path, relations)?;
         }
 
         // Recurse into children
@@ -598,21 +1331,322 @@ impl JavaPlugin {
         Ok(())
     }
 
-    /// Find the name of the class containing a given node
-    fn find_containing_class_name(&self, node: Node, source: &[u8]) -> Option<String> {
-        let mut current = node;
-        while let Some(parent) = current.parent() {
-            if parent.kind() == "class_declaration" || parent.kind() == "interface_declaration" {
-                let mut cursor = parent.walk();
-                for child in parent.children(&mut cursor) {
-                    if child.kind() == "identifier" {
-                        return child.utf8_text(source).ok().map(|s| s.to_string());
+    /// Emit `Permits` relations for a sealed class/interface's `permits`
+    /// clause (present as an optional `permits` field on both node kinds).
+    fn extract_permits_from(
+        &self,
+        node: Node,
+        owner_name: &str,
+        source: &[u8],
+        file_path: &Path,
+        relations: &mut Vec<Relation>,
+    ) -> Result<()> {
+        let Some(permits) = node.child_by_field_name("permits") else {
+            return Ok(());
+        };
+        let mut pcursor = permits.walk();
+        let Some(type_list) = permits.children(&mut pcursor).find(|c| c.kind() == "type_list") else {
+            return Ok(());
+        };
+        let mut tcursor = type_list.walk();
+        for t in type_list.children(&mut tcursor) {
+            if matches!(
+                t.kind(),
+                "type_identifier" | "generic_type" | "scoped_type_identifier"
+            ) {
+                if let Ok(raw) = t.utf8_text(source) {
+                    let name = raw.split('<').next().unwrap_or(raw).to_string();
+                    if !name.is_empty() {
+                        relations.push(Relation {
+                            from: owner_name.to_string(),
+                            to: name,
+                            relation_type: RelationType::Permits,
+                            location: SourceLocation {
+                                file: file_path.to_string_lossy().to_string(),
+                                start_line: t.start_position().row + 1,
+                                end_line: t.end_position().row + 1,
+                                start_column: t.start_position().column,
+                                end_column: t.end_position().column,
+                            },
+                            metadata: serde_json::json!({ "language": "java" }),
+                            to_qualified_hint: None,
+                            to_type_hint: None,
+                        });
                     }
                 }
             }
-            current = parent;
         }
-        None
+        Ok(())
+    }
+
+    /// Walk annotation usage sites (types, methods, constructors, fields,
+    /// parameters) and emit `AnnotatedWith` relations. Argument list text is
+    /// preserved in relation metadata when present.
+    fn extract_annotated_with(
+        &self,
+        node: Node,
+        source: &[u8],
+        file_path: &Path,
+        ctx: &ExtractCtx,
+        relations: &mut Vec<Relation>,
+    ) -> Result<()> {
+        let from = match node.kind() {
+            "class_declaration" | "interface_declaration" | "enum_declaration"
+            | "record_declaration" | "annotation_type_declaration" => {
+                Some(self.type_node_qualified_name(node, source, ctx))
+            }
+            "method_declaration" => node
+                .child_by_field_name("name")
+                .and_then(|n| n.utf8_text(source).ok())
+                .map(str::to_string)
+                .map(|name| {
+                    self.method_qualified_name(node, &name, source, ctx)
+                        .unwrap_or(name)
+                }),
+            "constructor_declaration" | "compact_constructor_declaration" => self
+                .find_containing_type_name(node, source, ctx)
+                .map(|owner| format!("{}.<init>", ctx.qualify_type(&owner))),
+            "field_declaration" => {
+                let owner = self
+                    .find_containing_type_name(node, source, ctx)
+                    .map(|o| ctx.qualify_type(&o));
+                let mut c = node.walk();
+                let field_name = node
+                    .children(&mut c)
+                    .find(|n| n.kind() == "variable_declarator")
+                    .and_then(|vd| vd.child_by_field_name("name"))
+                    .and_then(|n| n.utf8_text(source).ok())
+                    .map(str::to_string);
+                match (owner, field_name) {
+                    (Some(o), Some(f)) => Some(format!("{o}.{f}")),
+                    (None, Some(f)) => Some(f),
+                    _ => None,
+                }
+            }
+            "formal_parameter" => {
+                let param_name = node
+                    .child_by_field_name("name")
+                    .and_then(|n| n.utf8_text(source).ok())
+                    .map(str::to_string);
+                let containing = self.find_containing_callable_qn(node, source, ctx);
+                match (containing, param_name) {
+                    (Some(c), Some(p)) => Some(format!("{c}({p})")),
+                    _ => None,
+                }
+            }
+            _ => None,
+        };
+
+        if let Some(from) = from {
+            let mut cursor = node.walk();
+            let modifiers_node = node.children(&mut cursor).find(|c| c.kind() == "modifiers");
+            if let Some(modifiers_node) = modifiers_node {
+                let (_, annotations) = self.split_modifiers(modifiers_node, source);
+                for ann in annotations {
+                    self.push_annotated_with(&from, ann, source, file_path, relations);
+                }
+            }
+        }
+
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            self.extract_annotated_with(child, source, file_path, ctx, relations)?;
+        }
+        Ok(())
+    }
+
+    /// `new Type(...)` → `Instantiates` from the enclosing callable to the
+    /// created type.
+    fn extract_object_creation(
+        &self,
+        node: Node,
+        source: &[u8],
+        file_path: &Path,
+        ctx: &ExtractCtx,
+        relations: &mut Vec<Relation>,
+    ) -> Result<()> {
+        if node.kind() == "object_creation_expression" {
+            if let Some(from) = self.find_containing_callable_qn(node, source, ctx) {
+                if let Some(type_node) = node.child_by_field_name("type") {
+                    if let Ok(raw) = type_node.utf8_text(source) {
+                        let simple = raw.split('<').next().unwrap_or(raw).trim();
+                        let last_segment = simple.rsplit('.').next().unwrap_or(simple);
+                        if !last_segment.is_empty() {
+                            relations.push(Relation {
+                                from,
+                                to: last_segment.to_string(),
+                                relation_type: RelationType::Instantiates,
+                                location: source_location(node, &file_path.to_string_lossy()),
+                                metadata: serde_json::json!({ "language": "java" }),
+                                to_qualified_hint: if simple.contains('.') {
+                                    Some(simple.to_string())
+                                } else {
+                                    None
+                                },
+                                to_type_hint: None,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            self.extract_object_creation(child, source, file_path, ctx, relations)?;
+        }
+        Ok(())
+    }
+
+    /// `Type::method` / `obj::method` / `Type::new` → best-effort `Calls`.
+    fn extract_method_references(
+        &self,
+        node: Node,
+        source: &[u8],
+        file_path: &Path,
+        ctx: &ExtractCtx,
+        relations: &mut Vec<Relation>,
+    ) -> Result<()> {
+        if node.kind() == "method_reference" {
+            if let Some(from) = self.find_containing_callable_qn(node, source, ctx) {
+                let mut cursor = node.walk();
+                let children: Vec<Node> = node.children(&mut cursor).collect();
+                if let (Some(first), Some(last)) = (children.first(), children.last()) {
+                    let owner = first.utf8_text(source).ok().map(str::to_string);
+                    let method_name = if last.kind() == "new" {
+                        "<init>".to_string()
+                    } else if last.kind() == "identifier" {
+                        last.utf8_text(source).unwrap_or("").to_string()
+                    } else {
+                        String::new()
+                    };
+                    if !method_name.is_empty() {
+                        let to_qualified_hint = owner.as_ref().map(|o| format!("{o}.{method_name}"));
+                        relations.push(Relation {
+                            from,
+                            to: method_name,
+                            relation_type: RelationType::Calls,
+                            location: source_location(node, &file_path.to_string_lossy()),
+                            metadata: serde_json::json!({ "language": "java", "method_reference": true }),
+                            to_qualified_hint,
+                            to_type_hint: owner,
+                        });
+                    }
+                }
+            }
+        }
+
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            self.extract_method_references(child, source, file_path, ctx, relations)?;
+        }
+        Ok(())
+    }
+
+    /// `this(...)` / `super(...)` explicit constructor invocation → `Calls`
+    /// toward a `<init>` hint.
+    fn extract_ctor_chaining(
+        &self,
+        node: Node,
+        source: &[u8],
+        file_path: &Path,
+        ctx: &ExtractCtx,
+        relations: &mut Vec<Relation>,
+    ) -> Result<()> {
+        if node.kind() == "explicit_constructor_invocation" {
+            if let Some(ctor_field) = node.child_by_field_name("constructor") {
+                if let Some(from) = self.find_containing_callable_qn(node, source, ctx) {
+                    let to = if ctor_field.kind() == "super" {
+                        let super_name = self
+                            .find_enclosing_type_node(node)
+                            .and_then(|t| t.child_by_field_name("superclass"))
+                            .and_then(|sc| {
+                                let mut c = sc.walk();
+                                let found = sc.children(&mut c).find(|n| {
+                                    matches!(
+                                        n.kind(),
+                                        "type_identifier" | "generic_type" | "scoped_type_identifier"
+                                    )
+                                });
+                                found
+                            })
+                            .and_then(|n| n.utf8_text(source).ok())
+                            .map(|s| s.split('<').next().unwrap_or(s).to_string())
+                            .unwrap_or_else(|| "super".to_string());
+                        format!("{super_name}.<init>")
+                    } else {
+                        let owner = self
+                            .find_enclosing_type_node(node)
+                            .and_then(|t| t.child_by_field_name("name"))
+                            .and_then(|n| n.utf8_text(source).ok())
+                            .unwrap_or("")
+                            .to_string();
+                        format!("{owner}.<init>")
+                    };
+
+                    relations.push(Relation {
+                        from,
+                        to,
+                        relation_type: RelationType::Calls,
+                        location: source_location(node, &file_path.to_string_lossy()),
+                        metadata: serde_json::json!({
+                            "language": "java",
+                            "ctor_chain": ctor_field.kind(),
+                        }),
+                        to_qualified_hint: None,
+                        to_type_hint: None,
+                    });
+                }
+            }
+        }
+
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            self.extract_ctor_chaining(child, source, file_path, ctx, relations)?;
+        }
+        Ok(())
+    }
+
+    /// `import a.b.C;` → `Uses` from the file's package/module owner (or the
+    /// file path itself when no package is declared) to the imported name.
+    fn extract_import_uses(
+        &self,
+        node: Node,
+        source: &[u8],
+        file_path: &Path,
+        ctx: &ExtractCtx,
+        relations: &mut Vec<Relation>,
+    ) -> Result<()> {
+        if node.kind() == "import_declaration" {
+            let mut cursor = node.walk();
+            let name_node = node
+                .children(&mut cursor)
+                .find(|c| c.kind() == "identifier" || c.kind() == "scoped_identifier");
+            if let Some(name_node) = name_node {
+                if let Ok(fqn) = name_node.utf8_text(source) {
+                    let simple = fqn.rsplit('.').next().unwrap_or(fqn).to_string();
+                    let owner = ctx
+                        .package
+                        .clone()
+                        .unwrap_or_else(|| file_path.to_string_lossy().to_string());
+                    relations.push(Relation {
+                        from: owner,
+                        to: simple,
+                        relation_type: RelationType::Uses,
+                        location: source_location(node, &file_path.to_string_lossy()),
+                        metadata: serde_json::json!({ "language": "java", "fqn": fqn }),
+                        to_qualified_hint: Some(fqn.to_string()),
+                        to_type_hint: None,
+                    });
+                }
+            }
+        }
+
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            self.extract_import_uses(child, source, file_path, ctx, relations)?;
+        }
+        Ok(())
     }
 
     /// Find the fully qualified name of the method containing a given node
@@ -859,6 +1893,23 @@ mod tests {
     use super::*;
     use std::path::Path;
 
+    fn symbols_of(source: &[u8], file: &str) -> Vec<Symbol> {
+        let plugin = JavaPlugin::new().unwrap();
+        plugin.extract_symbols(Path::new(file), source).unwrap()
+    }
+
+    fn relations_of(source: &[u8], file: &str) -> Vec<Relation> {
+        let plugin = JavaPlugin::new().unwrap();
+        let symbols = plugin.extract_symbols(Path::new(file), source).unwrap();
+        plugin
+            .extract_relations(Path::new(file), source, &symbols)
+            .unwrap()
+    }
+
+    // ---------------------------------------------------------------
+    // Existing behavior (must keep passing)
+    // ---------------------------------------------------------------
+
     #[test]
     fn test_extract_java_class_and_method() {
         let source = br#"
@@ -868,10 +1919,7 @@ public class UserService {
     }
 }
 "#;
-        let plugin = JavaPlugin::new().unwrap();
-        let symbols = plugin
-            .extract_symbols(Path::new("UserService.java"), source)
-            .unwrap();
+        let symbols = symbols_of(source, "UserService.java");
         assert!(symbols.iter().any(|s| s.name == "UserService"));
         assert!(symbols.iter().any(|s| s.name == "authenticate"));
         let auth = symbols.iter().find(|s| s.name == "authenticate").unwrap();
@@ -897,10 +1945,7 @@ public class OrderDTO {
     }
 }
 "#;
-        let plugin = JavaPlugin::new().unwrap();
-        let symbols = plugin
-            .extract_symbols(Path::new("OrderDTO.java"), source)
-            .unwrap();
+        let symbols = symbols_of(source, "OrderDTO.java");
         let class = symbols
             .iter()
             .find(|s| s.name == "OrderDTO" && s.symbol_type == SymbolType::Class)
@@ -931,19 +1976,7 @@ public class Example {
     public void bar() {}
 }
 "#;
-        let plugin = JavaPlugin::new().unwrap();
-        let symbols = plugin
-            .extract_symbols(Path::new("Example.java"), source)
-            .unwrap();
-        let relations = plugin
-            .extract_relations(Path::new("Example.java"), source, &symbols)
-            .unwrap();
-
-        println!("Extracted {} relations", relations.len());
-        for rel in &relations {
-            println!("  {:?}: {} -> {}", rel.relation_type, rel.from, rel.to);
-        }
-
+        let relations = relations_of(source, "Example.java");
         assert!(
             !relations.is_empty(),
             "Should extract at least one relation"
@@ -959,23 +1992,7 @@ public class Example {
     #[test]
     fn test_extract_relations_implements() {
         let source = br#"public class ServiceImpl implements Service {}"#;
-        let plugin = JavaPlugin::new().unwrap();
-        let symbols = plugin
-            .extract_symbols(Path::new("Service.java"), source)
-            .unwrap();
-        let relations = plugin
-            .extract_relations(Path::new("Service.java"), source, &symbols)
-            .unwrap();
-
-        println!("Extracted {} relations", relations.len());
-        for rel in &relations {
-            println!("  {:?}: {} -> {}", rel.relation_type, rel.from, rel.to);
-        }
-
-        assert!(
-            !relations.is_empty(),
-            "Should extract at least one relation"
-        );
+        let relations = relations_of(source, "Service.java");
         assert!(
             relations
                 .iter()
@@ -987,28 +2004,456 @@ public class Example {
     #[test]
     fn test_extract_relations_extends() {
         let source = br#"public class DerivedClass extends BaseClass {}"#;
-        let plugin = JavaPlugin::new().unwrap();
-        let symbols = plugin
-            .extract_symbols(Path::new("Base.java"), source)
-            .unwrap();
-        let relations = plugin
-            .extract_relations(Path::new("Base.java"), source, &symbols)
-            .unwrap();
-
-        println!("Extracted {} relations", relations.len());
-        for rel in &relations {
-            println!("  {:?}: {} -> {}", rel.relation_type, rel.from, rel.to);
-        }
-
-        assert!(
-            !relations.is_empty(),
-            "Should extract at least one relation"
-        );
+        let relations = relations_of(source, "Base.java");
         assert!(
             relations
                 .iter()
                 .any(|r| matches!(r.relation_type, RelationType::Extends)),
             "Should extract an Extends relation"
         );
+    }
+
+    // ---------------------------------------------------------------
+    // 1. @interface -> Annotation
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_annotation_type_declaration() {
+        let source = br#"
+public @interface AddOnStartup {
+    String description() default "";
+}
+"#;
+        let symbols = symbols_of(source, "AddOnStartup.java");
+        let ann = symbols
+            .iter()
+            .find(|s| s.name == "AddOnStartup")
+            .expect("annotation symbol");
+        assert_eq!(ann.symbol_type, SymbolType::Annotation);
+    }
+
+    // ---------------------------------------------------------------
+    // 2. Method @Override + @RequestMapping(path="/x") -> AnnotatedWith x2
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_method_annotations_and_modifiers() {
+        let source = br#"
+public class Controller {
+    @Override
+    @RequestMapping(path = "/x")
+    public void handle() {}
+}
+"#;
+        let symbols = symbols_of(source, "Controller.java");
+        let method = symbols.iter().find(|s| s.name == "handle").expect("method");
+        assert!(method.modifiers.iter().any(|m| m == "public"));
+        assert!(!method.modifiers.iter().any(|m| m.contains('@')));
+
+        let relations = relations_of(source, "Controller.java");
+        let annotated: Vec<_> = relations
+            .iter()
+            .filter(|r| matches!(r.relation_type, RelationType::AnnotatedWith))
+            .collect();
+        assert_eq!(annotated.len(), 2, "expected two AnnotatedWith relations");
+        assert!(annotated.iter().any(|r| r.to == "Override"));
+        let req_mapping = annotated
+            .iter()
+            .find(|r| r.to == "RequestMapping")
+            .expect("RequestMapping annotation relation");
+        let args = req_mapping
+            .metadata
+            .get("arguments")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        assert!(args.contains("path"));
+    }
+
+    // ---------------------------------------------------------------
+    // 3. Field @AddOnStartup -> AnnotatedWith
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_field_annotation() {
+        let source = br#"
+public class Service {
+    @AddOnStartup(description = "x")
+    private String name;
+}
+"#;
+        let relations = relations_of(source, "Service.java");
+        assert!(
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::AnnotatedWith)
+                    && r.to == "AddOnStartup"),
+            "expected AnnotatedWith relation to AddOnStartup"
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // 4. Record + compact ctor + method
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_record_with_compact_constructor_and_method() {
+        let source = br#"
+public record Point(int x, int y) {
+    public Point {
+        if (x < 0) throw new IllegalArgumentException();
+    }
+    public int sum() {
+        return x + y;
+    }
+}
+"#;
+        let symbols = symbols_of(source, "Point.java");
+        let record = symbols
+            .iter()
+            .find(|s| s.name == "Point" && s.symbol_type == SymbolType::Class)
+            .expect("record class symbol");
+        assert_eq!(
+            record.metadata.get("is_record").and_then(|v| v.as_bool()),
+            Some(true)
+        );
+        assert!(record.fields.iter().any(|f| f.name == "x"));
+        assert!(record.fields.iter().any(|f| f.name == "y"));
+
+        let ctor = symbols
+            .iter()
+            .find(|s| {
+                s.metadata
+                    .get("is_constructor")
+                    .and_then(|v| v.as_bool())
+                    == Some(true)
+            })
+            .expect("compact constructor");
+        assert_eq!(ctor.qualified_name.as_deref(), Some("Point.<init>"));
+
+        let sum = symbols.iter().find(|s| s.name == "sum").expect("sum method");
+        assert_eq!(sum.qualified_name.as_deref(), Some("Point.sum"));
+    }
+
+    // ---------------------------------------------------------------
+    // 5. Enum constants as fields + method
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_enum_constants_and_method() {
+        let source = br#"
+public enum Color {
+    RED, GREEN;
+    public String lower() {
+        return name();
+    }
+}
+"#;
+        let symbols = symbols_of(source, "Color.java");
+        let color = symbols
+            .iter()
+            .find(|s| s.name == "Color" && s.symbol_type == SymbolType::Enum)
+            .expect("enum symbol");
+        assert!(color.fields.iter().any(|f| f.name == "RED"));
+        assert!(color.fields.iter().any(|f| f.name == "GREEN"));
+        assert!(symbols.iter().any(|s| s.name == "lower"));
+    }
+
+    // ---------------------------------------------------------------
+    // 6. package -> Module (java_kind package); class QN includes package
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_package_declaration_and_qualified_class_name() {
+        let source = br#"
+package com.example.app;
+
+public class Foo {}
+"#;
+        let symbols = symbols_of(source, "Foo.java");
+        let module = symbols
+            .iter()
+            .find(|s| s.symbol_type == SymbolType::Module && s.name == "com.example.app")
+            .expect("package module symbol");
+        assert_eq!(
+            module.metadata.get("java_kind").and_then(|v| v.as_str()),
+            Some("package")
+        );
+
+        let foo = symbols
+            .iter()
+            .find(|s| s.name == "Foo" && s.symbol_type == SymbolType::Class)
+            .expect("Foo class");
+        assert_eq!(foo.qualified_name.as_deref(), Some("com.example.app.Foo"));
+    }
+
+    // ---------------------------------------------------------------
+    // 7. module-info requires/exports
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_module_declaration() {
+        let source = br#"
+module com.example.app {
+    requires java.base;
+    exports com.example.app;
+}
+"#;
+        let symbols = symbols_of(source, "module-info.java");
+        let module = symbols
+            .iter()
+            .find(|s| s.symbol_type == SymbolType::Module && s.name == "com.example.app")
+            .expect("jpms module symbol");
+        assert_eq!(
+            module.metadata.get("java_kind").and_then(|v| v.as_str()),
+            Some("jpms")
+        );
+        let requires: Vec<&str> = module
+            .metadata
+            .get("requires")
+            .and_then(|v| v.as_array())
+            .map(|a| a.iter().filter_map(|x| x.as_str()).collect())
+            .unwrap_or_default();
+        assert!(requires.contains(&"java.base"));
+        let exports: Vec<&str> = module
+            .metadata
+            .get("exports")
+            .and_then(|v| v.as_array())
+            .map(|a| a.iter().filter_map(|x| x.as_str()).collect())
+            .unwrap_or_default();
+        assert!(exports.contains(&"com.example.app"));
+    }
+
+    // ---------------------------------------------------------------
+    // 8. sealed permits edges
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_sealed_permits() {
+        let source = br#"
+public sealed class Shape permits Circle, Square {}
+final class Circle extends Shape {}
+final class Square extends Shape {}
+"#;
+        let relations = relations_of(source, "Shape.java");
+        let permits: Vec<_> = relations
+            .iter()
+            .filter(|r| matches!(r.relation_type, RelationType::Permits))
+            .collect();
+        assert!(permits.iter().any(|r| r.from == "Shape" && r.to == "Circle"));
+        assert!(permits.iter().any(|r| r.from == "Shape" && r.to == "Square"));
+
+        // Subclass Extends relations still exist.
+        assert!(relations.iter().any(|r| matches!(r.relation_type, RelationType::Extends)
+            && r.from == "Circle"
+            && r.to == "Shape"));
+    }
+
+    // ---------------------------------------------------------------
+    // 9. interface extends B, C
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_interface_extends_multiple() {
+        let source = br#"
+public interface B {}
+public interface C {}
+public interface A extends B, C {}
+"#;
+        let relations = relations_of(source, "A.java");
+        let extends: Vec<_> = relations
+            .iter()
+            .filter(|r| matches!(r.relation_type, RelationType::Extends) && r.from == "A")
+            .collect();
+        assert!(extends.iter().any(|r| r.to == "B"));
+        assert!(extends.iter().any(|r| r.to == "C"));
+    }
+
+    // ---------------------------------------------------------------
+    // 10. new ArrayList -> Instantiates
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_object_creation_instantiates() {
+        let source = br#"
+import java.util.ArrayList;
+
+public class Factory {
+    public void make() {
+        new ArrayList<String>();
+    }
+}
+"#;
+        let relations = relations_of(source, "Factory.java");
+        assert!(
+            relations.iter().any(|r| matches!(r.relation_type, RelationType::Instantiates)
+                && r.to == "ArrayList"),
+            "expected Instantiates relation to ArrayList"
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // 11. String::length -> Calls
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_method_reference_calls() {
+        let source = br#"
+import java.util.function.ToIntFunction;
+
+public class Lengths {
+    public void run() {
+        ToIntFunction<String> f = String::length;
+    }
+}
+"#;
+        let relations = relations_of(source, "Lengths.java");
+        let call = relations
+            .iter()
+            .find(|r| matches!(r.relation_type, RelationType::Calls) && r.to == "length")
+            .expect("expected Calls relation for method reference");
+        assert_eq!(call.to_type_hint.as_deref(), Some("String"));
+    }
+
+    // ---------------------------------------------------------------
+    // 12. Child(){ super(1); } -> Calls-like relation
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_explicit_super_constructor_invocation() {
+        let source = br#"
+public class Base {
+    public Base(int x) {}
+}
+public class Child extends Base {
+    public Child() {
+        super(1);
+    }
+}
+"#;
+        let relations = relations_of(source, "Child.java");
+        assert!(
+            relations.iter().any(|r| matches!(r.relation_type, RelationType::Calls)
+                && r.from == "Child.<init>"
+                && r.to.contains("<init>")),
+            "expected ctor-chaining Calls relation from Child.<init>"
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // 13. import Uses
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_import_uses_relation() {
+        let source = br#"
+import java.util.List;
+
+public class Repo {}
+"#;
+        let symbols = symbols_of(source, "Repo.java");
+        assert!(symbols.iter().any(|s| s.symbol_type == SymbolType::Import));
+
+        let relations = relations_of(source, "Repo.java");
+        let uses = relations
+            .iter()
+            .find(|r| matches!(r.relation_type, RelationType::Uses))
+            .expect("expected a Uses relation for the import");
+        assert_eq!(uses.to, "List");
+        assert_eq!(uses.to_qualified_hint.as_deref(), Some("java.util.List"));
+    }
+
+    // ---------------------------------------------------------------
+    // 14. varargs
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_varargs_parameter() {
+        let source = br#"
+public class Logger {
+    public void log(String... args) {}
+}
+"#;
+        let symbols = symbols_of(source, "Logger.java");
+        let method = symbols.iter().find(|s| s.name == "log").expect("method");
+        assert_eq!(method.parameters.len(), 1);
+        assert_eq!(method.parameters[0].name, "args");
+        assert!(method.parameters[0]
+            .param_type
+            .as_deref()
+            .unwrap_or("")
+            .contains("String"));
+    }
+
+    // ---------------------------------------------------------------
+    // 15. nested Outer.Inner.i QN
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_nested_class_qualified_name() {
+        let source = br#"
+class Outer {
+    class Inner {
+        void i() {}
+    }
+}
+"#;
+        let symbols = symbols_of(source, "Outer.java");
+        let method = symbols.iter().find(|s| s.name == "i").expect("method i");
+        assert_eq!(method.qualified_name.as_deref(), Some("Outer.Inner.i"));
+    }
+
+    // ---------------------------------------------------------------
+    // 16. anonymous Runnable run NOT Outer.run
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_anonymous_class_method_qn_honesty() {
+        let source = br#"
+class Outer {
+    void m() {
+        Runnable r = new Runnable() {
+            public void run() {}
+        };
+    }
+}
+"#;
+        let symbols = symbols_of(source, "Outer.java");
+        let run = symbols.iter().find(|s| s.name == "run").expect("run method");
+        assert_ne!(run.qualified_name.as_deref(), Some("Outer.run"));
+        assert!(run
+            .qualified_name
+            .as_deref()
+            .unwrap_or("")
+            .starts_with("Outer.$Anonymous"));
+    }
+
+    // ---------------------------------------------------------------
+    // 17. complexity > 1 for if/else method
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_calculate_complexity_branching_method() {
+        let source = br#"
+public class Checker {
+    public int check(int x) {
+        if (x > 0) {
+            return 1;
+        } else {
+            return -1;
+        }
+    }
+}
+"#;
+        let plugin = JavaPlugin::new().unwrap();
+        let symbols = plugin
+            .extract_symbols(Path::new("Checker.java"), source)
+            .unwrap();
+        let method = symbols.iter().find(|s| s.name == "check").unwrap();
+        let metrics = plugin
+            .calculate_complexity(method, source)
+            .unwrap()
+            .expect("complexity metrics");
+        assert!(metrics.cyclomatic > 1, "expected cyclomatic > 1");
+        assert!(metrics.loc > 0, "expected loc > 0");
     }
 }

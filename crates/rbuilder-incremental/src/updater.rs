@@ -550,6 +550,8 @@ fn relation_type_to_edge(relation_type: rbuilder_plugin_api::RelationType) -> Ed
         RelationType::Uses => EdgeType::Uses,
         RelationType::Implements => EdgeType::Implements,
         RelationType::Extends => EdgeType::Extends,
+        RelationType::AnnotatedWith => EdgeType::AnnotatedWith,
+        RelationType::Permits => EdgeType::Permits,
         RelationType::Defines => EdgeType::Contains,
         RelationType::References => EdgeType::References,
         RelationType::Instantiates => EdgeType::Instantiates,

@@ -126,6 +126,21 @@ impl GraphBuilder {
             if !entry.contains(&node.id) {
                 entry.push(node.id);
             }
+            // Index dotted suffixes so `Marker` resolves `demo.Marker` and
+            // `Foo.bar` resolves `demo.Foo.bar` (Java package-qualified QNs).
+            let parts: Vec<&str> = qualified.split('.').collect();
+            for i in 0..parts.len() {
+                let suffix = parts[i..].join(".");
+                let entry = self.symbols_by_suffix.entry(suffix).or_default();
+                if !entry.contains(&node.id) {
+                    entry.push(node.id);
+                }
+            }
+        } else {
+            let entry = self.symbols_by_suffix.entry(node.name.clone()).or_default();
+            if !entry.contains(&node.id) {
+                entry.push(node.id);
+            }
         }
         let parts: Vec<&str> = key.split("::").collect();
         for i in 1..parts.len() {
@@ -863,6 +878,7 @@ fn symbol_type_to_node_type(symbol_type: SymbolType) -> NodeType {
         SymbolType::Struct => NodeType::Struct,
         SymbolType::Enum => NodeType::Enum,
         SymbolType::Interface => NodeType::Interface,
+        SymbolType::Annotation => NodeType::Annotation,
         SymbolType::Module => NodeType::Module,
         SymbolType::Variable => NodeType::Variable,
         SymbolType::TypeAlias => NodeType::TypeAlias,
@@ -900,6 +916,8 @@ fn relation_type_to_edge_type(relation_type: RelationType) -> EdgeType {
         RelationType::Uses => EdgeType::Uses,
         RelationType::Implements => EdgeType::Implements,
         RelationType::Extends => EdgeType::Extends,
+        RelationType::AnnotatedWith => EdgeType::AnnotatedWith,
+        RelationType::Permits => EdgeType::Permits,
         RelationType::Defines => EdgeType::Contains,
         RelationType::References => EdgeType::References,
         RelationType::Instantiates => EdgeType::Instantiates,
@@ -959,6 +977,79 @@ mod tests {
             documentation: None,
             metadata: serde_json::json!({}),
         }
+    }
+
+    #[test]
+    fn java_annotated_with_resolves_package_qualified_annotation() {
+        let mut builder = GraphBuilder::new();
+        let marker_file = builder.ensure_file_node(Path::new("Marker.java"));
+        let foo_file = builder.ensure_file_node(Path::new("Foo.java"));
+
+        let annotation = Symbol {
+            name: "Marker".to_string(),
+            symbol_type: SymbolType::Annotation,
+            qualified_name: Some("demo.Marker".to_string()),
+            location: SourceLocation {
+                file: "Marker.java".to_string(),
+                start_line: 1,
+                end_line: 1,
+                start_column: 0,
+                end_column: 1,
+            },
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec!["public".into()],
+            documentation: None,
+            metadata: serde_json::json!({ "language": "java" }),
+        };
+        let method = Symbol {
+            name: "bar".to_string(),
+            symbol_type: SymbolType::Function,
+            qualified_name: Some("demo.Foo.bar".to_string()),
+            location: SourceLocation {
+                file: "Foo.java".to_string(),
+                start_line: 3,
+                end_line: 4,
+                start_column: 0,
+                end_column: 1,
+            },
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec!["public".into()],
+            documentation: None,
+            metadata: serde_json::json!({ "language": "java" }),
+        };
+        builder.add_symbol(&annotation, marker_file);
+        builder.add_symbol(&method, foo_file);
+        builder
+            .add_relation(&Relation {
+                from: "demo.Foo.bar".to_string(),
+                to: "Marker".to_string(),
+                relation_type: RelationType::AnnotatedWith,
+                location: SourceLocation {
+                    file: "Foo.java".to_string(),
+                    start_line: 3,
+                    end_line: 3,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "language": "java" }),
+                to_qualified_hint: None,
+                to_type_hint: None,
+            })
+            .unwrap();
+
+        assert!(
+            builder
+                .edges
+                .iter()
+                .any(|e| e.edge_type == EdgeType::AnnotatedWith),
+            "AnnotatedWith edge must resolve Marker via dotted QN suffix index"
+        );
     }
 
     #[test]

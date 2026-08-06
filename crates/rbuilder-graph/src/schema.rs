@@ -24,6 +24,8 @@ pub enum NodeType {
     Enum,
     /// Interface or trait
     Interface,
+    /// Annotation type (e.g. Java `@interface`)
+    Annotation,
     /// Module or namespace
     Module,
     /// Variable or constant
@@ -145,6 +147,10 @@ pub enum EdgeType {
     RequiresResource,
     /// Puppet class or resource uses a fact
     UsesFact,
+    /// Subject is annotated with a type
+    AnnotatedWith,
+    /// Sealed type permits another type
+    Permits,
     /// Unknown or forward-compatible edge type; excluded from call-graph traversals.
     #[serde(other)]
     Unknown,
@@ -521,6 +527,7 @@ mod tests {
             NodeType::Struct,
             NodeType::Enum,
             NodeType::Interface,
+            NodeType::Annotation,
             NodeType::Module,
             NodeType::Variable,
             NodeType::File,
@@ -552,7 +559,7 @@ mod tests {
             NodeType::PuppetVariable,
             NodeType::PuppetFact,
         ];
-        assert_eq!(types.len(), 35);
+        assert_eq!(types.len(), 36);
     }
 
     #[test]
@@ -586,8 +593,20 @@ mod tests {
             EdgeType::InheritsClass,
             EdgeType::RequiresResource,
             EdgeType::UsesFact,
+            EdgeType::AnnotatedWith,
+            EdgeType::Permits,
             EdgeType::Unknown,
         ];
-        assert_eq!(types.len(), 29);
+        assert_eq!(types.len(), 31);
+    }
+
+    #[test]
+    fn annotation_node_and_edge_types_exist() {
+        let node = Node::new(NodeType::Annotation, "AddOnStartup".to_string());
+        assert_eq!(node.node_type, NodeType::Annotation);
+        let edge = Edge::new(Uuid::new_v4(), Uuid::new_v4(), EdgeType::AnnotatedWith);
+        assert_eq!(edge.edge_type, EdgeType::AnnotatedWith);
+        let permits = Edge::new(Uuid::new_v4(), Uuid::new_v4(), EdgeType::Permits);
+        assert_eq!(permits.edge_type, EdgeType::Permits);
     }
 }

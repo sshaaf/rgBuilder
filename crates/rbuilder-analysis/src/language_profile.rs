@@ -44,7 +44,12 @@ const PROFILES: &[LanguageAnalysisProfile] = &[
         id: "java",
         aliases: &[],
         extensions: &["java"],
-        function_kinds: &["method_declaration", "constructor_declaration"],
+        function_kinds: &[
+            "method_declaration",
+            "constructor_declaration",
+            "compact_constructor_declaration",
+            "static_initializer",
+        ],
         cfg_enabled: true,
         taint_enabled: true,
     },

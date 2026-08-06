@@ -117,6 +117,15 @@ fn find_function_by_name<'a>(
     name: &str,
     function_kinds: &[&str],
 ) -> Option<Node<'a>> {
+    // Java instance initializer blocks are bare `block` children of `class_body`,
+    // extracted as synthetic `<initblock>N` functions (not a distinct CST kind).
+    if let Some(idx) = name
+        .strip_prefix("<initblock>")
+        .and_then(|s| s.parse::<usize>().ok())
+    {
+        return find_java_instance_initblock(node, idx);
+    }
+
     if function_kinds.contains(&node.kind()) {
         if let Ok(Some(func_name)) = extract_name_from_node(node, source) {
             if func_name == name {
@@ -127,6 +136,29 @@ fn find_function_by_name<'a>(
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
         if let Some(found) = find_function_by_name(child, source, name, function_kinds) {
+            return Some(found);
+        }
+    }
+    None
+}
+
+/// Nth direct `block` child of a Java `class_body` (instance initializer).
+fn find_java_instance_initblock<'a>(node: Node<'a>, index: usize) -> Option<Node<'a>> {
+    if node.kind() == "class_body" {
+        let mut seen = 0usize;
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if child.kind() == "block" {
+                if seen == index {
+                    return Some(child);
+                }
+                seen += 1;
+            }
+        }
+    }
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        if let Some(found) = find_java_instance_initblock(child, index) {
             return Some(found);
         }
     }
@@ -3104,6 +3136,10 @@ fn is_block_like(kind: &str) -> bool {
 }
 
 fn function_body_node<'a>(func_node: Node<'a>, language: &str) -> Option<Node<'a>> {
+    // Java instance initializer: the function node *is* the block body.
+    if func_node.kind() == "block" {
+        return Some(func_node);
+    }
     if let Some(body) = func_node.child_by_field_name("body") {
         return Some(body);
     }
@@ -6283,6 +6319,63 @@ public class Demo {
                 )
             }),
             "throw must terminate with Exception/Return/Jump edge"
+        );
+    }
+
+    #[test]
+    fn test_java_compact_constructor_cfg() {
+        let code = r#"
+public record Point(int x, int y) {
+    public Point {
+        if (x < 0) throw new IllegalArgumentException();
+    }
+}
+"#;
+        let cfg = build_cfg_for_function("java", code, "Point").unwrap();
+        assert!(
+            java_texts(&cfg)
+                .iter()
+                .any(|t| t.contains("throw") || t.contains("IllegalArgument")),
+            "compact ctor body must appear in CFG: {:?}",
+            java_texts(&cfg)
+        );
+    }
+
+    #[test]
+    fn test_java_static_initializer_cfg() {
+        let code = r#"
+public class C {
+    static {
+        System.out.println("static");
+    }
+}
+"#;
+        let cfg = build_cfg_for_function("java", code, "<clinit>").unwrap();
+        assert!(
+            java_texts(&cfg)
+                .iter()
+                .any(|t| t.contains("println") || t.contains("static")),
+            "static initializer body must appear: {:?}",
+            java_texts(&cfg)
+        );
+    }
+
+    #[test]
+    fn test_java_instance_initializer_cfg() {
+        let code = r#"
+public class C {
+    {
+        System.out.println("instance");
+    }
+}
+"#;
+        let cfg = build_cfg_for_function("java", code, "<initblock>0").unwrap();
+        assert!(
+            java_texts(&cfg)
+                .iter()
+                .any(|t| t.contains("println") || t.contains("instance")),
+            "instance initializer must be CFG-reachable: {:?}",
+            java_texts(&cfg)
         );
     }
 }
