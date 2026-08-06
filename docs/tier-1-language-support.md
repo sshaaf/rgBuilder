@@ -117,12 +117,17 @@ Required for high-quality `cpg mutations` / typed field writes. Reference: Java 
 | Python | `__init__` → `Class.<init>`; harvest `self.x` fields | Annotations when present |
 | C | No language ctors; struct fields + typed params required | Strong on structs |
 
-**Java extract honesty (java-extract-gaps):**
+**Java extract honesty (java-extract-gaps + java-grammar-remainder):**
 
 - Annotation types are `:Annotation` nodes (not `:Interface`). Usages emit `AnnotatedWith`; no classpath/FQN resolution beyond imports/package best-effort.
 - Records are `Class` with `metadata.is_record`; compact ctors and `<clinit>` / `<initblock>N` are CFG entry points.
-- Lambdas are not separate Function symbols; anonymous classes use synthetic `Outer.$AnonymousN` owners.
-- Annotation type element methods (`value()`, etc.) are not emitted as Function nodes in v1.
+- Annotation elements are Functions with `is_annotation_element`; interface `constant_declaration` becomes fields.
+- Generics/`throws` are symbol metadata (`type_params`, `throws`); not TypeParameter nodes.
+- Lambdas are synthetic Functions (`$lambda$N`, `is_lambda`); direct CFG `$lambda$N` lookup is file-global (prefer enclosing-method CFG).
+- Anonymous classes use synthetic `Outer.$AnonymousN` owners.
+- Expression refs: field reads → `References`; array `new` → `Instantiates`; `.class` → `References`. No full points-to.
+- Type-use annotations (`annotated_type`) attach to nearest symbol; locals may attach to the enclosing method.
+- Pattern-matching (`record_pattern` / `type_pattern`) not first-class symbols.
 - No full reflection / retention-policy analysis.
 
 ---
