@@ -597,6 +597,7 @@ impl MemoryBackend {
                         | NodeType::Struct
                         | NodeType::Enum
                         | NodeType::Interface
+                        | NodeType::Annotation
                         | NodeType::Variable
                         | NodeType::TypeAlias
                 ) {

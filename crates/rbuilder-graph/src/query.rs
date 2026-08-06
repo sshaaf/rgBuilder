@@ -274,6 +274,7 @@ fn parse_node_type(value: &str) -> Result<NodeType> {
         "struct" => Ok(NodeType::Struct),
         "enum" => Ok(NodeType::Enum),
         "interface" => Ok(NodeType::Interface),
+        "annotation" => Ok(NodeType::Annotation),
         "module" => Ok(NodeType::Module),
         "variable" => Ok(NodeType::Variable),
         "file" => Ok(NodeType::File),

@@ -68,6 +68,8 @@ pub enum SymbolType {
     Enum,
     /// Interface or trait
     Interface,
+    /// Java annotation type (`@interface`) or language equivalent
+    Annotation,
     /// Module or namespace
     Module,
     /// Variable or constant
@@ -214,6 +216,10 @@ pub enum RelationType {
     Implements,
     /// Extends class/inherits
     Extends,
+    /// Subject is annotated with a type (Java `@Ann`, etc.)
+    AnnotatedWith,
+    /// Sealed type permits another type (Java `permits`)
+    Permits,
     /// Defines (module defines symbol)
     Defines,
     /// References (variable reference)
@@ -694,6 +700,7 @@ mod tests {
             SymbolType::Struct,
             SymbolType::Enum,
             SymbolType::Interface,
+            SymbolType::Annotation,
             SymbolType::Module,
             SymbolType::Variable,
             SymbolType::TypeAlias,
@@ -704,7 +711,7 @@ mod tests {
             SymbolType::Job,
             SymbolType::BuildStep,
         ];
-        assert_eq!(types.len(), 14);
+        assert_eq!(types.len(), 15);
     }
 
     #[test]
@@ -714,13 +721,15 @@ mod tests {
             RelationType::Uses,
             RelationType::Implements,
             RelationType::Extends,
+            RelationType::AnnotatedWith,
+            RelationType::Permits,
             RelationType::Defines,
             RelationType::References,
             RelationType::Instantiates,
             RelationType::Modifies,
             RelationType::DependsOn,
         ];
-        assert_eq!(types.len(), 9);
+        assert_eq!(types.len(), 11);
     }
 
     #[test]

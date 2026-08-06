@@ -1,7 +1,8 @@
 [package]
 name = "rbuilder-languages"
 version = "0.4.2"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
 description = "Built-in Tier 1 language plugins for rBuilder"
 license = "MIT OR Apache-2.0"
 

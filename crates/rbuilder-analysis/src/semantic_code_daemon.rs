@@ -50,7 +50,7 @@ pub fn validate_mrl_dimensions(dimensions: usize) -> Result<()> {
             "code-daemon supports at most {CODE_DAEMON_NATIVE_DIMS} dimensions (MRL); got {dimensions}"
         )));
     }
-    if !dimensions.is_multiple_of(8) {
+    if dimensions % 8 != 0 {
         return Err(Error::ConfigError(
             "code-daemon dimensions must be a multiple of 8 for binary quantization".into(),
         ));

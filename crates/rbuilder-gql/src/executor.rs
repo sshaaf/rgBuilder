@@ -341,6 +341,7 @@ fn resolve_property(
 ) -> Option<String> {
     match key {
         "name" => Some(node.name.clone()),
+        "qualified_name" => node.qualified_name.clone(),
         "type" => {
             if is_virtual_community(node) {
                 Some("Community".into())
@@ -482,6 +483,69 @@ mod tests {
         let query = parse("MATCH (n:Function) WHERE n.name = 'foo' RETURN n LIMIT 10").unwrap();
         let result = QueryExecutor::new(&backend).execute(&query).unwrap();
         assert!(result.rows.is_empty());
+    }
+
+    /// Issue #49: FQN lives on `Node.qualified_name`, not `name` / properties map.
+    #[test]
+    fn test_execute_qualified_name_filter() {
+        let mut backend = MemoryBackend::new();
+        let node = Node::new(NodeType::Class, "Context".to_string())
+            .with_qualified_name("org.openmrs.api.context.Context".to_string());
+        backend.insert_node(node).unwrap();
+
+        let by_simple = parse("MATCH (n:Class) WHERE n.name = 'Context' RETURN n").unwrap();
+        assert_eq!(
+            QueryExecutor::new(&backend).execute(&by_simple).unwrap().rows.len(),
+            1,
+            "simple name should match"
+        );
+
+        let by_fqn_on_name = parse(
+            "MATCH (n:Class) WHERE n.name = 'org.openmrs.api.context.Context' RETURN n",
+        )
+        .unwrap();
+        assert!(
+            QueryExecutor::new(&backend)
+                .execute(&by_fqn_on_name)
+                .unwrap()
+                .rows
+                .is_empty(),
+            "FQN must not match n.name"
+        );
+
+        let by_qn = parse(
+            "MATCH (n:Class) WHERE n.qualified_name = 'org.openmrs.api.context.Context' RETURN n",
+        )
+        .unwrap();
+        assert_eq!(
+            QueryExecutor::new(&backend).execute(&by_qn).unwrap().rows.len(),
+            1,
+            "WHERE n.qualified_name should resolve Node.qualified_name"
+        );
+
+        let by_like = parse(
+            "MATCH (n:Class) WHERE n.qualified_name LIKE 'org.openmrs.api.context.*' RETURN n",
+        )
+        .unwrap();
+        assert_eq!(
+            QueryExecutor::new(&backend).execute(&by_like).unwrap().rows.len(),
+            1,
+            "LIKE on qualified_name should work"
+        );
+
+        let by_inline = parse(
+            "MATCH (n:Class {qualified_name: 'org.openmrs.api.context.Context'}) RETURN n",
+        )
+        .unwrap();
+        assert_eq!(
+            QueryExecutor::new(&backend)
+                .execute(&by_inline)
+                .unwrap()
+                .rows
+                .len(),
+            1,
+            "inline property matcher should use qualified_name"
+        );
     }
 
     #[test]

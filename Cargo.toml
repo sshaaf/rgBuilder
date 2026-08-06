@@ -35,6 +35,10 @@ members = [
 ]
 resolver = "2"
 
+[workspace.package]
+edition = "2024"
+rust-version = "1.88"
+
 [workspace.dependencies]
 rbuilder-plugin-api = { path = "crates/rbuilder-plugin-api", version = "0.4.2" }
 rbuilder-plugin-helpers = { path = "crates/rbuilder-plugin-helpers", version = "0.4.2" }
@@ -100,7 +104,8 @@ expect_used = "warn"
 [package]
 name = "rbuilder"
 version = "0.4.2"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
 authors = ["rBuilder Contributors"]
 description = "A Code knowledge graph system"
 license = "MIT OR Apache-2.0"
@@ -329,6 +334,10 @@ path = "tests/go_cfg_analysis.rs"
 [[test]]
 name = "go_langfeatures"
 path = "tests/go_langfeatures.rs"
+
+[[test]]
+name = "java_langfeatures"
+path = "tests/java_langfeatures.rs"
 
 [[test]]
 name = "dashboard_metasfresh"

@@ -113,11 +113,10 @@ impl FileDiscoverer {
                 continue;
             }
 
-            if let Some(ref languages) = self.config.languages {
-                if !self.matches_language_filter(path, languages) {
+            if let Some(ref languages) = self.config.languages
+                && !self.matches_language_filter(path, languages) {
                     continue;
                 }
-            }
 
             if self.is_too_large(path)? {
                 continue;

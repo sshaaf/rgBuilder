@@ -1,7 +1,8 @@
 [package]
 name = "rbuilder-lang-runtime"
 version = "0.4.2"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
 description = "Generic tree-sitter and regex language plugins for rBuilder"
 license = "MIT OR Apache-2.0"
 

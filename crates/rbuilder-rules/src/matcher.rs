@@ -122,6 +122,7 @@ fn node_type_name(node_type: NodeType) -> &'static str {
         NodeType::Struct => "Struct",
         NodeType::Enum => "Enum",
         NodeType::Interface => "Interface",
+        NodeType::Annotation => "Annotation",
         NodeType::Module => "Module",
         NodeType::Variable => "Variable",
         NodeType::File => "File",

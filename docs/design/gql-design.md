@@ -60,7 +60,10 @@ flowchart TB
 ```cypher
 MATCH (n:Function) WHERE n.name LIKE '*Service*' RETURN n LIMIT 20
 MATCH (a:Function)-[:CALLS*1..3]->(b:Function) RETURN a, b
+MATCH (n:Class) WHERE n.qualified_name = 'com.example.Foo' RETURN n
 ```
+
+`n.name` is the simple/bare name; use `n.qualified_name` for language FQNs (e.g. Java package paths).
 
 **Macros** (positional query ignored when `--macro-name` set):
 

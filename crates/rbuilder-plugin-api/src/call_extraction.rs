@@ -263,10 +263,15 @@ fn go_call_type_hint(
         let owner = symbols.iter().find(|s| {
             matches!(
                 s.symbol_type,
-                SymbolType::Struct | SymbolType::Class | SymbolType::Interface
+                SymbolType::Struct
+                    | SymbolType::Class
+                    | SymbolType::Interface
+                    | SymbolType::Annotation
             ) && s.name == recv_ty
         })?;
-        if owner.symbol_type == SymbolType::Interface {
+        if owner.symbol_type == SymbolType::Interface
+            || owner.symbol_type == SymbolType::Annotation
+        {
             return Some(owner.name.clone());
         }
         let ft = owner

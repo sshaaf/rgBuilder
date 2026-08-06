@@ -37,6 +37,8 @@ pub fn node_type_name(node_type: u16) -> &'static str {
         13 => "Dependency",
         14 => "Job",
         15 => "BuildStep",
+        34 => "PuppetFact",
+        35 => "Annotation",
         _ => "Other",
     }
 }

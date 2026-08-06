@@ -113,7 +113,7 @@ impl StructuralTopology {
         targets
             .iter()
             .zip(types.iter())
-            .filter(move |(_, &ty)| allowed_codes.contains(&ty))
+            .filter(move |&(_, &ty)| allowed_codes.contains(&ty))
             .map(|(&t, _)| t)
     }
 
@@ -128,7 +128,7 @@ impl StructuralTopology {
         targets
             .iter()
             .zip(types.iter())
-            .filter(move |(_, &ty)| allowed_codes.contains(&ty))
+            .filter(move |&(_, &ty)| allowed_codes.contains(&ty))
             .map(|(&t, _)| t)
     }
 

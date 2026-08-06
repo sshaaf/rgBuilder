@@ -67,7 +67,7 @@ If no release is published yet for your platform, use [Option B](#option-b--buil
 
 ### Option B — Build from source
 
-Requires **Rust 1.70+** ([rustup.rs](https://rustup.rs/)).
+Requires **Rust 1.88+** (Edition 2024; [rustup.rs](https://rustup.rs/)).
 
 ```bash
 git clone https://github.com/sshaaf/rBuilder.git

@@ -18,6 +18,9 @@ pub struct GqlRowBinding {
     /// Node type label (`Community` for virtual overlay nodes).
     #[serde(rename = "type")]
     pub node_type: String,
+    /// Fully-qualified name when present on the graph node (issue #49).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub qualified_name: Option<String>,
     /// Source file path when present.
     pub file: Option<String>,
     /// Community id when available (virtual property or community node).
@@ -29,6 +32,36 @@ pub struct GqlRowBinding {
     /// Member count when binding a `:Community` node.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub member_count: Option<usize>,
+    /// Allowlisted node properties for gate / agent observability.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub properties: Option<std::collections::BTreeMap<String, String>>,
+}
+
+/// Property keys projected into GQL JSON rows when present on the node.
+const GQL_PROPERTY_ALLOWLIST: &[&str] = &[
+    "type_params",
+    "throws",
+    "is_lambda",
+    "is_external_stub",
+    "is_annotation_element",
+    "is_record",
+    "is_constructor",
+];
+
+fn projected_properties(
+    node: &rbuilder_graph::schema::Node,
+) -> Option<std::collections::BTreeMap<String, String>> {
+    let mut out = std::collections::BTreeMap::new();
+    for key in GQL_PROPERTY_ALLOWLIST {
+        if let Some(val) = node.properties.get(*key) {
+            out.insert((*key).to_string(), val.clone());
+        }
+    }
+    if out.is_empty() {
+        None
+    } else {
+        Some(out)
+    }
 }
 
 /// Top-level GQL JSON payload.
@@ -63,6 +96,7 @@ pub fn gql_response_from_result(result: &QueryResult, explain: bool) -> GqlJsonR
                         } else {
                             format!("{:?}", node.node_type)
                         },
+                        qualified_name: node.qualified_name.clone(),
                         file: node.file_path.clone(),
                         community_id: node
                             .get_property("community_id")
@@ -79,6 +113,7 @@ pub fn gql_response_from_result(result: &QueryResult, explain: bool) -> GqlJsonR
                         member_count: node
                             .get_property("member_count")
                             .and_then(|s| s.parse().ok()),
+                        properties: projected_properties(node),
                     }
                 })
                 .collect()
@@ -101,10 +136,12 @@ pub fn fixture_gql_response() -> GqlJsonResponse {
             binding: "f".into(),
             node: "main".into(),
             node_type: "Function".into(),
+            qualified_name: None,
             file: Some("src/main.rs".into()),
             community_id: None,
             label: None,
             member_count: None,
+            properties: None,
         }]],
         count: 1,
         explain: false,
@@ -113,4 +150,59 @@ pub fn fixture_gql_response() -> GqlJsonResponse {
 
 pub fn fixture_gql_json() -> Value {
     json!(fixture_gql_response())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rbuilder_graph::schema::{Node, NodeType};
+    use rbuilder_gql::QueryResult;
+    use std::collections::HashMap;
+
+    #[test]
+    fn projected_properties_allowlist() {
+        let mut node = Node::new(NodeType::Function, "lam".into());
+        node.properties.insert("is_lambda".into(), "true".into());
+        node.properties.insert("type_params".into(), "<T>".into());
+        node.properties
+            .insert("unrelated_noise".into(), "skip".into());
+
+        let mut row = HashMap::new();
+        row.insert("f".to_string(), node);
+        let response = gql_response_from_result(
+            &QueryResult {
+                rows: vec![row],
+                plan: None,
+            },
+            false,
+        );
+        let props = response.rows[0][0].properties.as_ref().expect("properties");
+        assert_eq!(props.get("is_lambda").map(String::as_str), Some("true"));
+        assert_eq!(props.get("type_params").map(String::as_str), Some("<T>"));
+        assert!(!props.contains_key("unrelated_noise"));
+    }
+
+    #[test]
+    fn projects_qualified_name_when_present() {
+        let node = Node::new(NodeType::Class, "Context".into())
+            .with_qualified_name("org.openmrs.api.context.Context".into());
+        let mut row = HashMap::new();
+        row.insert("n".to_string(), node);
+        let response = gql_response_from_result(
+            &QueryResult {
+                rows: vec![row],
+                plan: None,
+            },
+            false,
+        );
+        assert_eq!(
+            response.rows[0][0].qualified_name.as_deref(),
+            Some("org.openmrs.api.context.Context")
+        );
+        let doc = serde_json::to_value(&response).unwrap();
+        assert_eq!(
+            doc["rows"][0][0]["qualified_name"].as_str(),
+            Some("org.openmrs.api.context.Context")
+        );
+    }
 }

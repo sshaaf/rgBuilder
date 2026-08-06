@@ -126,6 +126,21 @@ impl GraphBuilder {
             if !entry.contains(&node.id) {
                 entry.push(node.id);
             }
+            // Index dotted suffixes so `Marker` resolves `demo.Marker` and
+            // `Foo.bar` resolves `demo.Foo.bar` (Java package-qualified QNs).
+            let parts: Vec<&str> = qualified.split('.').collect();
+            for i in 0..parts.len() {
+                let suffix = parts[i..].join(".");
+                let entry = self.symbols_by_suffix.entry(suffix).or_default();
+                if !entry.contains(&node.id) {
+                    entry.push(node.id);
+                }
+            }
+        } else {
+            let entry = self.symbols_by_suffix.entry(node.name.clone()).or_default();
+            if !entry.contains(&node.id) {
+                entry.push(node.id);
+            }
         }
         let parts: Vec<&str> = key.split("::").collect();
         for i in 1..parts.len() {
@@ -344,8 +359,9 @@ impl GraphBuilder {
             &symbol.name,
             symbol.qualified_name.as_deref(),
         );
-        if let Some(id) = self.symbol_index.get(&key) {
-            if let Some(node) = self.nodes.iter_mut().find(|n| n.id == *id) {
+        if let Some(id) = self.symbol_index.get(&key)
+            && let Some(node) = self.nodes.iter_mut().find(|n| n.id == *id)
+        {
                 node.properties
                     .insert("cyclomatic".to_string(), metrics.cyclomatic.to_string());
                 node.properties
@@ -356,7 +372,6 @@ impl GraphBuilder {
                     "nesting_depth".to_string(),
                     metrics.nesting_depth.to_string(),
                 );
-            }
         }
     }
 
@@ -418,7 +433,11 @@ impl GraphBuilder {
         id
     }
 
-    /// Add a relation between symbols if both endpoints exist.
+    /// Add a relation between symbols when endpoints resolve.
+    ///
+    /// For allowlisted relation kinds, missing endpoints become deduplicated
+    /// external stub nodes (`is_external_stub`) so Instantiates / JPMS /
+    /// AnnotatedWith / References edges survive into GQL.
     pub fn add_relation(&mut self, relation: &Relation) -> Result<()> {
         let from_id =
             self.resolve_symbol_tracked(&relation.from, &relation.location.file, None, None);
@@ -426,7 +445,7 @@ impl GraphBuilder {
         let (to_type_hint, to_qualified_hint) =
             self.enrich_go_type_hints(relation);
 
-        let to_id = self.resolve_symbol_tracked(
+        let mut to_id = self.resolve_symbol_tracked(
             &relation.to,
             &relation.location.file,
             to_qualified_hint
@@ -436,6 +455,22 @@ impl GraphBuilder {
                 .as_deref()
                 .or(relation.to_type_hint.as_deref()),
         );
+
+        if relation_allows_external_stub(relation.relation_type) {
+            // Only stub unresolved *targets*. Stubbing missing `from` when
+            // resolution is ambiguous invents phantom callers and inflates
+            // Function counts on large Java repos.
+            if from_id.is_some() && to_id.is_none() {
+                let qn = to_qualified_hint
+                    .as_deref()
+                    .or(relation.to_qualified_hint.as_deref());
+                to_id = Some(self.ensure_external_stub(
+                    &relation.to,
+                    qn,
+                    stub_node_type_for_target(relation),
+                ));
+            }
+        }
 
         if let (Some(from), Some(to)) = (from_id, to_id) {
             let edge_type = relation_type_to_edge_type(relation.relation_type);
@@ -449,6 +484,73 @@ impl GraphBuilder {
             self.commit_edge(edge);
         }
         Ok(())
+    }
+
+    /// Create or reuse a stub node for an unresolved relation endpoint.
+    fn ensure_external_stub(
+        &mut self,
+        name: &str,
+        qualified_hint: Option<&str>,
+        node_type: NodeType,
+    ) -> Uuid {
+        let simple = name
+            .rsplit(['.', '/', ':'])
+            .next()
+            .filter(|s| !s.is_empty())
+            .unwrap_or(name);
+        let qn = qualified_hint
+            .filter(|s| !s.is_empty())
+            .unwrap_or(name)
+            .to_string();
+
+        // Prefer an existing unique resolution (another stub or late symbol).
+        if let Some(id) = self
+            .symbols_by_qualified
+            .get(&qn)
+            .and_then(|ids| unique_resolved(ids))
+        {
+            return id;
+        }
+        if let Some(id) = self
+            .symbols_by_suffix
+            .get(name)
+            .and_then(|ids| unique_resolved(ids))
+        {
+            return id;
+        }
+        if name != simple
+            && let Some(id) = self
+                .symbols_by_suffix
+                .get(simple)
+                .and_then(|ids| unique_resolved(ids))
+            {
+                return id;
+            }
+
+        const STUB_FILE: &str = "<external>";
+        let key = symbol_key(STUB_FILE, simple, Some(qn.as_str()));
+        if let Some(id) = self.symbol_index.get(&key) {
+            return *id;
+        }
+
+        let file_id = self.ensure_file_node(Path::new(STUB_FILE));
+        // JPMS / dotted module ids keep the full name; types use the last segment.
+        let display_name = if node_type == NodeType::Module {
+            qn.clone()
+        } else {
+            simple.to_string()
+        };
+        let node = Node::new(node_type, display_name)
+            .with_qualified_name(qn.clone())
+            .with_file_path(STUB_FILE.to_string())
+            .with_property("is_external_stub".to_string(), "true".to_string());
+        let id = node.id;
+        self.symbol_index.insert(key.clone(), id);
+        self.index_symbol_resolution(&key, &node);
+        self.commit_node(node);
+        self.add_edge(id, file_id, EdgeType::DefinedIn);
+        self.add_edge(file_id, id, EdgeType::Contains);
+        id
     }
 
     /// Late-bind Go `recv.field.Method` using field Variable nodes from Pass 1.
@@ -715,33 +817,32 @@ impl GraphBuilder {
             return Some(*id);
         }
 
-        if let Some(hint) = qualified_hint {
-            if let Some(id) = self
+        if let Some(hint) = qualified_hint
+            && let Some(id) = self
                 .symbols_by_qualified
                 .get(hint)
                 .and_then(|ids| unique_resolved(ids))
-            {
-                return Some(id);
-            }
-            if let Some(id) = self
+        {
+            return Some(id);
+        }
+        if let Some(hint) = qualified_hint
+            && let Some(id) = self
                 .symbols_by_suffix
                 .get(hint)
                 .and_then(|ids| unique_resolved(ids))
-            {
-                return Some(id);
-            }
+        {
+            return Some(id);
         }
 
-        if let Some(type_name) = type_hint {
-            let simple_name = name.split('.').next_back().unwrap_or(name);
-            let type_qualified = format!("{type_name}.{simple_name}");
-            if let Some(id) = self
+        if let Some(type_name) = type_hint
+            && let simple_name = name.split('.').next_back().unwrap_or(name)
+            && let type_qualified = format!("{type_name}.{simple_name}")
+            && let Some(id) = self
                 .symbols_by_suffix
                 .get(&type_qualified)
                 .and_then(|ids| unique_resolved(ids))
-            {
-                return Some(id);
-            }
+        {
+            return Some(id);
         }
 
         self.symbols_by_suffix
@@ -863,6 +964,7 @@ fn symbol_type_to_node_type(symbol_type: SymbolType) -> NodeType {
         SymbolType::Struct => NodeType::Struct,
         SymbolType::Enum => NodeType::Enum,
         SymbolType::Interface => NodeType::Interface,
+        SymbolType::Annotation => NodeType::Annotation,
         SymbolType::Module => NodeType::Module,
         SymbolType::Variable => NodeType::Variable,
         SymbolType::TypeAlias => NodeType::TypeAlias,
@@ -894,12 +996,51 @@ fn symbol_type_to_node_type(symbol_type: SymbolType) -> NodeType {
     }
 }
 
+fn relation_allows_external_stub(relation_type: RelationType) -> bool {
+    matches!(
+        relation_type,
+        RelationType::Instantiates
+            | RelationType::DependsOn
+            | RelationType::Uses
+            | RelationType::AnnotatedWith
+            | RelationType::References
+    )
+}
+
+fn stub_node_type_for_target(relation: &Relation) -> NodeType {
+    if let Some(hint) = relation.to_type_hint.as_deref() {
+        match hint.to_ascii_lowercase().as_str() {
+            "module" => return NodeType::Module,
+            "annotation" => return NodeType::Annotation,
+            "interface" => return NodeType::Interface,
+            "enum" => return NodeType::Enum,
+            "function" | "method" => return NodeType::Function,
+            "class" | "struct" => return NodeType::Class,
+            _ => {}
+        }
+    }
+    match relation.relation_type {
+        RelationType::DependsOn => NodeType::Module,
+        RelationType::AnnotatedWith => NodeType::Annotation,
+        RelationType::Calls => NodeType::Function,
+        RelationType::Implements => NodeType::Interface,
+        RelationType::Extends
+        | RelationType::Instantiates
+        | RelationType::Permits
+        | RelationType::Uses
+        | RelationType::References => NodeType::Class,
+        _ => NodeType::Class,
+    }
+}
+
 fn relation_type_to_edge_type(relation_type: RelationType) -> EdgeType {
     match relation_type {
         RelationType::Calls => EdgeType::Calls,
         RelationType::Uses => EdgeType::Uses,
         RelationType::Implements => EdgeType::Implements,
         RelationType::Extends => EdgeType::Extends,
+        RelationType::AnnotatedWith => EdgeType::AnnotatedWith,
+        RelationType::Permits => EdgeType::Permits,
         RelationType::Defines => EdgeType::Contains,
         RelationType::References => EdgeType::References,
         RelationType::Instantiates => EdgeType::Instantiates,
@@ -959,6 +1100,298 @@ mod tests {
             documentation: None,
             metadata: serde_json::json!({}),
         }
+    }
+
+    #[test]
+    fn java_annotated_with_resolves_package_qualified_annotation() {
+        let mut builder = GraphBuilder::new();
+        let marker_file = builder.ensure_file_node(Path::new("Marker.java"));
+        let foo_file = builder.ensure_file_node(Path::new("Foo.java"));
+
+        let annotation = Symbol {
+            name: "Marker".to_string(),
+            symbol_type: SymbolType::Annotation,
+            qualified_name: Some("demo.Marker".to_string()),
+            location: SourceLocation {
+                file: "Marker.java".to_string(),
+                start_line: 1,
+                end_line: 1,
+                start_column: 0,
+                end_column: 1,
+            },
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec!["public".into()],
+            documentation: None,
+            metadata: serde_json::json!({ "language": "java" }),
+        };
+        let method = Symbol {
+            name: "bar".to_string(),
+            symbol_type: SymbolType::Function,
+            qualified_name: Some("demo.Foo.bar".to_string()),
+            location: SourceLocation {
+                file: "Foo.java".to_string(),
+                start_line: 3,
+                end_line: 4,
+                start_column: 0,
+                end_column: 1,
+            },
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec!["public".into()],
+            documentation: None,
+            metadata: serde_json::json!({ "language": "java" }),
+        };
+        builder.add_symbol(&annotation, marker_file);
+        builder.add_symbol(&method, foo_file);
+        builder
+            .add_relation(&Relation {
+                from: "demo.Foo.bar".to_string(),
+                to: "Marker".to_string(),
+                relation_type: RelationType::AnnotatedWith,
+                location: SourceLocation {
+                    file: "Foo.java".to_string(),
+                    start_line: 3,
+                    end_line: 3,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "language": "java" }),
+                to_qualified_hint: None,
+                to_type_hint: None,
+            })
+            .unwrap();
+
+        assert!(
+            builder
+                .edges
+                .iter()
+                .any(|e| e.edge_type == EdgeType::AnnotatedWith),
+            "AnnotatedWith edge must resolve Marker via dotted QN suffix index"
+        );
+    }
+
+    #[test]
+    fn instantiates_unresolved_type_creates_stub_and_edge() {
+        let mut builder = GraphBuilder::new();
+        let file_id = builder.ensure_file_node(Path::new("C.java"));
+        let method = Symbol {
+            name: "m".to_string(),
+            symbol_type: SymbolType::Function,
+            qualified_name: Some("C.m".to_string()),
+            location: SourceLocation {
+                file: "C.java".to_string(),
+                start_line: 2,
+                end_line: 3,
+                start_column: 0,
+                end_column: 1,
+            },
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({ "language": "java" }),
+        };
+        builder.add_symbol(&method, file_id);
+        builder
+            .add_relation(&Relation {
+                from: "C.m".to_string(),
+                to: "String".to_string(),
+                relation_type: RelationType::Instantiates,
+                location: SourceLocation {
+                    file: "C.java".to_string(),
+                    start_line: 2,
+                    end_line: 2,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "language": "java" }),
+                to_qualified_hint: Some("java.lang.String".to_string()),
+                to_type_hint: None,
+            })
+            .unwrap();
+
+        let stub = builder
+            .nodes()
+            .iter()
+            .find(|n| n.name == "String" && n.properties.get("is_external_stub").map(String::as_str) == Some("true"))
+            .expect("String stub");
+        assert_eq!(stub.node_type, NodeType::Class);
+        assert!(builder.edges.iter().any(|e| {
+            e.edge_type == EdgeType::Instantiates && e.to == stub.id
+        }));
+    }
+
+    #[test]
+    fn depends_on_unresolved_module_creates_module_stub() {
+        let mut builder = GraphBuilder::new();
+        let file_id = builder.ensure_file_node(Path::new("module-info.java"));
+        let module = Symbol {
+            name: "M".to_string(),
+            symbol_type: SymbolType::Module,
+            qualified_name: Some("M".to_string()),
+            location: SourceLocation {
+                file: "module-info.java".to_string(),
+                start_line: 1,
+                end_line: 4,
+                start_column: 0,
+                end_column: 1,
+            },
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({ "language": "java" }),
+        };
+        builder.add_symbol(&module, file_id);
+        builder
+            .add_relation(&Relation {
+                from: "M".to_string(),
+                to: "java.base".to_string(),
+                relation_type: RelationType::DependsOn,
+                location: SourceLocation {
+                    file: "module-info.java".to_string(),
+                    start_line: 2,
+                    end_line: 2,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "language": "java" }),
+                to_qualified_hint: Some("java.base".to_string()),
+                to_type_hint: None,
+            })
+            .unwrap();
+
+        let stub = builder
+            .nodes()
+            .iter()
+            .find(|n| {
+                n.qualified_name.as_deref() == Some("java.base")
+                    && n.properties.get("is_external_stub").map(String::as_str) == Some("true")
+            })
+            .expect("java.base stub");
+        assert_eq!(stub.node_type, NodeType::Module);
+        assert!(builder.edges.iter().any(|e| {
+            e.edge_type == EdgeType::DependsOn && e.to == stub.id
+        }));
+    }
+
+    #[test]
+    fn annotated_with_unresolved_annotation_creates_stub() {
+        let mut builder = GraphBuilder::new();
+        let file_id = builder.ensure_file_node(Path::new("C.java"));
+        let method = Symbol {
+            name: "m".to_string(),
+            symbol_type: SymbolType::Function,
+            qualified_name: Some("C.m".to_string()),
+            location: SourceLocation {
+                file: "C.java".to_string(),
+                start_line: 2,
+                end_line: 3,
+                start_column: 0,
+                end_column: 1,
+            },
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({ "language": "java" }),
+        };
+        builder.add_symbol(&method, file_id);
+        builder
+            .add_relation(&Relation {
+                from: "C.m".to_string(),
+                to: "NonNull".to_string(),
+                relation_type: RelationType::AnnotatedWith,
+                location: SourceLocation {
+                    file: "C.java".to_string(),
+                    start_line: 2,
+                    end_line: 2,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "language": "java" }),
+                to_qualified_hint: None,
+                to_type_hint: None,
+            })
+            .unwrap();
+
+        let stub = builder
+            .nodes()
+            .iter()
+            .find(|n| n.name == "NonNull" && n.node_type == NodeType::Annotation)
+            .expect("NonNull stub");
+        assert_eq!(
+            stub.properties.get("is_external_stub").map(String::as_str),
+            Some("true")
+        );
+        assert!(builder.edges.iter().any(|e| {
+            e.edge_type == EdgeType::AnnotatedWith && e.to == stub.id
+        }));
+    }
+
+    #[test]
+    fn external_stub_dedupes_by_qualified_name() {
+        let mut builder = GraphBuilder::new();
+        let file_id = builder.ensure_file_node(Path::new("C.java"));
+        let method = Symbol {
+            name: "m".to_string(),
+            symbol_type: SymbolType::Function,
+            qualified_name: Some("C.m".to_string()),
+            location: SourceLocation {
+                file: "C.java".to_string(),
+                start_line: 2,
+                end_line: 5,
+                start_column: 0,
+                end_column: 1,
+            },
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({ "language": "java" }),
+        };
+        builder.add_symbol(&method, file_id);
+        for _ in 0..2 {
+            builder
+                .add_relation(&Relation {
+                    from: "C.m".to_string(),
+                    to: "String".to_string(),
+                    relation_type: RelationType::Instantiates,
+                    location: SourceLocation {
+                        file: "C.java".to_string(),
+                        start_line: 3,
+                        end_line: 3,
+                        start_column: 0,
+                        end_column: 1,
+                    },
+                    metadata: serde_json::json!({ "language": "java" }),
+                    to_qualified_hint: Some("java.lang.String".to_string()),
+                    to_type_hint: None,
+                })
+                .unwrap();
+        }
+        let stubs: Vec<_> = builder
+            .nodes()
+            .iter()
+            .filter(|n| {
+                n.qualified_name.as_deref() == Some("java.lang.String")
+                    && n.properties.get("is_external_stub").map(String::as_str) == Some("true")
+            })
+            .collect();
+        assert_eq!(stubs.len(), 1, "expected one stub for java.lang.String");
     }
 
     #[test]

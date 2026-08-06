@@ -686,6 +686,7 @@ fn node_type_to_u16(t: NodeType) -> u16 {
         NodeType::PuppetResource => 32,
         NodeType::PuppetVariable => 33,
         NodeType::PuppetFact => 34,
+        NodeType::Annotation => 35,
     }
 }
 
@@ -726,6 +727,7 @@ fn node_type_from_u16(v: u16) -> Result<NodeType> {
         32 => NodeType::PuppetResource,
         33 => NodeType::PuppetVariable,
         34 => NodeType::PuppetFact,
+        35 => NodeType::Annotation,
         _ => return Err(Error::SerdeError(format!("unknown node type code {v}"))),
     })
 }
@@ -761,6 +763,7 @@ fn append_node_columnar(
 }
 
 /// Hash pre-serialized node bytes (must match `bincode::serialize(node)`) then encode columns.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn append_node_columnar_prehashed(
     node: &Node,
     node_bytes: &[u8],
@@ -814,6 +817,7 @@ pub(crate) fn append_node_columnar_prehashed(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn write_columnar_assembled(
     path: &Path,
     node_rows: &[NodeRow],
@@ -986,8 +990,7 @@ pub fn write_columnar_from_backend(backend: &MemoryBackend, path: &Path) -> Resu
     if let Some(err) = edge_err {
         return Err(err);
     }
-    edge_meta
-        .sort_by(|a, b| (a.0, a.1, edge_type_to_u8(a.2)).cmp(&(b.0, b.1, edge_type_to_u8(b.2))));
+    edge_meta.sort_by_key(|a| (a.0, a.1, edge_type_to_u8(a.2)));
 
     let mut edge_rows = Vec::with_capacity(edge_meta.len());
     for (from, to, edge_type, bytes) in &edge_meta {
@@ -1202,6 +1205,56 @@ mod tests {
         let recomputed = hasher.finalize().to_hex().to_string();
         assert_eq!(recomputed, written);
         assert_eq!(recomputed, col.content_digest());
+    }
+
+    #[test]
+    fn annotation_and_permits_columnar_round_trip() {
+        use crate::csr::edge_type_to_u8;
+        use memmap2::Mmap;
+        use std::sync::Arc;
+        use tempfile::TempDir;
+
+        let ann = Node::new(NodeType::Annotation, "AddOnStartup".into())
+            .with_file_path("AddOnStartup.java".into());
+        let method = Node::new(NodeType::Function, "bar".into()).with_file_path("Foo.java".into());
+        let sealed = Node::new(NodeType::Class, "Shape".into()).with_file_path("Shape.java".into());
+        let circle = Node::new(NodeType::Class, "Circle".into()).with_file_path("Circle.java".into());
+        let ann_id = ann.id;
+        let method_id = method.id;
+        let sealed_id = sealed.id;
+        let circle_id = circle.id;
+        let annotated = Edge::new(method_id, ann_id, EdgeType::AnnotatedWith);
+        let permits = Edge::new(sealed_id, circle_id, EdgeType::Permits);
+
+        let tmp = TempDir::new().unwrap();
+        let path = tmp.path().join("ann.bin");
+        write_columnar_from_nodes_edges(
+            vec![ann, method, sealed, circle],
+            vec![annotated, permits],
+            &path,
+        )
+        .unwrap();
+
+        let file = std::fs::File::open(&path).unwrap();
+        // SAFETY: test file is read-only; mapping covers the written snapshot bytes only.
+        let mmap = Arc::new(unsafe { Mmap::map(&file).unwrap() });
+        let col = ColumnarGraphMmap::open(mmap).unwrap();
+        let types: Vec<_> = (0..col.node_count())
+            .map(|i| col.materialize_node_at(i).unwrap().node_type)
+            .collect();
+        assert!(types.contains(&NodeType::Annotation));
+
+        let mut edges = Vec::new();
+        col.for_each_edge(|_f, _t, et| {
+            edges.push(et);
+            Ok(())
+        })
+        .unwrap();
+        assert!(edges.contains(&EdgeType::AnnotatedWith));
+        assert!(edges.contains(&EdgeType::Permits));
+        assert_eq!(edge_type_to_u8(EdgeType::AnnotatedWith), 28);
+        assert_eq!(edge_type_to_u8(EdgeType::Permits), 29);
+        assert_eq!(node_type_to_u16(NodeType::Annotation), 35);
     }
 
     #[test]

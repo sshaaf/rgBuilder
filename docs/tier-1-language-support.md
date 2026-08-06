@@ -117,6 +117,21 @@ Required for high-quality `cpg mutations` / typed field writes. Reference: Java 
 | Python | `__init__` → `Class.<init>`; harvest `self.x` fields | Annotations when present |
 | C | No language ctors; struct fields + typed params required | Strong on structs |
 
+**Java extract honesty (java-extract-gaps + java-grammar-remainder + java-gql-remainder-gates):**
+
+- Annotation types are `:Annotation` nodes (not `:Interface`). Usages emit `AnnotatedWith`; no classpath/FQN resolution beyond imports/package best-effort.
+- Records are `Class` with `metadata.is_record`; compact ctors and `<clinit>` / `<initblock>N` are CFG entry points.
+- Annotation elements are Functions with `is_annotation_element`; interface `constant_declaration` becomes fields.
+- Generics/`throws` are symbol metadata (`type_params`, `throws`); not TypeParameter nodes. GQL JSON projects allowlisted properties (`type_params`, `throws`, `is_lambda`, `is_external_stub`, …).
+- Lambdas are synthetic Functions (`$lambda$N`, `is_lambda`); direct CFG `$lambda$N` lookup is file-global (prefer enclosing-method CFG).
+- Anonymous classes use synthetic `Outer.$AnonymousN` owners.
+- Expression refs: field reads → `References`; array `new` → `Instantiates`; `.class` → `References`. No full points-to.
+- Type-use annotations (`annotated_type`) and declaration-site parameter annotations attach to the **owning method/constructor** (parameter encodings are not graph nodes). Field type-use attaches to the field symbol.
+- Unresolved Instantiates / DependsOn / Uses / AnnotatedWith / References / Calls targets become deduplicated **external stub** nodes (`is_external_stub`, file `<external>`) so GQL edges survive; stubs are placeholders, not a JDK model.
+- Pattern-matching (`record_pattern` / `type_pattern`) not first-class symbols.
+- No full reflection / retention-policy analysis.
+- GQL gates: `cargo test --test java_langfeatures` (fixture `tests/fixtures/java/langfeatures`).
+
 ---
 
 ## 3. Repository layout
@@ -389,7 +404,7 @@ Copy into your PR description:
 
 | Language | Tier | Calls | CFG | Taint | Dashboard gate | Layer F (CPG mutations) |
 |----------|------|-------|-----|-------|----------------|-------------------------|
-| Java | 1 custom | ✅ + Extends/Implements | ✅ | ✅ rich | gbuilder golden | ✅ F1–F6 |
+| Java | 1 custom | ✅ + Extends/Implements/AnnotatedWith/Permits/Instantiates | ✅ (+ compact ctor, `<clinit>`) | ✅ rich | gbuilder golden | ✅ F1–F6 |
 | Go | 1 custom | ✅ | ✅ deep | ✅ rich | `dashboard_ecommerce_go` | ✅ F1–F6 |
 | C# | 1 custom | ✅ | ✅ | ✅ | `dashboard_ecommerce_csharp` | ✅ F1–F6 |
 | C | 1 custom | ✅ | ✅ | ✅ | `dashboard_ecommerce_c` | ✅ F1/F3–F6 (no native ctors) |
