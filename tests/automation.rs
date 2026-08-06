@@ -1,16 +1,16 @@
 //! Phase 13: change detection and incremental updates.
 
-use rbuilder::changes::ChangeDetector;
-use rbuilder::config::project::{RbuilderConfig, RiskLevel};
-use rbuilder::graph::backend::GraphBackend;
-use rbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rbuilder::incremental::{changes_for_paths, IncrementalUpdater, UpdateOptions};
-use rbuilder::languages::registry::LanguageRegistry;
-use rbuilder::pipeline::{PipelineConfig, ProcessingPipeline};
+use rgbuilder::changes::ChangeDetector;
+use rgbuilder::config::project::{RgbuilderConfig, RiskLevel};
+use rgbuilder::graph::backend::GraphBackend;
+use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
+use rgbuilder::incremental::{changes_for_paths, IncrementalUpdater, UpdateOptions};
+use rgbuilder::languages::registry::LanguageRegistry;
+use rgbuilder::pipeline::{PipelineConfig, ProcessingPipeline};
 use std::fs;
 use tempfile::TempDir;
 
-fn chain_graph_repo(temp: &TempDir) -> rbuilder::CodeGraph {
+fn chain_graph_repo(temp: &TempDir) -> rgbuilder::CodeGraph {
     let root = temp.path();
     fs::create_dir_all(root.join("src")).unwrap();
     fs::write(
@@ -29,7 +29,7 @@ fn chain_graph_repo(temp: &TempDir) -> rbuilder::CodeGraph {
     let (graph, _) = pipeline.process_repository(root).unwrap();
     graph.save_to_repo(root).unwrap();
 
-    let mut tracker = rbuilder::incremental::FileTracker::new(root);
+    let mut tracker = rgbuilder::incremental::FileTracker::new(root);
     let files = vec![root.join("src/lib.rs")];
     tracker.index_files(&files, &graph).unwrap();
     tracker.save().unwrap();
@@ -50,7 +50,7 @@ fn test_changes_for_paths_modified() {
 
 #[test]
 fn test_detect_changes_risk_on_chain() {
-    let mut graph = rbuilder::CodeGraph::new();
+    let mut graph = rgbuilder::CodeGraph::new();
     let backend = graph.backend_mut();
     let a = Node::new(NodeType::Function, "a".into()).with_file_path("src/lib.rs".into());
     let b = Node::new(NodeType::Function, "b".into()).with_file_path("src/lib.rs".into());
@@ -100,16 +100,16 @@ fn test_update_files_incremental() {
 }
 
 #[test]
-fn test_rbuilder_config_defaults() {
+fn test_rgbuilder_config_defaults() {
     let temp = TempDir::new().unwrap();
-    let cfg = RbuilderConfig::load(temp.path()).unwrap();
+    let cfg = RgbuilderConfig::load(temp.path()).unwrap();
     assert_eq!(cfg.hooks.block_on_risk, RiskLevel::Critical);
     assert_eq!(cfg.watch.debounce_ms, 500);
 }
 
 #[test]
 fn test_manual_graph_blast_risk() {
-    let mut graph = rbuilder::CodeGraph::new();
+    let mut graph = rgbuilder::CodeGraph::new();
     let backend = graph.backend_mut();
     let a = Node::new(NodeType::Function, "a".into()).with_file_path("f.rs".into());
     let b = Node::new(NodeType::Function, "b".into()).with_file_path("f.rs".into());
@@ -135,16 +135,16 @@ fn test_manual_graph_blast_risk() {
 
 #[test]
 fn test_critical_risk_blocks_per_config() {
-    use rbuilder::config::project::RbuilderConfig;
-    let cfg = RbuilderConfig::default();
+    use rgbuilder::config::project::RgbuilderConfig;
+    let cfg = RgbuilderConfig::default();
     assert!(cfg.hooks.block_on_risk.blocks(RiskLevel::Critical));
     assert!(!cfg.hooks.block_on_risk.blocks(RiskLevel::Medium));
 }
 
 #[test]
 fn test_high_risk_blocked_when_configured() {
-    use rbuilder::config::project::{RbuilderConfig, RiskLevel};
-    let mut cfg = RbuilderConfig::default();
+    use rgbuilder::config::project::{RgbuilderConfig, RiskLevel};
+    let mut cfg = RgbuilderConfig::default();
     cfg.hooks.block_on_risk = RiskLevel::High;
     assert!(cfg.hooks.block_on_risk.blocks(RiskLevel::Critical));
     assert!(cfg.hooks.block_on_risk.blocks(RiskLevel::High));
@@ -153,7 +153,7 @@ fn test_high_risk_blocked_when_configured() {
 
 #[test]
 fn test_detect_changes_json_contains_summary() {
-    let mut graph = rbuilder::CodeGraph::new();
+    let mut graph = rgbuilder::CodeGraph::new();
     let backend = graph.backend_mut();
     let leaf = Node::new(NodeType::Function, "leaf".into()).with_file_path("f.rs".into());
     backend.insert_node(leaf).unwrap();

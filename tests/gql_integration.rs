@@ -1,10 +1,10 @@
 //! Phase 12.4 — GQL integration tests
 
-use rbuilder::gql::{
+use rgbuilder::gql::{
     execute, execute_explain, execute_macro, parse, QueryExecutor, QueryMacroRegistry,
 };
-use rbuilder::graph::backend::{GraphBackend, MemoryBackend};
-use rbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
+use rgbuilder::graph::backend::{GraphBackend, MemoryBackend};
+use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
 use std::collections::HashSet;
 
 fn sample_graph() -> MemoryBackend {

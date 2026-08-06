@@ -10,7 +10,7 @@ export const footerLearn = [
   { href: "/install/", label: "Install" },
   { href: "/demo/", label: "Interactive demos" },
   {
-    href: "https://github.com/sshaaf/rBuilder/blob/main/docs/faq.md",
+    href: "https://github.com/sshaaf/rgBuilder/blob/main/docs/faq.md",
     label: "FAQ",
     external: true,
   },
@@ -19,17 +19,17 @@ export const footerLearn = [
 export const footerAgents = [
   { href: "/agents/", label: "Agent overview" },
   {
-    href: "https://github.com/sshaaf/rBuilder/blob/main/AGENTS.md",
+    href: "https://github.com/sshaaf/rgBuilder/blob/main/AGENTS.md",
     label: "AGENTS.md",
     external: true,
   },
   {
-    href: "https://github.com/sshaaf/rBuilder/blob/main/docs/agent-recipes.md",
+    href: "https://github.com/sshaaf/rgBuilder/blob/main/docs/agent-recipes.md",
     label: "Recipes",
     external: true,
   },
   {
-    href: "https://github.com/sshaaf/rBuilder/blob/main/docs/json-api.md",
+    href: "https://github.com/sshaaf/rgBuilder/blob/main/docs/json-api.md",
     label: "JSON API",
     external: true,
   },
@@ -37,22 +37,22 @@ export const footerAgents = [
 
 export const footerContribute = [
   {
-    href: "https://github.com/sshaaf/rBuilder/blob/main/CONTRIBUTING.md",
+    href: "https://github.com/sshaaf/rgBuilder/blob/main/CONTRIBUTING.md",
     label: "Contributing",
     external: true,
   },
   {
-    href: "https://github.com/sshaaf/rBuilder/issues",
+    href: "https://github.com/sshaaf/rgBuilder/issues",
     label: "Issues",
     external: true,
   },
   {
-    href: "https://github.com/sshaaf/rBuilder/discussions",
+    href: "https://github.com/sshaaf/rgBuilder/discussions",
     label: "Discussions",
     external: true,
   },
   {
-    href: "https://github.com/sshaaf/rBuilder/releases",
+    href: "https://github.com/sshaaf/rgBuilder/releases",
     label: "Releases",
     external: true,
   },

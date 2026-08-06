@@ -1,9 +1,9 @@
-//! rBuilder CLI entry point.
+//! rgBuilder CLI entry point.
 
 use clap::Parser;
-use rbuilder::cli::Cli;
+use rgbuilder::cli::Cli;
 
 fn main() -> anyhow::Result<()> {
-    rbuilder::init();
+    rgbuilder::init();
     Cli::parse().run()
 }

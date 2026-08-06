@@ -1,21 +1,21 @@
 //! Phase 15 community detection audit — isolation, determinism, modularity.
 
-use rbuilder::analysis::{default_community_edge_types, CommunityDetector, PetGraphView};
-use rbuilder::graph::backend::GraphBackend;
-use rbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rbuilder::graph::CodeGraph;
+use rgbuilder::analysis::{default_community_edge_types, CommunityDetector, PetGraphView};
+use rgbuilder::graph::backend::GraphBackend;
+use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
+use rgbuilder::graph::CodeGraph;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
-fn insert_call(backend: &mut rbuilder::graph::backend::MemoryBackend, from: Uuid, to: Uuid) {
+fn insert_call(backend: &mut rgbuilder::graph::backend::MemoryBackend, from: Uuid, to: Uuid) {
     backend
         .insert_edge(Edge::new(from, to, EdgeType::Calls))
         .unwrap();
 }
 
 fn build_clique(
-    backend: &mut rbuilder::graph::backend::MemoryBackend,
+    backend: &mut rgbuilder::graph::backend::MemoryBackend,
     prefix: &str,
     n: usize,
 ) -> Vec<Uuid> {

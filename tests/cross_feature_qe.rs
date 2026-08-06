@@ -5,9 +5,9 @@
 //! C4 semantic expand ⊆ CALLS, C5 CFG text ⊆ CALLS, plus centrality degrees.
 //!
 //! C2/C3: empty blast caches on flat/on-demand graphs are accepted (#28 won't-fix).
-//! See `rbuilder-tests/correctness/QE.md`.
+//! See `rgbuilder-tests/correctness/QE.md`.
 
-use rbuilder::analysis::{AnalysisResults, MacroCallIndex};
+use rgbuilder::analysis::{AnalysisResults, MacroCallIndex};
 use serde_json::Value;
 use std::collections::BTreeSet;
 use std::fs;
@@ -20,8 +20,8 @@ fn fixture_repo() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/tiny_polyglot_repo")
 }
 
-fn rbuilder_bin() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_rbuilder"))
+fn rgbuilder_bin() -> PathBuf {
+    PathBuf::from(env!("CARGO_BIN_EXE_rgbuilder"))
 }
 
 fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
@@ -58,10 +58,10 @@ impl Sandbox {
     }
 
     fn run(&self, args: &[&str]) -> Output {
-        let mut cmd = Command::new(rbuilder_bin());
+        let mut cmd = Command::new(rgbuilder_bin());
         cmd.arg("-r").arg(&self.repo);
         cmd.args(args);
-        cmd.output().expect("spawn rbuilder")
+        cmd.output().expect("spawn rgbuilder")
     }
 
     fn parse_json(&self, output: &Output) -> Value {
@@ -206,7 +206,7 @@ fn cross_feature_consistency_after_discover() {
         "publishEvent must have ≥1 CALLS caller on fixture",
     );
 
-    let analysis_path = sandbox.repo.join(".rbuilder/analysis_results.bin");
+    let analysis_path = sandbox.repo.join(".rgbuilder/analysis_results.bin");
     check(
         &mut failures,
         analysis_path.is_file(),

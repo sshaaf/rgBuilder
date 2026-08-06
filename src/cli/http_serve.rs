@@ -1,4 +1,4 @@
-//! HTTP server for the analysis dashboard and GQL query API (`rbuilder serve`).
+//! HTTP server for the analysis dashboard and GQL query API (`rgbuilder serve`).
 
 use super::context::CliContext;
 use super::gql_output::gql_result_to_json;
@@ -13,13 +13,13 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use rbuilder_analysis::{CommunityQueryContext, SemanticIndex};
-use rbuilder_dashboard::default_dashboard_path;
-use rbuilder_gql::{
+use rgbuilder_analysis::{CommunityQueryContext, SemanticIndex};
+use rgbuilder_dashboard::default_dashboard_path;
+use rgbuilder_gql::{
     execute_explain_with_community, execute_macro_with_community, execute_with_community,
     QueryMacroRegistry,
 };
-use rbuilder_graph::CodeGraph;
+use rgbuilder_graph::CodeGraph;
 use serde::Deserialize;
 use serde_json::Value;
 use std::net::SocketAddr;
@@ -105,7 +105,7 @@ pub fn serve(ctx: &CliContext, args: HttpServeArgs) -> Result<()> {
         let index = dashboard_dir.join("index.html");
         if !index.is_file() {
             bail!(
-                "dashboard not found at {} (run `rbuilder discover` first)",
+                "dashboard not found at {} (run `rgbuilder discover` first)",
                 dashboard_dir.display()
             );
         }
@@ -116,7 +116,7 @@ pub fn serve(ctx: &CliContext, args: HttpServeArgs) -> Result<()> {
     } else {
         let graph = ctx
             .load_graph()
-            .context("load graph for query API (run `rbuilder discover` first)")?;
+            .context("load graph for query API (run `rgbuilder discover` first)")?;
         let community = super::gql::load_community_context(ctx, graph.backend());
         let semantic = load_semantic_index(&ctx.repo);
         Some(Arc::new(AppState {
@@ -202,7 +202,7 @@ async fn run_server(
         }
         eprintln!("[i] Press Ctrl+C to stop");
     } else {
-        eprintln!("rbuilder HTTP server listening on http://{bound}");
+        eprintln!("rgbuilder HTTP server listening on http://{bound}");
     }
 
     if args.open && !args.query_only {
@@ -269,7 +269,7 @@ async fn api_semantic_query(
     let index = state.semantic.as_ref().ok_or_else(|| {
         (
             StatusCode::SERVICE_UNAVAILABLE,
-            "semantic index not available — run `rbuilder semantic index` and restart serve".into(),
+            "semantic index not available — run `rgbuilder semantic index` and restart serve".into(),
         )
     })?;
 

@@ -1,0 +1,133 @@
+using Ecommerce.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace Ecommerce.Data;
+
+public class EcommerceDbContext : DbContext
+{
+    public EcommerceDbContext(DbContextOptions<EcommerceDbContext> options) : base(options)
+    {
+    }
+
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<Cart> Carts => Set<Cart>();
+    public DbSet<CartItem> CartItems => Set<CartItem>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<Inventory> Inventory => Set<Inventory>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.ToTable("users");
+            entity.HasIndex(u => u.Email).IsUnique();
+            entity.Property(u => u.Email).IsRequired();
+            entity.Property(u => u.Password).IsRequired();
+            entity.Property(u => u.Name).IsRequired();
+            entity.Property(u => u.Role).IsRequired().HasDefaultValue("USER");
+            entity.Property(u => u.CreatedAt).IsRequired();
+        });
+
+        modelBuilder.Entity<Category>(entity =>
+        {
+            entity.ToTable("categories");
+            entity.HasIndex(c => c.Name).IsUnique();
+            entity.Property(c => c.Name).IsRequired();
+        });
+
+        modelBuilder.Entity<Product>(entity =>
+        {
+            entity.ToTable("products");
+            entity.Property(p => p.Name).IsRequired();
+            entity.Property(p => p.Price).HasPrecision(12, 2);
+            entity.Property(p => p.CreatedAt).IsRequired();
+            entity.HasOne(p => p.Category)
+                .WithMany(c => c.Products)
+                .HasForeignKey(p => p.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Cart>(entity =>
+        {
+            entity.ToTable("carts");
+            entity.HasIndex(c => c.UserId).IsUnique();
+            entity.HasOne(c => c.User)
+                .WithOne(u => u.Cart)
+                .HasForeignKey<Cart>(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CartItem>(entity =>
+        {
+            entity.ToTable("cart_items");
+            entity.HasIndex(ci => new { ci.CartId, ci.ProductId }).IsUnique();
+            entity.Property(ci => ci.Quantity).IsRequired();
+            entity.HasOne(ci => ci.Cart)
+                .WithMany(c => c.Items)
+                .HasForeignKey(ci => ci.CartId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(ci => ci.Product)
+                .WithMany()
+                .HasForeignKey(ci => ci.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.ToTable("orders");
+            entity.Property(o => o.Status).IsRequired().HasDefaultValue("PENDING");
+            entity.Property(o => o.TotalAmount).HasPrecision(12, 2);
+            entity.Property(o => o.CreatedAt).IsRequired();
+            entity.HasOne(o => o.User)
+                .WithMany(u => u.Orders)
+                .HasForeignKey(o => o.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<OrderItem>(entity =>
+        {
+            entity.ToTable("order_items");
+            entity.Property(oi => oi.Quantity).IsRequired();
+            entity.Property(oi => oi.UnitPrice).HasPrecision(12, 2);
+            entity.HasOne(oi => oi.Order)
+                .WithMany(o => o.Items)
+                .HasForeignKey(oi => oi.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(oi => oi.Product)
+                .WithMany()
+                .HasForeignKey(oi => oi.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Review>(entity =>
+        {
+            entity.ToTable("reviews");
+            entity.HasIndex(r => new { r.UserId, r.ProductId }).IsUnique();
+            entity.Property(r => r.Rating).IsRequired();
+            entity.Property(r => r.CreatedAt).IsRequired();
+            entity.HasOne(r => r.User)
+                .WithMany(u => u.Reviews)
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(r => r.Product)
+                .WithMany(p => p.Reviews)
+                .HasForeignKey(r => r.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Inventory>(entity =>
+        {
+            entity.ToTable("inventory");
+            entity.HasIndex(i => i.ProductId).IsUnique();
+            entity.Property(i => i.Quantity).IsRequired();
+            entity.HasOne(i => i.Product)
+                .WithOne(p => p.Inventory)
+                .HasForeignKey<Inventory>(i => i.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
+}

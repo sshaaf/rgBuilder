@@ -1,7 +1,7 @@
-# Approximate Centrality Algorithms (rBuilder)
+# Approximate Centrality Algorithms (rgBuilder)
 
 Design note for sampled betweenness and HyperBall harmonic centrality in
-`crates/rbuilder-analysis/src/centrality_approx.rs`, and the columnar discover
+`crates/rgbuilder-analysis/src/centrality_approx.rs`, and the columnar discover
 path in `centrality.rs` / `results.rs`.
 
 ## Motivation
@@ -12,7 +12,7 @@ On graphs above ~500 nodes this becomes prohibitive; on 500k nodes it is days of
 Production static-analysis tools use **sampled** and **sketch-based** estimators that
 preserve **ranking quality** for architectural hotspots while running in seconds.
 
-rBuilder uses a **tiered strategy**:
+rgBuilder uses a **tiered strategy**:
 
 | Graph size | Betweenness | Harmonic |
 |------------|-------------|----------|
@@ -36,7 +36,7 @@ HLL precision `p = 14` (adaptive below).
 This avoids multi-million-entry `HashMap<Uuid, CentralityScores>` allocations that previously
 spiked peak RSS on kernel-scale graphs.
 
-`rbuilder metrics` still uses **`analyze_with_view`** (HashMap report) but shares the same flat
+`rgbuilder metrics` still uses **`analyze_with_view`** (HashMap report) but shares the same flat
 compute core and adaptive gating.
 
 ---
@@ -53,7 +53,7 @@ Policy and migration use **relative rank order** and community aggregates — no
 PageRank convergence on multi-million-node call graphs. Explicit CLI tuning remains available:
 
 ```bash
-rbuilder -f json metrics --pagerank --iterations 50
+rgbuilder -f json metrics --pagerank --iterations 50
 ```
 
 ---
@@ -142,7 +142,7 @@ discover → analyze_columnar → FlatGraphIndex
 
 ### Configuration (future)
 
-Planned `rbuilder.toml` keys:
+Planned `rgbuilder.toml` keys:
 
 ```toml
 [centrality]
@@ -183,7 +183,7 @@ Currently hard-coded via `DEFAULT_*` and `LARGE_GRAPH_*` constants.
 
 **Reading the peak:** Lever 1 removed `MemoryBackend` co-residency; Lever 1.5
 (segmented spill) removes full `Vec<Node>`/`Vec<Edge>` staging during discover ingest.
-Extract appends length-prefixed bincode to `.rbuilder/spill/`, then externally sorts and
+Extract appends length-prefixed bincode to `.rgbuilder/spill/`, then externally sorts and
 compiles columnar. Absolute peak should move toward **resolution-map RAM + sort/compile
 buffers** (not linear full-graph struct heap). Remaining multi-GB on Linux is largely
 `symbol_index` / suffix maps until those are slimmed or spilled.
@@ -191,7 +191,7 @@ buffers** (not linear full-graph struct heap). Remaining multi-GB on Linux is la
 Discover `-v` reports **`ingest_peak_rss_mb`** vs **`analysis_peak_rss_mb`** separately
 (`[profile] discover summary`).
 
-Artifacts after this run: `.rbuilder` ≈ 2.0 GB (`graph.snapshot.bin` 1.2G, `analysis_results.bin` 354M, `blast_engine.snapshot.bin` 259M).
+Artifacts after this run: `.rgbuilder` ≈ 2.0 GB (`graph.snapshot.bin` 1.2G, `analysis_results.bin` 354M, `blast_engine.snapshot.bin` 259M).
 
 Sub-phase profile (`RUST_LOG=profile=info discover -v`):
 
@@ -243,7 +243,7 @@ because k=512 is fixed.
 
 ```bash
 # Stage timings + centrality sub-phases
-RUST_LOG=info,profile=info rbuilder discover . -v 2>&1 | tee discover-profile.log
+RUST_LOG=info,profile=info rgbuilder discover . -v 2>&1 | tee discover-profile.log
 grep '\[profile\]' discover-profile.log
 ```
 
@@ -268,7 +268,7 @@ Lines to watch:
 | 10k / 50k mock budget | `centrality_approx_scale` | Scale gates |
 
 ```bash
-cargo test --release -p rbuilder-analysis centrality
+cargo test --release -p rgbuilder-analysis centrality
 cargo test --release --test centrality_approx_scale -- --nocapture
 ```
 

@@ -32,7 +32,7 @@ skills-lock.json
 /dist
 
 # Generated graph data
-.rbuilder/
+.rgbuilder/
 /coverage
 *.profraw
 *.profdata

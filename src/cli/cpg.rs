@@ -1,11 +1,11 @@
-//! `rbuilder cpg` — hybrid CPG façade (L_repo ⟷ L_proc).
+//! `rgbuilder cpg` — hybrid CPG façade (L_repo ⟷ L_proc).
 
 use super::args::{InspectLayer, OutputFormat, PdgEdgeLayer, SliceDirection, SliceView};
 use super::context::CliContext;
 use super::inspect::{self, InspectArgs};
 use super::slice::{self, SliceArgs};
 use anyhow::Result;
-use rbuilder_analysis::{
+use rgbuilder_analysis::{
     cpg_calls, cpg_flows, cpg_function, cpg_mutations, cpg_status, export_cpg, CpgExportFormat,
     CpgExportScope, CpgFlowsArgs, MutationQuery, SliceDirection as AnalysisSliceDirection,
     AstSkeletonArchive,
@@ -159,7 +159,7 @@ fn run_status(ctx: &CliContext) -> Result<()> {
         }
     } else {
         println!(
-            "CPG L_proc: missing (run `rbuilder discover --with-cfg`)\n  expected: {}",
+            "CPG L_proc: missing (run `rgbuilder discover --with-cfg`)\n  expected: {}",
             status.archive_path
         );
     }
@@ -264,7 +264,7 @@ fn run_flows(
 fn run_ast(ctx: &CliContext, symbol: &str) -> Result<()> {
     let archive = AstSkeletonArchive::open_if_exists(&ctx.repo)?.ok_or_else(|| {
         anyhow::anyhow!(
-            "AST skeleton archive missing (run `rbuilder discover --with-ast-skeleton`)"
+            "AST skeleton archive missing (run `rgbuilder discover --with-ast-skeleton`)"
         )
     })?;
     let matches: Vec<_> = archive

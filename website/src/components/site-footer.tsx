@@ -50,7 +50,7 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-[var(--hairline)] bg-[var(--canvas)]">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
         <div className="space-y-3">
-          <p className="text-sm font-medium text-[var(--ink)]">rBuilder</p>
+          <p className="text-sm font-medium text-[var(--ink)]">rgBuilder</p>
           <p className="max-w-xs text-sm text-[var(--body)]">
             Open-source code knowledge graph for LLM agents — accurate answers,
             fewer tokens.
@@ -72,7 +72,7 @@ export function SiteFooter() {
             target="_blank"
             rel="noreferrer"
           >
-            github.com/sshaaf/rBuilder
+            github.com/sshaaf/rgBuilder
           </a>
         </div>
       </div>

@@ -522,7 +522,7 @@ fn cfg_edge_kinds(cfg: &Value) -> Vec<String> {
 }
 
 fn ensure_discover(bin: &Path, cwd: &Path, exclude: &str, clean: bool) -> CheckResult {
-    let cache = cwd.join(".rbuilder");
+    let cache = cwd.join(".rgbuilder");
     if clean && cache.exists() {
         let _ = fs::remove_dir_all(&cache);
     }

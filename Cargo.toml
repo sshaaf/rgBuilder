@@ -1,37 +1,37 @@
 [workspace]
 members = [
     ".",
-    "rbuilder-macros",
-    "crates/rbuilder-plugin-api",
-    "crates/rbuilder-plugin-helpers",
-    "crates/rbuilder-config-formats",
-    "crates/rbuilder-lang-runtime",
-    "crates/rbuilder-registry",
-    "crates/rbuilder-error",
-    "crates/rbuilder-graph",
-    "crates/rbuilder-extraction",
-    "crates/rbuilder-pipeline",
-    "crates/rbuilder-analysis",
-    "crates/rbuilder-gql",
-    "crates/rbuilder-export",
-    "crates/rbuilder-dashboard",
-    "crates/rbuilder-wasm",
-    "crates/rbuilder-security",
-    "crates/rbuilder-project-config",
-    "crates/rbuilder-incremental",
-    "crates/rbuilder-semantic",
-    "crates/rbuilder-rules",
-    "crates/rbuilder-core",
-    "crates/rbuilder-lang-go",
-    "crates/rbuilder-lang-java",
-    "crates/rbuilder-lang-javascript",
-    "crates/rbuilder-lang-python",
-    "crates/rbuilder-lang-rust",
-    "crates/rbuilder-lang-typescript",
-    "crates/rbuilder-lang-csharp",
-    "crates/rbuilder-lang-c",
-    "crates/rbuilder-lang-cpp",
-    "crates/rbuilder-languages",
+    "rgbuilder-macros",
+    "crates/rgbuilder-plugin-api",
+    "crates/rgbuilder-plugin-helpers",
+    "crates/rgbuilder-config-formats",
+    "crates/rgbuilder-lang-runtime",
+    "crates/rgbuilder-registry",
+    "crates/rgbuilder-error",
+    "crates/rgbuilder-graph",
+    "crates/rgbuilder-extraction",
+    "crates/rgbuilder-pipeline",
+    "crates/rgbuilder-analysis",
+    "crates/rgbuilder-gql",
+    "crates/rgbuilder-export",
+    "crates/rgbuilder-dashboard",
+    "crates/rgbuilder-wasm",
+    "crates/rgbuilder-security",
+    "crates/rgbuilder-project-config",
+    "crates/rgbuilder-incremental",
+    "crates/rgbuilder-semantic",
+    "crates/rgbuilder-rules",
+    "crates/rgbuilder-core",
+    "crates/rgbuilder-lang-go",
+    "crates/rgbuilder-lang-java",
+    "crates/rgbuilder-lang-javascript",
+    "crates/rgbuilder-lang-python",
+    "crates/rgbuilder-lang-rust",
+    "crates/rgbuilder-lang-typescript",
+    "crates/rgbuilder-lang-csharp",
+    "crates/rgbuilder-lang-c",
+    "crates/rgbuilder-lang-cpp",
+    "crates/rgbuilder-languages",
 ]
 resolver = "2"
 
@@ -40,39 +40,39 @@ edition = "2024"
 rust-version = "1.88"
 
 [workspace.dependencies]
-rbuilder-plugin-api = { path = "crates/rbuilder-plugin-api", version = "0.4.2" }
-rbuilder-plugin-helpers = { path = "crates/rbuilder-plugin-helpers", version = "0.4.2" }
-rbuilder-config-formats = { path = "crates/rbuilder-config-formats", version = "0.4.2" }
-rbuilder-lang-runtime = { path = "crates/rbuilder-lang-runtime", version = "0.4.2" }
-rbuilder-registry = { path = "crates/rbuilder-registry", version = "0.4.2" }
-rbuilder-error = { path = "crates/rbuilder-error", version = "0.4.2" }
-rbuilder-graph = { path = "crates/rbuilder-graph", version = "0.4.2" }
-rbuilder-extraction = { path = "crates/rbuilder-extraction", version = "0.4.2" }
-rbuilder-pipeline = { path = "crates/rbuilder-pipeline", version = "0.4.2" }
-rbuilder-analysis = { path = "crates/rbuilder-analysis", version = "0.4.2", default-features = false }
-rbuilder-gql = { path = "crates/rbuilder-gql", version = "0.4.2" }
-rbuilder-export = { path = "crates/rbuilder-export", version = "0.4.2" }
-rbuilder-dashboard = { path = "crates/rbuilder-dashboard", version = "0.4.2" }
-rbuilder-wasm = { path = "crates/rbuilder-wasm", version = "0.4.2" }
-rbuilder-security = { path = "crates/rbuilder-security", version = "0.4.2" }
-rbuilder-project-config = { path = "crates/rbuilder-project-config", version = "0.4.2" }
-rbuilder-incremental = { path = "crates/rbuilder-incremental", version = "0.4.2" }
-rbuilder-semantic = { path = "crates/rbuilder-semantic", version = "0.4.2" }
-rbuilder-rules = { path = "crates/rbuilder-rules", version = "0.4.2" }
-rbuilder-core = { path = "crates/rbuilder-core", version = "0.4.2" }
+rgbuilder-plugin-api = { path = "crates/rgbuilder-plugin-api", version = "0.4.3" }
+rgbuilder-plugin-helpers = { path = "crates/rgbuilder-plugin-helpers", version = "0.4.3" }
+rgbuilder-config-formats = { path = "crates/rgbuilder-config-formats", version = "0.4.3" }
+rgbuilder-lang-runtime = { path = "crates/rgbuilder-lang-runtime", version = "0.4.3" }
+rgbuilder-registry = { path = "crates/rgbuilder-registry", version = "0.4.3" }
+rgbuilder-error = { path = "crates/rgbuilder-error", version = "0.4.3" }
+rgbuilder-graph = { path = "crates/rgbuilder-graph", version = "0.4.3" }
+rgbuilder-extraction = { path = "crates/rgbuilder-extraction", version = "0.4.3" }
+rgbuilder-pipeline = { path = "crates/rgbuilder-pipeline", version = "0.4.3" }
+rgbuilder-analysis = { path = "crates/rgbuilder-analysis", version = "0.4.3", default-features = false }
+rgbuilder-gql = { path = "crates/rgbuilder-gql", version = "0.4.3" }
+rgbuilder-export = { path = "crates/rgbuilder-export", version = "0.4.3" }
+rgbuilder-dashboard = { path = "crates/rgbuilder-dashboard", version = "0.4.3" }
+rgbuilder-wasm = { path = "crates/rgbuilder-wasm", version = "0.4.3" }
+rgbuilder-security = { path = "crates/rgbuilder-security", version = "0.4.3" }
+rgbuilder-project-config = { path = "crates/rgbuilder-project-config", version = "0.4.3" }
+rgbuilder-incremental = { path = "crates/rgbuilder-incremental", version = "0.4.3" }
+rgbuilder-semantic = { path = "crates/rgbuilder-semantic", version = "0.4.3" }
+rgbuilder-rules = { path = "crates/rgbuilder-rules", version = "0.4.3" }
+rgbuilder-core = { path = "crates/rgbuilder-core", version = "0.4.3" }
 tempfile = "3"
 zstd = "0.13"
 rayon = "1.7"
-rbuilder-lang-go = { path = "crates/rbuilder-lang-go", version = "0.4.2" }
-rbuilder-lang-java = { path = "crates/rbuilder-lang-java", version = "0.4.2" }
-rbuilder-lang-javascript = { path = "crates/rbuilder-lang-javascript", version = "0.4.2" }
-rbuilder-lang-python = { path = "crates/rbuilder-lang-python", version = "0.4.2" }
-rbuilder-lang-rust = { path = "crates/rbuilder-lang-rust", version = "0.4.2" }
-rbuilder-lang-typescript = { path = "crates/rbuilder-lang-typescript", version = "0.4.2" }
-rbuilder-lang-csharp = { path = "crates/rbuilder-lang-csharp", version = "0.4.2" }
-rbuilder-lang-c = { path = "crates/rbuilder-lang-c", version = "0.4.2" }
-rbuilder-lang-cpp = { path = "crates/rbuilder-lang-cpp", version = "0.4.2" }
-rbuilder-languages = { path = "crates/rbuilder-languages", version = "0.4.2" }
+rgbuilder-lang-go = { path = "crates/rgbuilder-lang-go", version = "0.4.3" }
+rgbuilder-lang-java = { path = "crates/rgbuilder-lang-java", version = "0.4.3" }
+rgbuilder-lang-javascript = { path = "crates/rgbuilder-lang-javascript", version = "0.4.3" }
+rgbuilder-lang-python = { path = "crates/rgbuilder-lang-python", version = "0.4.3" }
+rgbuilder-lang-rust = { path = "crates/rgbuilder-lang-rust", version = "0.4.3" }
+rgbuilder-lang-typescript = { path = "crates/rgbuilder-lang-typescript", version = "0.4.3" }
+rgbuilder-lang-csharp = { path = "crates/rgbuilder-lang-csharp", version = "0.4.3" }
+rgbuilder-lang-c = { path = "crates/rgbuilder-lang-c", version = "0.4.3" }
+rgbuilder-lang-cpp = { path = "crates/rgbuilder-lang-cpp", version = "0.4.3" }
+rgbuilder-languages = { path = "crates/rgbuilder-languages", version = "0.4.3" }
 tree-sitter = "0.25"
 
 [workspace.lints.rust]
@@ -102,42 +102,42 @@ unwrap_used = "warn"
 expect_used = "warn"
 
 [package]
-name = "rbuilder"
-version = "0.4.2"
+name = "rgbuilder"
+version = "0.4.3"
 edition.workspace = true
 rust-version.workspace = true
-authors = ["rBuilder Contributors"]
+authors = ["rgBuilder Contributors"]
 description = "A Code knowledge graph system"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/sshaaf/rbuilder"
+repository = "https://github.com/sshaaf/rgbuilder"
 readme = "README.md"
 keywords = ["code-analysis", "graph", "ai", "knowledge-graph"]
 categories = ["development-tools", "command-line-utilities"]
 
 [dependencies]
 # Workspace crates
-rbuilder-core = { workspace = true }
-rbuilder-plugin-api = { workspace = true }
-rbuilder-plugin-helpers = { workspace = true }
-rbuilder-config-formats = { workspace = true }
-rbuilder-lang-runtime = { workspace = true }
-rbuilder-registry = { workspace = true }
-rbuilder-error = { workspace = true }
-rbuilder-graph = { workspace = true }
-rbuilder-extraction = { workspace = true }
-rbuilder-pipeline = { workspace = true }
-rbuilder-analysis = { workspace = true }
-rbuilder-gql = { workspace = true }
-rbuilder-export = { workspace = true }
-rbuilder-dashboard = { workspace = true }
-rbuilder-security = { workspace = true }
-rbuilder-project-config = { workspace = true }
-rbuilder-incremental = { workspace = true }
-rbuilder-semantic = { workspace = true }
-rbuilder-rules = { workspace = true }
-rbuilder-languages = { workspace = true }
+rgbuilder-core = { workspace = true }
+rgbuilder-plugin-api = { workspace = true }
+rgbuilder-plugin-helpers = { workspace = true }
+rgbuilder-config-formats = { workspace = true }
+rgbuilder-lang-runtime = { workspace = true }
+rgbuilder-registry = { workspace = true }
+rgbuilder-error = { workspace = true }
+rgbuilder-graph = { workspace = true }
+rgbuilder-extraction = { workspace = true }
+rgbuilder-pipeline = { workspace = true }
+rgbuilder-analysis = { workspace = true }
+rgbuilder-gql = { workspace = true }
+rgbuilder-export = { workspace = true }
+rgbuilder-dashboard = { workspace = true }
+rgbuilder-security = { workspace = true }
+rgbuilder-project-config = { workspace = true }
+rgbuilder-incremental = { workspace = true }
+rgbuilder-semantic = { workspace = true }
+rgbuilder-rules = { workspace = true }
+rgbuilder-languages = { workspace = true }
 
-rbuilder-macros = { path = "rbuilder-macros", optional = true }
+rgbuilder-macros = { path = "rgbuilder-macros", optional = true }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -181,19 +181,19 @@ tempfile = "3"
 pretty_assertions = "1"
 insta = "1"
 reqwest = { version = "0.12", features = ["blocking", "json"] }
-rbuilder-dashboard = { workspace = true }
-rbuilder-lang-go = { workspace = true }
-rbuilder-lang-csharp = { workspace = true }
-rbuilder-lang-c = { workspace = true }
-rbuilder-lang-cpp = { workspace = true }
-rbuilder-lang-javascript = { workspace = true }
-rbuilder-lang-typescript = { workspace = true }
-rbuilder-lang-rust = { workspace = true }
+rgbuilder-dashboard = { workspace = true }
+rgbuilder-lang-go = { workspace = true }
+rgbuilder-lang-csharp = { workspace = true }
+rgbuilder-lang-c = { workspace = true }
+rgbuilder-lang-cpp = { workspace = true }
+rgbuilder-lang-javascript = { workspace = true }
+rgbuilder-lang-typescript = { workspace = true }
+rgbuilder-lang-rust = { workspace = true }
 
 [features]
 default = ["semantic-onnx"]
-proc-macros = ["rbuilder-macros"]
-semantic-onnx = ["rbuilder-analysis/semantic-onnx"]
+proc-macros = ["rgbuilder-macros"]
+semantic-onnx = ["rgbuilder-analysis/semantic-onnx"]
 
 [profile.release]
 opt-level = 3
@@ -208,7 +208,7 @@ debug = false
 strip = false
 
 [[bin]]
-name = "rbuilder"
+name = "rgbuilder"
 path = "src/main.rs"
 
 [[test]]

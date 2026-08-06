@@ -1,4 +1,4 @@
-//! `rbuilder semantic` — opt-in function semantic index and Hamming search.
+//! `rgbuilder semantic` — opt-in function semantic index and Hamming search.
 
 use super::args::OutputFormat;
 use super::context::CliContext;
@@ -164,7 +164,7 @@ pub fn run_query(ctx: &CliContext, args: SemanticQueryArgs) -> Result<()> {
     let path = semantic_index_path(ctx);
     if !path.is_file() {
         bail!(
-            "Semantic index not found at {} (run `rbuilder semantic index` first)",
+            "Semantic index not found at {} (run `rgbuilder semantic index` first)",
             path.display()
         );
     }
@@ -292,7 +292,7 @@ impl BlastSummaryProvider for EngineBlastProvider<'_> {
     fn summarize(
         &self,
         anchor_id: Uuid,
-    ) -> rbuilder_error::Result<Option<crate::analysis::SemanticBlastSummary>> {
+    ) -> rgbuilder_error::Result<Option<crate::analysis::SemanticBlastSummary>> {
         let result = if let Some(digest) = self.graph_digest.as_deref() {
             if let Some(engine) = try_load_engine(self.repo, digest)? {
                 engine.analyze(anchor_id)?
@@ -306,7 +306,7 @@ impl BlastSummaryProvider for EngineBlastProvider<'_> {
         let node = self
             .backend
             .get_node(anchor_id)?
-            .ok_or_else(|| rbuilder_error::Error::NodeNotFound(anchor_id.to_string()))?;
+            .ok_or_else(|| rgbuilder_error::Error::NodeNotFound(anchor_id.to_string()))?;
 
         Ok(Some(blast_summary_from_result(
             &crate::analysis::SemanticEntry {

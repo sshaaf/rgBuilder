@@ -1,4 +1,4 @@
-# rBuilder CLI Getting Started
+# rgBuilder CLI Getting Started
 
 > **This page is deprecated.** Use the canonical walkthrough instead.
 

@@ -99,7 +99,7 @@ export function TaintView() {
         <p class="text-muted mb-2">
           Taint analysis is not in this bundle. Run discover with CFG/PDG enabled:
         </p>
-        <pre class="bg-light border rounded p-3 small mb-0">rbuilder discover . --languages java --cfg</pre>
+        <pre class="bg-light border rounded p-3 small mb-0">rgbuilder discover . --languages java --cfg</pre>
       </div>
     );
   }

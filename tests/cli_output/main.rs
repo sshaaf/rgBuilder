@@ -2,7 +2,7 @@
 //!
 //! Each module tests the typed serializer in `src/cli/<command>_output.rs` via
 //! fixture builders (`fixture_*`, `build_*_response`). Fast serde-shape checks
-//! that run without spawning the `rbuilder` binary.
+//! that run without spawning the `rgbuilder` binary.
 //!
 //! For subprocess coverage see:
 //! - `subprocess_golden_path.rs` — discover + blast-radius golden paths

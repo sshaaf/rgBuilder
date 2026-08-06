@@ -2,12 +2,12 @@
 
 mod dashboard_harness;
 
-use dashboard_harness::{copy_dir_all, rbuilder_bin};
+use dashboard_harness::{copy_dir_all, rgbuilder_bin};
 use std::path::Path;
 use std::process::Command;
 
 fn run_discover(repo: &Path, extra: &[&str]) -> std::process::Output {
-    let mut cmd = Command::new(rbuilder_bin());
+    let mut cmd = Command::new(rgbuilder_bin());
     cmd.args([
         "-r",
         repo.to_str().unwrap(),
@@ -17,7 +17,7 @@ fn run_discover(repo: &Path, extra: &[&str]) -> std::process::Output {
         "java,rust",
     ]);
     cmd.args(extra);
-    cmd.output().expect("spawn rbuilder discover")
+    cmd.output().expect("spawn rgbuilder discover")
 }
 
 fn assert_ok(output: &std::process::Output, label: &str) {
@@ -34,8 +34,8 @@ fn materialize() -> (tempfile::TempDir, std::path::PathBuf) {
     let tmp = tempfile::tempdir().expect("tempdir");
     let repo = tmp.path().join("repo");
     copy_dir_all(&fixture, &repo).expect("copy fixture");
-    // Fixture may ship a stale `.rbuilder/`; start clean so default-off is observable.
-    let _ = std::fs::remove_dir_all(repo.join(".rbuilder"));
+    // Fixture may ship a stale `.rgbuilder/`; start clean so default-off is observable.
+    let _ = std::fs::remove_dir_all(repo.join(".rgbuilder"));
     (tmp, repo)
 }
 
@@ -46,18 +46,18 @@ fn discover_default_skips_dashboard_dir() {
     assert_ok(&output, "discover default");
 
     assert!(
-        repo.join(".rbuilder/graph.snapshot.bin").is_file(),
+        repo.join(".rgbuilder/graph.snapshot.bin").is_file(),
         "graph snapshot still required"
     );
     assert!(
-        !repo.join(".rbuilder/dashboard").exists(),
-        "default discover must not write .rbuilder/dashboard (#31)"
+        !repo.join(".rgbuilder/dashboard").exists(),
+        "default discover must not write .rgbuilder/dashboard (#31)"
     );
 }
 
 #[test]
 fn discover_with_dashboard_writes_bundle() {
-    if !rbuilder_dashboard::dist_embedded() {
+    if !rgbuilder_dashboard::dist_embedded() {
         eprintln!("skip: dashboard/dist not embedded");
         return;
     }
@@ -66,7 +66,7 @@ fn discover_with_dashboard_writes_bundle() {
     let output = run_discover(&repo, &["--with-dashboard"]);
     assert_ok(&output, "discover --with-dashboard");
 
-    let dash = repo.join(".rbuilder/dashboard");
+    let dash = repo.join(".rgbuilder/dashboard");
     assert!(dash.join("index.html").is_file(), "missing index.html");
     assert!(
         dash.join("manifest.json").is_file(),
@@ -93,7 +93,7 @@ fn export_migration_hints_writes_plan_without_dashboard() {
         serde_json::from_slice(&std::fs::read(&plan_path).unwrap()).unwrap();
     assert_eq!(plan["schema_version"], 2);
     assert!(
-        !repo.join(".rbuilder/dashboard").exists(),
+        !repo.join(".rgbuilder/dashboard").exists(),
         "migration hints must not imply dashboard export"
     );
 }
@@ -112,7 +112,7 @@ fn export_migration_plan_alias_still_works() {
 
 #[test]
 fn discover_help_documents_dashboard_flags() {
-    let output = Command::new(rbuilder_bin())
+    let output = Command::new(rgbuilder_bin())
         .args(["discover", "--help"])
         .output()
         .expect("spawn help");

@@ -1,4 +1,4 @@
-//! `rbuilder metrics` — PageRank, betweenness, and community detection.
+//! `rgbuilder metrics` — PageRank, betweenness, and community detection.
 
 use super::args::OutputFormat;
 use super::context::CliContext;
@@ -11,7 +11,7 @@ use crate::analysis::{
     CommunityDetector, FastPageRank, PetGraphView,
 };
 use anyhow::Result;
-use rbuilder_graph::schema::EdgeType;
+use rgbuilder_graph::schema::EdgeType;
 use serde_json::json;
 
 pub struct MetricsArgs {

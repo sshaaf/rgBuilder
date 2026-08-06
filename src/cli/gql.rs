@@ -1,11 +1,11 @@
-//! `rbuilder gql` — graph query language execution.
+//! `rgbuilder gql` — graph query language execution.
 
 use super::args::OutputFormat;
 use super::context::CliContext;
 use super::gql_output::gql_result_to_json;
 use anyhow::Result;
-use rbuilder_analysis::{AnalysisResults, CommunityQueryContext};
-use rbuilder_graph::backend::GraphBackend;
+use rgbuilder_analysis::{AnalysisResults, CommunityQueryContext};
+use rgbuilder_graph::backend::GraphBackend;
 
 pub struct GqlArgs {
     pub query: String,
@@ -54,9 +54,9 @@ pub fn run(ctx: &CliContext, args: GqlArgs) -> Result<()> {
 
 pub(crate) fn load_community_context(
     ctx: &CliContext,
-    backend: &rbuilder_graph::backend::MemoryBackend,
+    backend: &rgbuilder_graph::backend::MemoryBackend,
 ) -> Option<CommunityQueryContext> {
-    let path = ctx.repo.join(".rbuilder/analysis_results.bin");
+    let path = ctx.repo.join(".rgbuilder/analysis_results.bin");
     if !path.is_file() {
         return None;
     }

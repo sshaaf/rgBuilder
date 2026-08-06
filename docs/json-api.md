@@ -1,6 +1,6 @@
-# rBuilder JSON API
+# rgBuilder JSON API
 
-Programmatic reference for parsing rBuilder output. Every structured CLI command emits **one JSON document on stdout** when invoked with `-f json` / `--format json`.
+Programmatic reference for parsing rgBuilder output. Every structured CLI command emits **one JSON document on stdout** when invoked with `-f json` / `--format json`.
 
 **Companion docs:** field-by-field catalogs live in [cli-output-schemas.md](cli-output-schemas.md).
 
@@ -42,8 +42,8 @@ Programmatic reference for parsing rBuilder output. Every structured CLI command
 
 ```bash
 export REPO=/path/to/coolstore
-rbuilder -r "$REPO" -f json gql 'MATCH (n:Function) RETURN n LIMIT 5' | jq .
-rbuilder -r "$REPO" -f json blast-radius ShoppingCartService -o /tmp/blast.json
+rgbuilder -r "$REPO" -f json gql 'MATCH (n:Function) RETURN n LIMIT 5' | jq .
+rgbuilder -r "$REPO" -f json blast-radius ShoppingCartService -o /tmp/blast.json
 ```
 
 ### Stdout vs stderr
@@ -58,7 +58,7 @@ rbuilder -r "$REPO" -f json blast-radius ShoppingCartService -o /tmp/blast.json
 
 ### Prerequisites
 
-All query commands require a prior successful `discover` (creates `.rbuilder/graph.snapshot.bin` and related caches). See [user-guide.md](user-guide.md).
+All query commands require a prior successful `discover` (creates `.rgbuilder/graph.snapshot.bin` and related caches). See [user-guide.md](user-guide.md).
 
 ---
 
@@ -115,7 +115,7 @@ if (doc.schema_version !== 2) {
 ## 4. `discover`
 
 ```bash
-rbuilder -f json discover PATH [-l LANGS] [-e PATTERNS] [--with-cfg] [--with-taint]
+rgbuilder -f json discover PATH [-l LANGS] [-e PATTERNS] [--with-cfg] [--with-taint]
 ```
 
 ### TypeScript shape
@@ -155,7 +155,7 @@ interface DiscoverResponse {
 ### jq
 
 ```bash
-rbuilder -f json discover . | jq '.metrics | {nodes: .nodes_generated, ms: .duration_ms}'
+rgbuilder -f json discover . | jq '.metrics | {nodes: .nodes_generated, ms: .duration_ms}'
 ```
 
 ---
@@ -163,7 +163,7 @@ rbuilder -f json discover . | jq '.metrics | {nodes: .nodes_generated, ms: .dura
 ## 5. `gql`
 
 ```bash
-rbuilder -f json gql "<QUERY>" [--macro-name NAME] [--explain]
+rgbuilder -f json gql "<QUERY>" [--macro-name NAME] [--explain]
 ```
 
 ### TypeScript shape
@@ -189,7 +189,7 @@ interface GqlRow {
 
 Each `rows[i]` is an **array** of bindings (one object per variable in the `RETURN` clause).
 
-Virtual `:Community` nodes and `f.community_id` filters join `.rbuilder/analysis_results.bin`
+Virtual `:Community` nodes and `f.community_id` filters join `.rgbuilder/analysis_results.bin`
 (see [community-query-and-naming-plan.md](design/community-query-and-naming-plan.md)).
 
 ### Example
@@ -216,15 +216,15 @@ Virtual `:Community` nodes and `f.community_id` filters join `.rbuilder/analysis
 
 ```bash
 # All function names
-rbuilder -f json gql 'MATCH (n:Function) RETURN n' \
+rgbuilder -f json gql 'MATCH (n:Function) RETURN n' \
   | jq -r '.rows[][].node'
 
 # Multi-binding row (a,b) from a CALLS query
-rbuilder -f json gql 'MATCH (a:Function)-[:CALLS]->(b:Function) RETURN a,b LIMIT 5' \
+rgbuilder -f json gql 'MATCH (a:Function)-[:CALLS]->(b:Function) RETURN a,b LIMIT 5' \
   | jq '.rows[] | map({binding, node, file})'
 
 # Named communities
-rbuilder -f json gql --macro-name all_communities unused \
+rgbuilder -f json gql --macro-name all_communities unused \
   | jq '.rows[:5][][] | {id: .community_id, label, member_count}'
 ```
 
@@ -233,7 +233,7 @@ rbuilder -f json gql --macro-name all_communities unused \
 When `--macro-name` is set, the positional query string is ignored:
 
 ```bash
-rbuilder -f json gql --macro-name all_functions 'unused'
+rgbuilder -f json gql --macro-name all_functions 'unused'
 # Macros: all_functions | direct_calls | call_chain | all_communities
 ```
 
@@ -242,7 +242,7 @@ rbuilder -f json gql --macro-name all_functions 'unused'
 ## 6. `blast-radius`
 
 ```bash
-rbuilder -f json blast-radius SYMBOL [--depth N] [--policy-file PATH] [--with-slices]
+rgbuilder -f json blast-radius SYMBOL [--depth N] [--policy-file PATH] [--with-slices]
 ```
 
 ### TypeScript shape
@@ -305,15 +305,15 @@ Tagged union — discriminant field is **`kind`**:
 
 ```bash
 # Impact score and caller UUIDs
-rbuilder -f json blast-radius ShoppingCartService \
+rgbuilder -f json blast-radius ShoppingCartService \
   | jq '{score: .metrics.score, callers: [.topology.direct_callers[].id]}'
 
 # Depth-capped impact zone
-rbuilder -f json blast-radius CartEndpoint --depth 3 \
+rgbuilder -f json blast-radius CartEndpoint --depth 3 \
   | jq '.metrics.caller_depth_limit, .topology.impact_zone | length'
 
 # Policy gate
-rbuilder -f json blast-radius OrderService --policy-file policy.json \
+rgbuilder -f json blast-radius OrderService --policy-file policy.json \
   | jq '.gatekeeping.policy_status, .gatekeeping.violations'
 ```
 
@@ -321,7 +321,7 @@ rbuilder -f json blast-radius OrderService --policy-file policy.json \
 
 ### Migration from legacy flat JSON
 
-Older rBuilder emitted a flat object (`symbol`, `score`, `direct_callers[]`, `impact_zone[]` at the root). Current output is **nested** with `schema_version: 2`. See [cli-output-schemas.md](cli-output-schemas.md) §1 for the full field catalog and jq path mapping.
+Older rgBuilder emitted a flat object (`symbol`, `score`, `direct_callers[]`, `impact_zone[]` at the root). Current output is **nested** with `schema_version: 2`. See [cli-output-schemas.md](cli-output-schemas.md) §1 for the full field catalog and jq path mapping.
 
 ```bash
 # Was: jq '.score'  →  Now:
@@ -339,7 +339,7 @@ jq '.target.canonical_fqn'
 ## 7. `metrics`
 
 ```bash
-rbuilder -f json metrics [--pagerank] [--betweenness] [--communities] [--iterations N]
+rgbuilder -f json metrics [--pagerank] [--betweenness] [--communities] [--iterations N]
 ```
 
 Default (no section flags) includes **all three** sections. Requesting a single flag omits the others entirely.
@@ -367,8 +367,8 @@ interface MetricsResponse {
 ### jq
 
 ```bash
-rbuilder -f json metrics --pagerank | jq '.pagerank.top[:5]'
-rbuilder -f json metrics | jq '.communities.modularity'
+rgbuilder -f json metrics --pagerank | jq '.pagerank.top[:5]'
+rgbuilder -f json metrics | jq '.communities.modularity'
 ```
 
 ---
@@ -376,7 +376,7 @@ rbuilder -f json metrics | jq '.communities.modularity'
 ## 8. `check`
 
 ```bash
-rbuilder -f json check --policy-file policy.json
+rgbuilder -f json check --policy-file policy.json
 ```
 
 Evaluates policy rules against **git-changed** functions (or all functions if git is unavailable).
@@ -399,7 +399,7 @@ interface CheckResponse {
 ### jq
 
 ```bash
-rbuilder -f json check --policy-file policy.json | jq '{passed, count: (.violations | length)}'
+rgbuilder -f json check --policy-file policy.json | jq '{passed, count: (.violations | length)}'
 ```
 
 ---
@@ -407,7 +407,7 @@ rbuilder -f json check --policy-file policy.json | jq '{passed, count: (.violati
 ## 9. `slice`
 
 ```bash
-rbuilder -f json slice FILE --line N --variable VAR [--function NAME] \
+rgbuilder -f json slice FILE --line N --variable VAR [--function NAME] \
   [--view text|cfg|pdg] [--direction backward|forward] [--taint]
 ```
 
@@ -500,11 +500,11 @@ interface CfgEdgeNode {
 
 ```bash
 # Lines touched by backward slice
-rbuilder -f json slice src/.../Foo.java --line 42 --variable x --function Foo \
+rgbuilder -f json slice src/.../Foo.java --line 42 --variable x --function Foo \
   | jq '.lines'
 
 # Taint counts only
-rbuilder -f json slice src/.../Foo.java --line 10 --variable input --function Foo --taint \
+rgbuilder -f json slice src/.../Foo.java --line 10 --variable input --function Foo --taint \
   | jq '{flows, vulnerable}'
 ```
 
@@ -513,7 +513,7 @@ rbuilder -f json slice src/.../Foo.java --line 10 --variable input --function Fo
 ## 10. `inspect`
 
 ```bash
-rbuilder -f json inspect SYMBOL cfg|pdg|dom [layer options]
+rgbuilder -f json inspect SYMBOL cfg|pdg|dom [layer options]
 ```
 
 Requires `discover --with-cfg` for richest PDG/CFG data from the analysis archive.
@@ -563,7 +563,7 @@ Block references use integer **`block_index`** (sorted by `start_line`), not str
 ### jq
 
 ```bash
-rbuilder -f json inspect ShoppingCartService pdg --edge-layer data \
+rgbuilder -f json inspect ShoppingCartService pdg --edge-layer data \
   | jq '{data: .data_deps, nodes: [.nodes[] | {line, label}]}'
 ```
 
@@ -576,8 +576,8 @@ rbuilder -f json inspect ShoppingCartService pdg --edge-layer data \
 `export` writes to **`--export-output`**; stdout is a one-line summary (unless global `-o` redirects).
 
 ```bash
-rbuilder export --export-format json --export-output graph.json --query all
-rbuilder export --export-format mermaid --export-output clearCart.mmd --query 'name:clearCart'
+rgbuilder export --export-format json --export-output graph.json --query all
+rgbuilder export --export-format mermaid --export-output clearCart.mmd --query 'name:clearCart'
 ```
 
 | `--export-format` | File content |
@@ -593,7 +593,7 @@ rbuilder export --export-format mermaid --export-output clearCart.mmd --query 'n
 
 ## 12. On-disk JSON after `discover`
 
-These files are written under `.rbuilder/` (and copied into `.rbuilder/dashboard/` for the UI). They are **not** emitted on stdout but are stable inputs for custom tooling.
+These files are written under `.rgbuilder/` (and copied into `.rgbuilder/dashboard/` for the UI). They are **not** emitted on stdout but are stable inputs for custom tooling.
 
 | Path | `schema_version` | Purpose |
 |------|------------------:|---------|
@@ -692,7 +692,7 @@ Binary artifacts (`graph.snapshot.bin`, `graph_payload.bin`, `blast_engine.snaps
 **CI pattern:** capture stdout first, then check `$?`.
 
 ```bash
-out=$(rbuilder -f json blast-radius Foo --policy-file policy.json) || ec=$?
+out=$(rgbuilder -f json blast-radius Foo --policy-file policy.json) || ec=$?
 echo "$out" | jq .
 exit "${ec:-0}"
 ```
@@ -706,12 +706,12 @@ exit "${ec:-0}"
 ```python
 import json, subprocess
 
-def rbuilder_json(repo: str, *args: str) -> dict:
-    cmd = ["rbuilder", "-r", repo, "-f", "json", *args]
+def rgbuilder_json(repo: str, *args: str) -> dict:
+    cmd = ["rgbuilder", "-r", repo, "-f", "json", *args]
     out = subprocess.check_output(cmd, text=True)
     return json.loads(out)
 
-doc = rbuilder_json("/path/to/coolstore", "blast-radius", "CartEndpoint")
+doc = rgbuilder_json("/path/to/coolstore", "blast-radius", "CartEndpoint")
 assert doc["schema_version"] == 2
 for caller in doc["topology"]["direct_callers"]:
     print(caller["id"], caller["fqn"])
@@ -722,21 +722,21 @@ for caller in doc["topology"]["direct_callers"]:
 ```javascript
 import { execFileSync } from "node:child_process";
 
-function rbuilderJson(repo, ...args) {
-  const out = execFileSync("rbuilder", ["-r", repo, "-f", "json", ...args], {
+function rgbuilderJson(repo, ...args) {
+  const out = execFileSync("rgbuilder", ["-r", repo, "-f", "json", ...args], {
     encoding: "utf8",
   });
   return JSON.parse(out);
 }
 
-const gql = rbuilderJson(process.env.REPO, "gql", "MATCH (n:Function) RETURN n");
+const gql = rgbuilderJson(process.env.REPO, "gql", "MATCH (n:Function) RETURN n");
 const names = gql.rows.flat().map((b) => b.node);
 ```
 
 ### CI ingestion gate
 
 ```bash
-metrics=$(rbuilder -f json discover .)
+metrics=$(rgbuilder -f json discover .)
 nodes=$(echo "$metrics" | jq '.metrics.nodes_generated')
 test "$nodes" -gt 100
 ```
@@ -744,8 +744,8 @@ test "$nodes" -gt 100
 ### Chaining discover → query
 
 ```bash
-rbuilder -f json discover . | tee discover.json
-rbuilder -f json gql --macro-name all_functions x | jq '.count'
+rgbuilder -f json discover . | tee discover.json
+rgbuilder -f json gql --macro-name all_functions x | jq '.count'
 ```
 
 ---
@@ -757,7 +757,7 @@ Opt-in embedding index + query. Types: `src/cli/semantic_output.rs`.
 ### `semantic index`
 
 ```bash
-rbuilder -r "$REPO" -f json semantic index
+rgbuilder -r "$REPO" -f json semantic index
 # offline: --embedder vocab|hash
 ```
 
@@ -767,7 +767,7 @@ type SemanticIndexJsonResponse = {
   model_id: string;
   dimensions: number;          // default 256
   functions_indexed: number;
-  path: string;                // .rbuilder/semantic_index.bin
+  path: string;                // .rgbuilder/semantic_index.bin
   graph_digest?: string;
   build_stats?: {
     total: number;
@@ -779,13 +779,13 @@ type SemanticIndexJsonResponse = {
 ```
 
 ```bash
-rbuilder -r "$REPO" -f json semantic index | jq '{model_id, dimensions, functions_indexed}'
+rgbuilder -r "$REPO" -f json semantic index | jq '{model_id, dimensions, functions_indexed}'
 ```
 
 ### `semantic query`
 
 ```bash
-rbuilder -r "$REPO" -f json semantic query "checkout flow" --limit 10
+rgbuilder -r "$REPO" -f json semantic query "checkout flow" --limit 10
 ```
 
 ```typescript
@@ -811,9 +811,9 @@ type SemanticQueryJsonResponse = {
 ```
 
 ```bash
-rbuilder -r "$REPO" -f json semantic query "OrderService" --limit 5 \
+rgbuilder -r "$REPO" -f json semantic query "OrderService" --limit 5 \
   | jq '.hits[:5] | map({name, score, file_path})'
-rbuilder -r "$REPO" -f json semantic query "cart" --scope community --limit 5 \
+rgbuilder -r "$REPO" -f json semantic query "cart" --scope community --limit 5 \
   | jq '.hits[].name'
 ```
 
@@ -824,8 +824,8 @@ rbuilder -r "$REPO" -f json semantic query "cart" --scope community --limit 5 \
 List / refresh heuristic labels over label-propagation clusters. Types: `src/cli/communities.rs`.
 
 ```bash
-rbuilder -r "$REPO" -f json communities list
-rbuilder -r "$REPO" -f json communities label --write
+rgbuilder -r "$REPO" -f json communities list
+rgbuilder -r "$REPO" -f json communities label --write
 ```
 
 ```typescript
@@ -842,8 +842,8 @@ type CommunitiesJsonResponse = {
 ```
 
 ```bash
-rbuilder -r "$REPO" -f json communities list | jq '.communities[:10]'
-rbuilder -r "$REPO" -f json communities list | jq '{modularity, n: (.communities|length)}'
+rgbuilder -r "$REPO" -f json communities list | jq '.communities[:10]'
+rgbuilder -r "$REPO" -f json communities list | jq '{modularity, n: (.communities|length)}'
 ```
 
 GQL alternative: `--macro-name all_communities` (see User Guide §6).
@@ -852,12 +852,12 @@ GQL alternative: `--macro-name all_communities` (see User Guide §6).
 
 ## 17. `cpg`
 
-Hybrid CPG façade (needs `discover --with-cfg`). Types: `crates/rbuilder-analysis/src/cpg.rs` + `src/cli/cpg.rs`. All JSON payloads use `schema_version: 1`.
+Hybrid CPG façade (needs `discover --with-cfg`). Types: `crates/rgbuilder-analysis/src/cpg.rs` + `src/cli/cpg.rs`. All JSON payloads use `schema_version: 1`.
 
 ### `cpg status`
 
 ```bash
-rbuilder -r "$REPO" -f json cpg status
+rgbuilder -r "$REPO" -f json cpg status
 ```
 
 ```typescript
@@ -877,7 +877,7 @@ type CpgStatus = {
 ### `cpg mutations`
 
 ```bash
-rbuilder -r "$REPO" -f json cpg mutations --type ShoppingCart --exclude-ctors
+rgbuilder -r "$REPO" -f json cpg mutations --type ShoppingCart --exclude-ctors
 ```
 
 ```typescript
@@ -911,10 +911,10 @@ type CpgMutationsResult = {
 | `cpg export` | writes a **file** (`--format` / `--output`); not stdout JSON |
 
 ```bash
-rbuilder -r "$REPO" -f json cpg status | jq '{archive_present, function_count, field_write_count}'
-rbuilder -r "$REPO" -f json cpg mutations --type ShoppingCart --exclude-ctors \
+rgbuilder -r "$REPO" -f json cpg status | jq '{archive_present, function_count, field_write_count}'
+rgbuilder -r "$REPO" -f json cpg mutations --type ShoppingCart --exclude-ctors \
   | jq '.mutations | length'
-rbuilder -r "$REPO" -f json cpg calls priceShoppingCart | jq '.edges[:10]'
+rgbuilder -r "$REPO" -f json cpg calls priceShoppingCart | jq '.edges[:10]'
 ```
 
 ---
@@ -935,5 +935,5 @@ See [cli-io-sanity-qe.md](cli-io-sanity-qe.md) for the full coverage matrix.
 
 - [user-guide.md](user-guide.md) — install, ecommerce-java walkthrough (CoolStore dual API), CLI examples
 - [cli-output-schemas.md](cli-output-schemas.md) — exhaustive field tables per command
-- [http-api.md](http-api.md) — `rbuilder serve` and `/api/query`
+- [http-api.md](http-api.md) — `rgbuilder serve` and `/api/query`
 - [cli-io-sanity-qe.md](cli-io-sanity-qe.md) — subprocess JSON contract and release perf gates

@@ -13,7 +13,7 @@
 | Goal | How |
 |------|-----|
 | Find functions by intent, not exact names | code-daemon ONNX embeddings (256-d MRL default) |
-| Keep discover lean | Separate `.rbuilder/semantic_index.bin` — built via `semantic index` |
+| Keep discover lean | Separate `.rgbuilder/semantic_index.bin` — built via `semantic index` |
 | Fast retrieval at scale | Sign-quantized vectors + Hamming top-k |
 | Blend structure + semantics | Late fusion re-ranks Hamming pool with graph signals |
 | Agent-ready output | `-f json semantic query` + HTTP `/api/semantic/query` |
@@ -62,7 +62,7 @@ flowchart TB
 
 | Embedder | CLI | Notes |
 |----------|-----|-------|
-| **code-daemon** (default) | `--embedder code-daemon` | Bundled ONNX + SentencePiece in `rbuilder-analysis/assets/`; requires `semantic-onnx` feature (default) |
+| **code-daemon** (default) | `--embedder code-daemon` | Bundled ONNX + SentencePiece in `rgbuilder-analysis/assets/`; requires `semantic-onnx` feature (default) |
 | **vocab** | `--embedder vocab` | Compiled bag-of-tokens (`vocab-accumulate-v1`); offline, no ONNX; native **256-d** |
 | **sign-hash** | `--embedder hash` | Deterministic FNV sign-hash — CI / `--no-default-features` |
 | **custom ONNX** | `--embedder onnx --model PATH` | Optional `--tokenizer` for SentencePiece |
@@ -75,8 +75,8 @@ Escape hatch for builds without ONNX:
 
 ```bash
 cargo build --release --no-default-features
-rbuilder semantic index --embedder vocab   # preferred offline
-# or: rbuilder semantic index --embedder hash
+rgbuilder semantic index --embedder vocab   # preferred offline
+# or: rgbuilder semantic index --embedder hash
 ```
 
 ---
@@ -96,18 +96,18 @@ No extra index pass required beyond normal `discover`.
 
 | Component | Path |
 |-----------|------|
-| Index + Hamming search | `crates/rbuilder-analysis/src/semantic_search.rs` |
-| Vocab accumulator | `crates/rbuilder-analysis/src/semantic_vocab.rs` |
-| Call-graph diffusion | `crates/rbuilder-analysis/src/semantic_diffuse.rs` |
-| Body token extraction | `crates/rbuilder-analysis/src/semantic_extract.rs` |
-| Late fusion | `crates/rbuilder-analysis/src/semantic_fusion.rs` |
-| Hybrid expansion | `crates/rbuilder-analysis/src/semantic_hybrid.rs` |
-| Bundled code-daemon | `crates/rbuilder-analysis/src/semantic_embedded.rs` |
-| ONNX runtime path | `crates/rbuilder-analysis/src/semantic_onnx.rs` |
-| Token bloom at extract | `crates/rbuilder-graph/src/structural_sketch.rs` |
+| Index + Hamming search | `crates/rgbuilder-analysis/src/semantic_search.rs` |
+| Vocab accumulator | `crates/rgbuilder-analysis/src/semantic_vocab.rs` |
+| Call-graph diffusion | `crates/rgbuilder-analysis/src/semantic_diffuse.rs` |
+| Body token extraction | `crates/rgbuilder-analysis/src/semantic_extract.rs` |
+| Late fusion | `crates/rgbuilder-analysis/src/semantic_fusion.rs` |
+| Hybrid expansion | `crates/rgbuilder-analysis/src/semantic_hybrid.rs` |
+| Bundled code-daemon | `crates/rgbuilder-analysis/src/semantic_embedded.rs` |
+| ONNX runtime path | `crates/rgbuilder-analysis/src/semantic_onnx.rs` |
+| Token bloom at extract | `crates/rgbuilder-graph/src/structural_sketch.rs` |
 | CLI | `src/cli/semantic.rs`, `semantic_output.rs` |
 | HTTP API | `src/cli/semantic_api.rs`, `http_serve.rs` |
-| Manifest export | `crates/rbuilder-export/src/manifest.rs` |
+| Manifest export | `crates/rgbuilder-export/src/manifest.rs` |
 
 ---
 
@@ -119,22 +119,22 @@ No extra index pass required beyond normal `discover`.
 | HTTP client | `dashboard/src/semanticSearch.ts` |
 | Status + query API | `GET /api/semantic/status`, `POST /api/semantic/query` |
 
-Requires `rbuilder serve` (not static `python -m http.server`) so the semantic API is available.
+Requires `rgbuilder serve` (not static `python -m http.server`) so the semantic API is available.
 
 ---
 
 ## 7. CLI usage
 
 ```bash
-rbuilder discover .
-rbuilder semantic index                    # default code-daemon, 256-d
-rbuilder semantic index --incremental      # reuse unchanged code_hash rows
-rbuilder -f json semantic query "shopping cart checkout" --limit 10
-rbuilder -f json semantic query "OrderService" --keyword-and
-rbuilder -f json semantic query "auth login" --expand neighbors --expand-depth 2
+rgbuilder discover .
+rgbuilder semantic index                    # default code-daemon, 256-d
+rgbuilder semantic index --incremental      # reuse unchanged code_hash rows
+rgbuilder -f json semantic query "shopping cart checkout" --limit 10
+rgbuilder -f json semantic query "OrderService" --keyword-and
+rgbuilder -f json semantic query "auth login" --expand neighbors --expand-depth 2
 # Fusion is on by default; use --no-fusion for pure Hamming
 
-rbuilder serve --open   # dashboard Search tab + /api/semantic/*
+rgbuilder serve --open   # dashboard Search tab + /api/semantic/*
 ```
 
 Index-only flags: `--embedder`, `--dimensions`, `--model`, `--tokenizer`, `--incremental`,
@@ -144,8 +144,8 @@ Query flags: `--no-fusion` (fusion is on by default), `--keyword-and`, `--candid
 
 ```bash
 # Offline / no ONNX (preferred)
-rbuilder semantic index --embedder vocab
-rbuilder semantic index --embedder vocab --diffuse
+rgbuilder semantic index --embedder vocab
+rgbuilder semantic index --embedder vocab --diffuse
 ```
 
 ---
@@ -154,8 +154,8 @@ rbuilder semantic index --embedder vocab --diffuse
 
 | Path | Content |
 |------|---------|
-| `.rbuilder/semantic_index.bin` | Quantized embeddings + metadata (schema v2) |
-| `.rbuilder/dashboard/manifest.json` | `semantic` section when index present |
+| `.rgbuilder/semantic_index.bin` | Quantized embeddings + metadata (schema v2) |
+| `.rgbuilder/dashboard/manifest.json` | `semantic` section when index present |
 
 ---
 
@@ -163,12 +163,12 @@ rbuilder semantic index --embedder vocab --diffuse
 
 | Layer | Location |
 |-------|----------|
-| Hamming + index roundtrip | `crates/rbuilder-analysis/src/semantic_search.rs` tests |
-| Vocab accumulate | `crates/rbuilder-analysis/src/semantic_vocab.rs` tests |
-| Call-graph diffusion | `crates/rbuilder-analysis/src/semantic_diffuse.rs` tests |
-| Fusion scoring | `crates/rbuilder-analysis/src/semantic_fusion.rs` tests |
+| Hamming + index roundtrip | `crates/rgbuilder-analysis/src/semantic_search.rs` tests |
+| Vocab accumulate | `crates/rgbuilder-analysis/src/semantic_vocab.rs` tests |
+| Call-graph diffusion | `crates/rgbuilder-analysis/src/semantic_diffuse.rs` tests |
+| Fusion scoring | `crates/rgbuilder-analysis/src/semantic_fusion.rs` tests |
 | QE oracles | `tests/semantic_search_qe.rs` |
-| Multi-query timing | `tests/semantic_query_timing.rs` (polyglot CI; linux ignored + `RBUILDER_LINUX_SEMANTIC=1`, prefer `--release`) |
+| Multi-query timing | `tests/semantic_query_timing.rs` (polyglot CI; linux ignored + `RGBUILDER_LINUX_SEMANTIC=1`, prefer `--release`) |
 | CLI subprocess | `tests/cli_output/subprocess_golden_path.rs` |
 | HTTP semantic API | `src/cli/http_serve.rs` unit tests |
 
@@ -177,8 +177,8 @@ Time linux-scale Hamming with a **release** build — debug can be ~100× slower
 Regenerate screenshots:
 
 ```bash
-rbuilder -r ~/git/java/gbuilder semantic index
-rbuilder -r ~/git/java/gbuilder serve --port 8080
+rgbuilder -r ~/git/java/gbuilder semantic index
+rgbuilder -r ~/git/java/gbuilder serve --port 8080
 DASHBOARD_URL=http://127.0.0.1:8080/ node dashboard/scripts/capture-design-screenshots.mjs
 ```
 

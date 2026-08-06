@@ -13,7 +13,7 @@
 | Goal | How |
 |------|-----|
 | Minimal relevant code | PDG traversal from slice criterion |
-| CLI automation | `rbuilder slice FILE --line N --variable V` |
+| CLI automation | `rgbuilder slice FILE --line N --variable V` |
 | Dashboard exploration | WASM `compute_slice` on exported PDG bundles |
 | Security cross-check | `--taint` mode shares taint engine paths |
 
@@ -65,11 +65,11 @@ flowchart LR
 
 | Component | Path |
 |-----------|------|
-| CFG construction | `crates/rbuilder-analysis/src/cfg.rs` |
-| PDG + slicing | `crates/rbuilder-analysis/src/pdg.rs`, `slicing.rs` |
+| CFG construction | `crates/rgbuilder-analysis/src/cfg.rs` |
+| PDG + slicing | `crates/rgbuilder-analysis/src/pdg.rs`, `slicing.rs` |
 | CLI | `src/cli/slice.rs` |
-| Archive storage | `crates/rbuilder-analysis/src/storage.rs` |
-| Dashboard export | `crates/rbuilder-dashboard/src/slice_export.rs` |
+| Archive storage | `crates/rgbuilder-analysis/src/storage.rs` |
+| Dashboard export | `crates/rgbuilder-dashboard/src/slice_export.rs` |
 
 ---
 
@@ -87,10 +87,10 @@ flowchart LR
 ## 6. CLI usage
 
 ```bash
-rbuilder discover . --cfg
-rbuilder slice src/Foo.java --line 42 --variable cart --function checkOut
-rbuilder -f json slice src/Foo.java --line 10 --variable req --direction forward
-rbuilder slice src/Foo.java --line 8 --variable input --taint
+rgbuilder discover . --cfg
+rgbuilder slice src/Foo.java --line 42 --variable cart --function checkOut
+rgbuilder -f json slice src/Foo.java --line 10 --variable req --direction forward
+rgbuilder slice src/Foo.java --line 8 --variable input --taint
 ```
 
 ---
@@ -99,7 +99,7 @@ rbuilder slice src/Foo.java --line 8 --variable input --taint
 
 | Layer | Location |
 |-------|----------|
-| Analysis unit tests | `crates/rbuilder-analysis/src/slicing.rs` |
+| Analysis unit tests | `crates/rgbuilder-analysis/src/slicing.rs` |
 | CLI subprocess | `tests/cli_output/all_commands_sanity.rs` |
 | Dashboard harness | `tests/dashboard_harness.rs` (`slice_index.json`) |
 

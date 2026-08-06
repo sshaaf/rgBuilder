@@ -1,4 +1,4 @@
-//! rBuilder CLI command definitions and dispatch.
+//! rgBuilder CLI command definitions and dispatch.
 
 mod args;
 mod blast_radius;
@@ -38,7 +38,7 @@ use clap::{Parser, Subcommand};
 use context::CliContext;
 
 #[derive(Parser)]
-#[command(name = "rbuilder")]
+#[command(name = "rgbuilder")]
 #[command(about = "AI-powered code knowledge graph", version = BUILD_INFO)]
 pub struct Cli {
     /// Path to the graph cache database
@@ -82,7 +82,7 @@ pub enum Commands {
         #[arg(long = "with-security", visible_alias = "security")]
         with_security: bool,
 
-        /// Per-function CFG, dominators, and PDG → `.rbuilder/analysis/` + cfg_pdg archive.
+        /// Per-function CFG, dominators, and PDG → `.rgbuilder/analysis/` + cfg_pdg archive.
         /// Off by default. Does **not** include discover-time taint (see `--with-taint`).
         #[arg(long = "with-cfg", visible_alias = "cfg")]
         with_cfg: bool,
@@ -96,7 +96,7 @@ pub enum Commands {
         #[arg(long = "with-dfg-loops")]
         with_dfg_loops: bool,
 
-        /// Write coarse AST skeleton archive under `.rbuilder/analysis/` (implies CFG).
+        /// Write coarse AST skeleton archive under `.rgbuilder/analysis/` (implies CFG).
         #[arg(long = "with-ast-skeleton")]
         with_ast_skeleton: bool,
 
@@ -104,11 +104,11 @@ pub enum Commands {
         #[arg(long = "write-json-graph")]
         write_json_graph: bool,
 
-        /// Export the static dashboard bundle under `.rbuilder/dashboard/`. Off by default.
+        /// Export the static dashboard bundle under `.rgbuilder/dashboard/`. Off by default.
         #[arg(long = "with-dashboard")]
         with_dashboard: bool,
 
-        /// Write a migration roadmap JSON after analysis (default: `.rbuilder/migration_plan.json`).
+        /// Write a migration roadmap JSON after analysis (default: `.rgbuilder/migration_plan.json`).
         /// Alias: `--export-migration-plan` (deprecated name).
         #[arg(
             long = "export-migration-hints",
@@ -275,7 +275,7 @@ pub enum Commands {
         #[arg(long, default_value_t = 8080)]
         port: u16,
 
-        /// Dashboard directory [default: `<repo>/.rbuilder/dashboard`]
+        /// Dashboard directory [default: `<repo>/.rgbuilder/dashboard`]
         #[arg(long, value_name = "DIR")]
         dashboard_dir: Option<std::path::PathBuf>,
 
@@ -295,7 +295,7 @@ pub enum Commands {
         #[arg(long, conflicts_with_all = ["host", "port", "open", "query_only", "dashboard_only", "dashboard_dir"])]
         daemon: bool,
 
-        /// Daemon endpoint path (Unix socket or Windows port file; default under `<repo>/.rbuilder/`)
+        /// Daemon endpoint path (Unix socket or Windows port file; default under `<repo>/.rgbuilder/`)
         #[arg(long, value_name = "PATH")]
         socket: Option<std::path::PathBuf>,
 
@@ -307,7 +307,7 @@ pub enum Commands {
 
 #[derive(Subcommand)]
 pub enum SemanticCommands {
-    /// Build `.rbuilder/semantic_index.bin` from function symbols (not run by default discover)
+    /// Build `.rgbuilder/semantic_index.bin` from function symbols (not run by default discover)
     Index {
         /// Embedding dimensions before sign quantization (multiple of 8) [default: 256]
         #[arg(long, default_value_t = DEFAULT_EMBEDDING_DIMENSIONS)]
@@ -817,7 +817,7 @@ fn init_logging(verbose: bool, discover_json: bool) {
         tracing_subscriber::fmt()
             .with_env_filter(
                 EnvFilter::try_from_default_env()
-                    .unwrap_or_else(|_| EnvFilter::new("info,rbuilder=debug,profile=info")),
+                    .unwrap_or_else(|_| EnvFilter::new("info,rgbuilder=debug,profile=info")),
             )
             .with_target(true)
             .with_level(true)
@@ -836,7 +836,7 @@ fn init_logging(verbose: bool, discover_json: bool) {
     } else {
         tracing_subscriber::fmt()
             .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                EnvFilter::new("warn,rbuilder=info,rbuilder_extraction=warn,rbuilder_analysis=warn")
+                EnvFilter::new("warn,rgbuilder=info,rgbuilder_extraction=warn,rgbuilder_analysis=warn")
             }))
             .with_target(false)
             .with_level(false)

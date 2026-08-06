@@ -1,6 +1,6 @@
-# rbuilder-graph Storage Architecture
+# rgbuilder-graph Storage Architecture
 
-The `rbuilder-graph` crate stores the code knowledge graph: typed nodes and edges, secondary indexes, persistence, and a mini query language. Analysis algorithms live in `rbuilder-analysis`.
+The `rgbuilder-graph` crate stores the code knowledge graph: typed nodes and edges, secondary indexes, persistence, and a mini query language. Analysis algorithms live in `rgbuilder-analysis`.
 
 ## Layers
 
@@ -34,12 +34,12 @@ v2 uses fixed-width rows (64 B node, 40 B edge) + string pool. BLAKE3 `content_d
 
 ## SQLite (blast-radius only)
 
-rBuilder does **not** store the knowledge graph in SQLite. The only SQLite usage is `macro_call_index.db` in `rbuilder-analysis` — a precomputed **blast-radius lookup cache** written at `discover` and read by `blast-radius` T0 (`MacroCallLookupDb`). GQL, export, and metrics use the columnar mmap graph.
+rgBuilder does **not** store the knowledge graph in SQLite. The only SQLite usage is `macro_call_index.db` in `rgbuilder-analysis` — a precomputed **blast-radius lookup cache** written at `discover` and read by `blast-radius` T0 (`MacroCallLookupDb`). GQL, export, and metrics use the columnar mmap graph.
 
 ## Downstream
 
 ```
-MemoryBackend / ColumnarGraphMmap → rbuilder-analysis::PetGraphView → algorithms
+MemoryBackend / ColumnarGraphMmap → rgbuilder-analysis::PetGraphView → algorithms
 ```
 
 See also: [analysis-architecture.md](analysis-architecture.md), [cli-io-sanity-qe.md](cli-io-sanity-qe.md).

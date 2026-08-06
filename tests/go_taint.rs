@@ -1,11 +1,11 @@
 //! Phase 13-style Go analysis: CFG depth, taint, and call relations.
 
-use rbuilder::analysis::{
+use rgbuilder::analysis::{
     build_cfg_for_function, canonical_language_id, cfg_language_id_from_path,
     ProgramDependenceGraph, TaintAnalyzer, TaintSink, TaintSource,
 };
-use rbuilder_lang_go::GoPlugin;
-use rbuilder_plugin_api::{LanguagePlugin, RelationType, SymbolType};
+use rgbuilder_lang_go::GoPlugin;
+use rgbuilder_plugin_api::{LanguagePlugin, RelationType, SymbolType};
 use std::path::Path;
 
 #[test]

@@ -1,8 +1,8 @@
 //! Shared CLI context: paths, graph I/O, and output routing.
 
 use anyhow::{bail, Context, Result};
-use rbuilder_graph::CodeGraph;
-use rbuilder_graph::SnapshotNodeStore;
+use rgbuilder_graph::CodeGraph;
+use rgbuilder_graph::SnapshotNodeStore;
 use std::cell::RefCell;
 use std::fs;
 use std::io::{self, Write};
@@ -38,7 +38,8 @@ impl CliContext {
     ) -> Self {
         let repo =
             repo.unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
-        let db = db.unwrap_or_else(|| repo.join(".rbuilder").join("graph.db"));
+        let _ = rgbuilder_graph::paths::ensure_artifact_dir_migrated(&repo);
+        let db = db.unwrap_or_else(|| rgbuilder_graph::paths::artifact_path(&repo, "graph.db"));
         Self {
             repo,
             db,
@@ -50,9 +51,10 @@ impl CliContext {
     }
 
     fn snapshot_path(&self) -> PathBuf {
-        self.repo
-            .join(".rbuilder")
-            .join(rbuilder_graph::snapshot::SNAPSHOT_FILE)
+        rgbuilder_graph::paths::artifact_path(
+            &self.repo,
+            rgbuilder_graph::snapshot::SNAPSHOT_FILE,
+        )
     }
 
     fn ensure_snapshot_loaded(&self) -> Result<()> {
@@ -89,13 +91,13 @@ impl CliContext {
                 .with_context(|| format!("read graph db {}", self.db.display()))?;
             return CodeGraph::import_json(&json).map_err(Into::into);
         }
-        let legacy = self.repo.join(".rbuilder").join("graph.json");
+        let legacy = rgbuilder_graph::paths::artifact_path(&self.repo, "graph.json");
         if legacy.exists() {
             let json = fs::read_to_string(&legacy)?;
             return CodeGraph::import_json(&json).map_err(Into::into);
         }
         bail!(
-            "Graph not found at {} (run `rbuilder discover` first)",
+            "Graph not found at {} (run `rgbuilder discover` first)",
             self.db.display()
         );
     }

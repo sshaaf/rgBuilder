@@ -4,9 +4,9 @@
  * Prereq (ecommerce-java with CFG + dashboard):
  *   cargo build --release
  *   ./scripts/build-dashboard.sh   # if UI changed
- *   rbuilder -r rbuilder-tests/ecommerce-java discover . -l java -e target \
+ *   rgbuilder -r rgbuilder-tests/ecommerce-java discover . -l java -e target \
  *     --with-cfg --with-dashboard
- *   rbuilder -r rbuilder-tests/ecommerce-java serve --port 8080
+ *   rgbuilder -r rgbuilder-tests/ecommerce-java serve --port 8080
  *
  * Usage:
  *   DASHBOARD_URL=http://127.0.0.1:8080/ node dashboard/scripts/test-mutations-panel.mjs

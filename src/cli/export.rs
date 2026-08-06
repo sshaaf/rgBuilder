@@ -1,12 +1,12 @@
-//! `rbuilder export` — graph serialization.
+//! `rgbuilder export` — graph serialization.
 
 use super::args::ExportFormat;
 use super::context::CliContext;
 use crate::export::{export_graphml, generate_dot, generate_mermaid, select_subgraph};
 use crate::export::{GraphvizOptions, MermaidOptions};
 use anyhow::{bail, Result};
-use rbuilder_graph::export::GraphSnapshot;
-use rbuilder_graph::schema::GRAPH_SCHEMA_VERSION;
+use rgbuilder_graph::export::GraphSnapshot;
+use rgbuilder_graph::schema::GRAPH_SCHEMA_VERSION;
 
 pub struct ExportArgs {
     pub export_format: ExportFormat,
@@ -78,7 +78,7 @@ pub fn run(ctx: &CliContext, args: ExportArgs) -> Result<()> {
 }
 
 fn filtered_counts(
-    backend: &rbuilder_graph::backend::MemoryBackend,
+    backend: &rgbuilder_graph::backend::MemoryBackend,
     query: &str,
 ) -> Result<(usize, usize)> {
     if query == "all" {

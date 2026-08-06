@@ -130,7 +130,7 @@ export function SliceView({ computeSlice }: SliceViewProps) {
           <code>--cfg</code>:
         </p>
         <pre class="bg-light border rounded p-3 small mb-0">
-          rbuilder discover . --languages java --cfg
+          rgbuilder discover . --languages java --cfg
         </pre>
       </div>
     );

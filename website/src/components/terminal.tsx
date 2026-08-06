@@ -5,7 +5,7 @@ import { Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function TerminalBlock({
-  prompt = "rbuilder ›",
+  prompt = "rgbuilder ›",
   lines,
   className,
 }: {
@@ -51,11 +51,11 @@ export function TerminalBlock({
       <pre className="overflow-x-auto p-4 font-mono text-[13px] leading-relaxed text-[var(--body-strong)]">
         {lines.map((line, i) => (
           <div key={i} className="whitespace-pre-wrap">
-            {line.startsWith("$") || line.startsWith("rbuilder") ? (
+            {line.startsWith("$") || line.startsWith("rgbuilder") ? (
               <>
                 <span className="text-[var(--mute)]">{prompt} </span>
                 <span className="text-[var(--ink)]">
-                  {line.replace(/^\$\s?/, "").replace(/^rbuilder\s?/, "")}
+                  {line.replace(/^\$\s?/, "").replace(/^rgbuilder\s?/, "")}
                 </span>
               </>
             ) : (

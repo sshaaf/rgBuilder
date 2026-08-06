@@ -1,0 +1,4117 @@
+{
+  "schema_version": 2,
+  "rows": [
+    {
+      "index": 0,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 202
+    },
+    {
+      "index": 1,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 268
+    },
+    {
+      "index": 2,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 493
+    },
+    {
+      "index": 3,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 18
+    },
+    {
+      "index": 4,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 473
+    },
+    {
+      "index": 5,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 144
+    },
+    {
+      "index": 6,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 122
+    },
+    {
+      "index": 7,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 68
+    },
+    {
+      "index": 8,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 459
+    },
+    {
+      "index": 9,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 410
+    },
+    {
+      "index": 10,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 80
+    },
+    {
+      "index": 11,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 170
+    },
+    {
+      "index": 12,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 503
+    },
+    {
+      "index": 13,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 455
+    },
+    {
+      "index": 14,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 131
+    },
+    {
+      "index": 15,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 91
+    },
+    {
+      "index": 16,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 152
+    },
+    {
+      "index": 17,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 383
+    },
+    {
+      "index": 18,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 307
+    },
+    {
+      "index": 19,
+      "pagerank": 0.0050266073,
+      "betweenness": 0.0000038221333,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 370
+    },
+    {
+      "index": 20,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 267
+    },
+    {
+      "index": 21,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 505
+    },
+    {
+      "index": 22,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 483
+    },
+    {
+      "index": 23,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 335
+    },
+    {
+      "index": 24,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 487
+    },
+    {
+      "index": 25,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 409
+    },
+    {
+      "index": 26,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 408
+    },
+    {
+      "index": 27,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 224
+    },
+    {
+      "index": 28,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 40
+    },
+    {
+      "index": 29,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 127
+    },
+    {
+      "index": 30,
+      "pagerank": 0.011231458,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 467
+    },
+    {
+      "index": 31,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 49
+    },
+    {
+      "index": 32,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 133
+    },
+    {
+      "index": 33,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 204
+    },
+    {
+      "index": 34,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 490
+    },
+    {
+      "index": 35,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 276
+    },
+    {
+      "index": 36,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 378
+    },
+    {
+      "index": 37,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 89
+    },
+    {
+      "index": 38,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 255
+    },
+    {
+      "index": 39,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 36
+    },
+    {
+      "index": 40,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 371
+    },
+    {
+      "index": 41,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 263
+    },
+    {
+      "index": 42,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 136
+    },
+    {
+      "index": 43,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 315
+    },
+    {
+      "index": 44,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 85
+    },
+    {
+      "index": 45,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 363
+    },
+    {
+      "index": 46,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 161
+    },
+    {
+      "index": 47,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 23
+    },
+    {
+      "index": 48,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 330
+    },
+    {
+      "index": 49,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 333
+    },
+    {
+      "index": 50,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 368
+    },
+    {
+      "index": 51,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 341
+    },
+    {
+      "index": 52,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 278
+    },
+    {
+      "index": 53,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 88
+    },
+    {
+      "index": 54,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 240
+    },
+    {
+      "index": 55,
+      "pagerank": 0.0032094694,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 295
+    },
+    {
+      "index": 56,
+      "pagerank": 0.011231458,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 155
+    },
+    {
+      "index": 57,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 28
+    },
+    {
+      "index": 58,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 52
+    },
+    {
+      "index": 59,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 143
+    },
+    {
+      "index": 60,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 425
+    },
+    {
+      "index": 61,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 395
+    },
+    {
+      "index": 62,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 139
+    },
+    {
+      "index": 63,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 433
+    },
+    {
+      "index": 64,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 511
+    },
+    {
+      "index": 65,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 118
+    },
+    {
+      "index": 66,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 187
+    },
+    {
+      "index": 67,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 325
+    },
+    {
+      "index": 68,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 471
+    },
+    {
+      "index": 69,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 57
+    },
+    {
+      "index": 70,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 312
+    },
+    {
+      "index": 71,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 374
+    },
+    {
+      "index": 72,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 66
+    },
+    {
+      "index": 73,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 185
+    },
+    {
+      "index": 74,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 176
+    },
+    {
+      "index": 75,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 281
+    },
+    {
+      "index": 76,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 126
+    },
+    {
+      "index": 77,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 264
+    },
+    {
+      "index": 78,
+      "pagerank": 0.0060086763,
+      "betweenness": 0.0000038221333,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 301
+    },
+    {
+      "index": 79,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 437
+    },
+    {
+      "index": 80,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 489
+    },
+    {
+      "index": 81,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 271
+    },
+    {
+      "index": 82,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 140
+    },
+    {
+      "index": 83,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 496
+    },
+    {
+      "index": 84,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 500
+    },
+    {
+      "index": 85,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 475
+    },
+    {
+      "index": 86,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 254
+    },
+    {
+      "index": 87,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 17
+    },
+    {
+      "index": 88,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 379
+    },
+    {
+      "index": 89,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 253
+    },
+    {
+      "index": 90,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 179
+    },
+    {
+      "index": 91,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 70
+    },
+    {
+      "index": 92,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 449
+    },
+    {
+      "index": 93,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 401
+    },
+    {
+      "index": 94,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 79
+    },
+    {
+      "index": 95,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 157
+    },
+    {
+      "index": 96,
+      "pagerank": 0.011231458,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 434
+    },
+    {
+      "index": 97,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 512
+    },
+    {
+      "index": 98,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 366
+    },
+    {
+      "index": 99,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 316
+    },
+    {
+      "index": 100,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 0
+    },
+    {
+      "index": 101,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 439
+    },
+    {
+      "index": 102,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 313
+    },
+    {
+      "index": 103,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 55
+    },
+    {
+      "index": 104,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 403
+    },
+    {
+      "index": 105,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 182
+    },
+    {
+      "index": 106,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 418
+    },
+    {
+      "index": 107,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 110
+    },
+    {
+      "index": 108,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 446
+    },
+    {
+      "index": 109,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 25
+    },
+    {
+      "index": 110,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 192
+    },
+    {
+      "index": 111,
+      "pagerank": 0.0060086763,
+      "betweenness": 0.0000038221333,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 149
+    },
+    {
+      "index": 112,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 198
+    },
+    {
+      "index": 113,
+      "pagerank": 0.0044634147,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 371
+    },
+    {
+      "index": 114,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 95
+    },
+    {
+      "index": 115,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 245
+    },
+    {
+      "index": 116,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 218
+    },
+    {
+      "index": 117,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 406
+    },
+    {
+      "index": 118,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 299
+    },
+    {
+      "index": 119,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 246
+    },
+    {
+      "index": 120,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 346
+    },
+    {
+      "index": 121,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 90
+    },
+    {
+      "index": 122,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 39
+    },
+    {
+      "index": 123,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 102
+    },
+    {
+      "index": 124,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 194
+    },
+    {
+      "index": 125,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 63
+    },
+    {
+      "index": 126,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 488
+    },
+    {
+      "index": 127,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 120
+    },
+    {
+      "index": 128,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 33
+    },
+    {
+      "index": 129,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 53
+    },
+    {
+      "index": 130,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 199
+    },
+    {
+      "index": 131,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 380
+    },
+    {
+      "index": 132,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 169
+    },
+    {
+      "index": 133,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 327
+    },
+    {
+      "index": 134,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 159
+    },
+    {
+      "index": 135,
+      "pagerank": 0.0027178656,
+      "betweenness": 0.000007644267,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 346
+    },
+    {
+      "index": 136,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 438
+    },
+    {
+      "index": 137,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 400
+    },
+    {
+      "index": 138,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 272
+    },
+    {
+      "index": 139,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 287
+    },
+    {
+      "index": 140,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 286
+    },
+    {
+      "index": 141,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 385
+    },
+    {
+      "index": 142,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 86
+    },
+    {
+      "index": 143,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 318
+    },
+    {
+      "index": 144,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 346
+    },
+    {
+      "index": 145,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 431
+    },
+    {
+      "index": 146,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 71
+    },
+    {
+      "index": 147,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 320
+    },
+    {
+      "index": 148,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 124
+    },
+    {
+      "index": 149,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 402
+    },
+    {
+      "index": 150,
+      "pagerank": 0.011231458,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 353
+    },
+    {
+      "index": 151,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 186
+    },
+    {
+      "index": 152,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 308
+    },
+    {
+      "index": 153,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 309
+    },
+    {
+      "index": 154,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 451
+    },
+    {
+      "index": 155,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 42
+    },
+    {
+      "index": 156,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 329
+    },
+    {
+      "index": 157,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 153
+    },
+    {
+      "index": 158,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 479
+    },
+    {
+      "index": 159,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 180
+    },
+    {
+      "index": 160,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 282
+    },
+    {
+      "index": 161,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 48
+    },
+    {
+      "index": 162,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 275
+    },
+    {
+      "index": 163,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 326
+    },
+    {
+      "index": 164,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 6
+    },
+    {
+      "index": 165,
+      "pagerank": 0.0050266073,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 301
+    },
+    {
+      "index": 166,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 134
+    },
+    {
+      "index": 167,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 200
+    },
+    {
+      "index": 168,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 501
+    },
+    {
+      "index": 169,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 228
+    },
+    {
+      "index": 170,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 304
+    },
+    {
+      "index": 171,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 422
+    },
+    {
+      "index": 172,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 193
+    },
+    {
+      "index": 173,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 30
+    },
+    {
+      "index": 174,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 147
+    },
+    {
+      "index": 175,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 47
+    },
+    {
+      "index": 176,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 357
+    },
+    {
+      "index": 177,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 504
+    },
+    {
+      "index": 178,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 458
+    },
+    {
+      "index": 179,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 294
+    },
+    {
+      "index": 180,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 468
+    },
+    {
+      "index": 181,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 72
+    },
+    {
+      "index": 182,
+      "pagerank": 0.0032094694,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 115
+    },
+    {
+      "index": 183,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 481
+    },
+    {
+      "index": 184,
+      "pagerank": 0.004438479,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 514
+    },
+    {
+      "index": 185,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 338
+    },
+    {
+      "index": 186,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 243
+    },
+    {
+      "index": 187,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 345
+    },
+    {
+      "index": 188,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 311
+    },
+    {
+      "index": 189,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 466
+    },
+    {
+      "index": 190,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 508
+    },
+    {
+      "index": 191,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 237
+    },
+    {
+      "index": 192,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 82
+    },
+    {
+      "index": 193,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 334
+    },
+    {
+      "index": 194,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 361
+    },
+    {
+      "index": 195,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 10
+    },
+    {
+      "index": 196,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 135
+    },
+    {
+      "index": 197,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 461
+    },
+    {
+      "index": 198,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 274
+    },
+    {
+      "index": 199,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 43
+    },
+    {
+      "index": 200,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 373
+    },
+    {
+      "index": 201,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 472
+    },
+    {
+      "index": 202,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 432
+    },
+    {
+      "index": 203,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 171
+    },
+    {
+      "index": 204,
+      "pagerank": 0.0050266073,
+      "betweenness": 0.0000038221333,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 191
+    },
+    {
+      "index": 205,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 9
+    },
+    {
+      "index": 206,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 93
+    },
+    {
+      "index": 207,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 407
+    },
+    {
+      "index": 208,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 107
+    },
+    {
+      "index": 209,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 356
+    },
+    {
+      "index": 210,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 300
+    },
+    {
+      "index": 211,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 365
+    },
+    {
+      "index": 212,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 454
+    },
+    {
+      "index": 213,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 360
+    },
+    {
+      "index": 214,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 352
+    },
+    {
+      "index": 215,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 244
+    },
+    {
+      "index": 216,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 342
+    },
+    {
+      "index": 217,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 64
+    },
+    {
+      "index": 218,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 420
+    },
+    {
+      "index": 219,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 364
+    },
+    {
+      "index": 220,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 339
+    },
+    {
+      "index": 221,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 12
+    },
+    {
+      "index": 222,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 494
+    },
+    {
+      "index": 223,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 206
+    },
+    {
+      "index": 224,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 128
+    },
+    {
+      "index": 225,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 73
+    },
+    {
+      "index": 226,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 163
+    },
+    {
+      "index": 227,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 98
+    },
+    {
+      "index": 228,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 386
+    },
+    {
+      "index": 229,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 450
+    },
+    {
+      "index": 230,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 295
+    },
+    {
+      "index": 231,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 289
+    },
+    {
+      "index": 232,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 296
+    },
+    {
+      "index": 233,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 114
+    },
+    {
+      "index": 234,
+      "pagerank": 0.0032094694,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 116
+    },
+    {
+      "index": 235,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 393
+    },
+    {
+      "index": 236,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 92
+    },
+    {
+      "index": 237,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 210
+    },
+    {
+      "index": 238,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 288
+    },
+    {
+      "index": 239,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 16
+    },
+    {
+      "index": 240,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 491
+    },
+    {
+      "index": 241,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 205
+    },
+    {
+      "index": 242,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 123
+    },
+    {
+      "index": 243,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 197
+    },
+    {
+      "index": 244,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 177
+    },
+    {
+      "index": 245,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 261
+    },
+    {
+      "index": 246,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 116
+    },
+    {
+      "index": 247,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 247
+    },
+    {
+      "index": 248,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 225
+    },
+    {
+      "index": 249,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 321
+    },
+    {
+      "index": 250,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 457
+    },
+    {
+      "index": 251,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 222
+    },
+    {
+      "index": 252,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 445
+    },
+    {
+      "index": 253,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 351
+    },
+    {
+      "index": 254,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 226
+    },
+    {
+      "index": 255,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 250
+    },
+    {
+      "index": 256,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 480
+    },
+    {
+      "index": 257,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 416
+    },
+    {
+      "index": 258,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 236
+    },
+    {
+      "index": 259,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 22
+    },
+    {
+      "index": 260,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 292
+    },
+    {
+      "index": 261,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 423
+    },
+    {
+      "index": 262,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 75
+    },
+    {
+      "index": 263,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 142
+    },
+    {
+      "index": 264,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 238
+    },
+    {
+      "index": 265,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 112
+    },
+    {
+      "index": 266,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 174
+    },
+    {
+      "index": 267,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 442
+    },
+    {
+      "index": 268,
+      "pagerank": 0.0032094694,
+      "betweenness": 0.0000038221333,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 371
+    },
+    {
+      "index": 269,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 96
+    },
+    {
+      "index": 270,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 301
+    },
+    {
+      "index": 271,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 470
+    },
+    {
+      "index": 272,
+      "pagerank": 0.0032094694,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 225
+    },
+    {
+      "index": 273,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 359
+    },
+    {
+      "index": 274,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 229
+    },
+    {
+      "index": 275,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 76
+    },
+    {
+      "index": 276,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 14
+    },
+    {
+      "index": 277,
+      "pagerank": 0.0050266073,
+      "betweenness": 0.0000038221333,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 301
+    },
+    {
+      "index": 278,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 203
+    },
+    {
+      "index": 279,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 498
+    },
+    {
+      "index": 280,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 258
+    },
+    {
+      "index": 281,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 297
+    },
+    {
+      "index": 282,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 99
+    },
+    {
+      "index": 283,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 428
+    },
+    {
+      "index": 284,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 506
+    },
+    {
+      "index": 285,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 173
+    },
+    {
+      "index": 286,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 358
+    },
+    {
+      "index": 287,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 394
+    },
+    {
+      "index": 288,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 456
+    },
+    {
+      "index": 289,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 513
+    },
+    {
+      "index": 290,
+      "pagerank": 0.0022262617,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 346
+    },
+    {
+      "index": 291,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 444
+    },
+    {
+      "index": 292,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 396
+    },
+    {
+      "index": 293,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 474
+    },
+    {
+      "index": 294,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 154
+    },
+    {
+      "index": 295,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 130
+    },
+    {
+      "index": 296,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 21
+    },
+    {
+      "index": 297,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 54
+    },
+    {
+      "index": 298,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 257
+    },
+    {
+      "index": 299,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 381
+    },
+    {
+      "index": 300,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 233
+    },
+    {
+      "index": 301,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 464
+    },
+    {
+      "index": 302,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 181
+    },
+    {
+      "index": 303,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 191
+    },
+    {
+      "index": 304,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 167
+    },
+    {
+      "index": 305,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 269
+    },
+    {
+      "index": 306,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 3
+    },
+    {
+      "index": 307,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 484
+    },
+    {
+      "index": 308,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 336
+    },
+    {
+      "index": 309,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 387
+    },
+    {
+      "index": 310,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 478
+    },
+    {
+      "index": 311,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 411
+    },
+    {
+      "index": 312,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 382
+    },
+    {
+      "index": 313,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 65
+    },
+    {
+      "index": 314,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 348
+    },
+    {
+      "index": 315,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 31
+    },
+    {
+      "index": 316,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 132
+    },
+    {
+      "index": 317,
+      "pagerank": 0.0038716672,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 191
+    },
+    {
+      "index": 318,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 427
+    },
+    {
+      "index": 319,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 232
+    },
+    {
+      "index": 320,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 460
+    },
+    {
+      "index": 321,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 421
+    },
+    {
+      "index": 322,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 119
+    },
+    {
+      "index": 323,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 97
+    },
+    {
+      "index": 324,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 108
+    },
+    {
+      "index": 325,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 37
+    },
+    {
+      "index": 326,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 510
+    },
+    {
+      "index": 327,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 221
+    },
+    {
+      "index": 328,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 350
+    },
+    {
+      "index": 329,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 67
+    },
+    {
+      "index": 330,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 465
+    },
+    {
+      "index": 331,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 106
+    },
+    {
+      "index": 332,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 115
+    },
+    {
+      "index": 333,
+      "pagerank": 0.0032094694,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 341
+    },
+    {
+      "index": 334,
+      "pagerank": 0.0032094694,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 396
+    },
+    {
+      "index": 335,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 162
+    },
+    {
+      "index": 336,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 166
+    },
+    {
+      "index": 337,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 149
+    },
+    {
+      "index": 338,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 35
+    },
+    {
+      "index": 339,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 492
+    },
+    {
+      "index": 340,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 20
+    },
+    {
+      "index": 341,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 230
+    },
+    {
+      "index": 342,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 207
+    },
+    {
+      "index": 343,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 485
+    },
+    {
+      "index": 344,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 265
+    },
+    {
+      "index": 345,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 251
+    },
+    {
+      "index": 346,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 497
+    },
+    {
+      "index": 347,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 158
+    },
+    {
+      "index": 348,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 426
+    },
+    {
+      "index": 349,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 310
+    },
+    {
+      "index": 350,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 146
+    },
+    {
+      "index": 351,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 58
+    },
+    {
+      "index": 352,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 430
+    },
+    {
+      "index": 353,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 189
+    },
+    {
+      "index": 354,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 242
+    },
+    {
+      "index": 355,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 178
+    },
+    {
+      "index": 356,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 424
+    },
+    {
+      "index": 357,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 367
+    },
+    {
+      "index": 358,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 319
+    },
+    {
+      "index": 359,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 340
+    },
+    {
+      "index": 360,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 164
+    },
+    {
+      "index": 361,
+      "pagerank": 0.0032094694,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 308
+    },
+    {
+      "index": 362,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 104
+    },
+    {
+      "index": 363,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 249
+    },
+    {
+      "index": 364,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 305
+    },
+    {
+      "index": 365,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 26
+    },
+    {
+      "index": 366,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 69
+    },
+    {
+      "index": 367,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 56
+    },
+    {
+      "index": 368,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 476
+    },
+    {
+      "index": 369,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 303
+    },
+    {
+      "index": 370,
+      "pagerank": 0.0050266073,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 149
+    },
+    {
+      "index": 371,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 150
+    },
+    {
+      "index": 372,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 453
+    },
+    {
+      "index": 373,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 509
+    },
+    {
+      "index": 374,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 290
+    },
+    {
+      "index": 375,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 214
+    },
+    {
+      "index": 376,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 59
+    },
+    {
+      "index": 377,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 291
+    },
+    {
+      "index": 378,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 129
+    },
+    {
+      "index": 379,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 111
+    },
+    {
+      "index": 380,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 234
+    },
+    {
+      "index": 381,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 283
+    },
+    {
+      "index": 382,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 172
+    },
+    {
+      "index": 383,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 436
+    },
+    {
+      "index": 384,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 148
+    },
+    {
+      "index": 385,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 435
+    },
+    {
+      "index": 386,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 502
+    },
+    {
+      "index": 387,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 298
+    },
+    {
+      "index": 388,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 44
+    },
+    {
+      "index": 389,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 84
+    },
+    {
+      "index": 390,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 452
+    },
+    {
+      "index": 391,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 284
+    },
+    {
+      "index": 392,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 141
+    },
+    {
+      "index": 393,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 419
+    },
+    {
+      "index": 394,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 306
+    },
+    {
+      "index": 395,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 4
+    },
+    {
+      "index": 396,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 2
+    },
+    {
+      "index": 397,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 175
+    },
+    {
+      "index": 398,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 5
+    },
+    {
+      "index": 399,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 362
+    },
+    {
+      "index": 400,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 113
+    },
+    {
+      "index": 401,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 117
+    },
+    {
+      "index": 402,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 137
+    },
+    {
+      "index": 403,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 285
+    },
+    {
+      "index": 404,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 196
+    },
+    {
+      "index": 405,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 61
+    },
+    {
+      "index": 406,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 11
+    },
+    {
+      "index": 407,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 322
+    },
+    {
+      "index": 408,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 405
+    },
+    {
+      "index": 409,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 220
+    },
+    {
+      "index": 410,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 302
+    },
+    {
+      "index": 411,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 354
+    },
+    {
+      "index": 412,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 469
+    },
+    {
+      "index": 413,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 370
+    },
+    {
+      "index": 414,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 201
+    },
+    {
+      "index": 415,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 343
+    },
+    {
+      "index": 416,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 376
+    },
+    {
+      "index": 417,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 60
+    },
+    {
+      "index": 418,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 499
+    },
+    {
+      "index": 419,
+      "pagerank": 0.0050266073,
+      "betweenness": 0.0000038221333,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 149
+    },
+    {
+      "index": 420,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 32
+    },
+    {
+      "index": 421,
+      "pagerank": 0.005346479,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 191
+    },
+    {
+      "index": 422,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 184
+    },
+    {
+      "index": 423,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 239
+    },
+    {
+      "index": 424,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 213
+    },
+    {
+      "index": 425,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 482
+    },
+    {
+      "index": 426,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 397
+    },
+    {
+      "index": 427,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 105
+    },
+    {
+      "index": 428,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 477
+    },
+    {
+      "index": 429,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 332
+    },
+    {
+      "index": 430,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 24
+    },
+    {
+      "index": 431,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 41
+    },
+    {
+      "index": 432,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 51
+    },
+    {
+      "index": 433,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 314
+    },
+    {
+      "index": 434,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 443
+    },
+    {
+      "index": 435,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 125
+    },
+    {
+      "index": 436,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 183
+    },
+    {
+      "index": 437,
+      "pagerank": 0.0064048944,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 514
+    },
+    {
+      "index": 438,
+      "pagerank": 0.006649034,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 346
+    },
+    {
+      "index": 439,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 101
+    },
+    {
+      "index": 440,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 266
+    },
+    {
+      "index": 441,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 486
+    },
+    {
+      "index": 442,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 223
+    },
+    {
+      "index": 443,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 429
+    },
+    {
+      "index": 444,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 337
+    },
+    {
+      "index": 445,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 389
+    },
+    {
+      "index": 446,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 190
+    },
+    {
+      "index": 447,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 188
+    },
+    {
+      "index": 448,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 208
+    },
+    {
+      "index": 449,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 404
+    },
+    {
+      "index": 450,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 372
+    },
+    {
+      "index": 451,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 317
+    },
+    {
+      "index": 452,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 241
+    },
+    {
+      "index": 453,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 1
+    },
+    {
+      "index": 454,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 227
+    },
+    {
+      "index": 455,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 8
+    },
+    {
+      "index": 456,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 138
+    },
+    {
+      "index": 457,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 293
+    },
+    {
+      "index": 458,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 195
+    },
+    {
+      "index": 459,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 369
+    },
+    {
+      "index": 460,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 384
+    },
+    {
+      "index": 461,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 388
+    },
+    {
+      "index": 462,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 15
+    },
+    {
+      "index": 463,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 29
+    },
+    {
+      "index": 464,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 413
+    },
+    {
+      "index": 465,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 256
+    },
+    {
+      "index": 466,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 328
+    },
+    {
+      "index": 467,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 231
+    },
+    {
+      "index": 468,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 151
+    },
+    {
+      "index": 469,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 441
+    },
+    {
+      "index": 470,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 277
+    },
+    {
+      "index": 471,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 94
+    },
+    {
+      "index": 472,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 398
+    },
+    {
+      "index": 473,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 156
+    },
+    {
+      "index": 474,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 324
+    },
+    {
+      "index": 475,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 462
+    },
+    {
+      "index": 476,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 45
+    },
+    {
+      "index": 477,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 323
+    },
+    {
+      "index": 478,
+      "pagerank": 0.004045433,
+      "betweenness": 0.000007644267,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 346
+    },
+    {
+      "index": 479,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 448
+    },
+    {
+      "index": 480,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 391
+    },
+    {
+      "index": 481,
+      "pagerank": 0.0038716672,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 370
+    },
+    {
+      "index": 482,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 355
+    },
+    {
+      "index": 483,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 13
+    },
+    {
+      "index": 484,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 349
+    },
+    {
+      "index": 485,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 415
+    },
+    {
+      "index": 486,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 280
+    },
+    {
+      "index": 487,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 259
+    },
+    {
+      "index": 488,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 507
+    },
+    {
+      "index": 489,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 160
+    },
+    {
+      "index": 490,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 212
+    },
+    {
+      "index": 491,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 347
+    },
+    {
+      "index": 492,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 447
+    },
+    {
+      "index": 493,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 216
+    },
+    {
+      "index": 494,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 273
+    },
+    {
+      "index": 495,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 46
+    },
+    {
+      "index": 496,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 219
+    },
+    {
+      "index": 497,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 100
+    },
+    {
+      "index": 498,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 168
+    },
+    {
+      "index": 499,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 109
+    },
+    {
+      "index": 500,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 412
+    },
+    {
+      "index": 501,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 279
+    },
+    {
+      "index": 502,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 375
+    },
+    {
+      "index": 503,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 399
+    },
+    {
+      "index": 504,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 62
+    },
+    {
+      "index": 505,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 495
+    },
+    {
+      "index": 506,
+      "pagerank": 0.005346479,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 370
+    },
+    {
+      "index": 507,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 211
+    },
+    {
+      "index": 508,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 377
+    },
+    {
+      "index": 509,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 252
+    },
+    {
+      "index": 510,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 74
+    },
+    {
+      "index": 511,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 440
+    },
+    {
+      "index": 512,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 260
+    },
+    {
+      "index": 513,
+      "pagerank": 0.0017346579,
+      "betweenness": 0.0,
+      "harmonic": 0.0,
+      "blast": 0.0,
+      "community_id": 50
+    }
+  ]
+}

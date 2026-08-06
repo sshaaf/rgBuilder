@@ -1,4 +1,4 @@
-//! `rbuilder check` — CI policy gateway.
+//! `rgbuilder check` — CI policy gateway.
 
 use super::args::OutputFormat;
 use super::check_output::{build_check_response, violations_from_json_values};
@@ -6,7 +6,7 @@ use super::context::CliContext;
 use super::policy_file::PolicyFile;
 use crate::analysis::{BlastRadiusEngine, CentralityAnalyzer, PetGraphView, PolicyViolation};
 use anyhow::Result;
-use rbuilder_graph::schema::NodeType;
+use rgbuilder_graph::schema::NodeType;
 use serde_json::json;
 use std::path::Path;
 use std::process::Command;
@@ -83,7 +83,7 @@ pub fn run(ctx: &CliContext, args: CheckArgs) -> Result<()> {
 
 fn changed_function_symbols(
     repo: &Path,
-    backend: &rbuilder_graph::backend::MemoryBackend,
+    backend: &rgbuilder_graph::backend::MemoryBackend,
 ) -> Result<Vec<String>> {
     let output = Command::new("git")
         .args(["diff", "--name-only", "HEAD"])

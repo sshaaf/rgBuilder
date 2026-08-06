@@ -89,7 +89,7 @@ pub(crate) fn run_full_analysis(
     }
 
     // Initialize memory monitoring with periodic peak sampling (#33).
-    use rbuilder_core::memory::MemoryMonitor;
+    use rgbuilder_core::memory::MemoryMonitor;
     let mut mem_monitor = MemoryMonitor::new();
     mem_monitor.start_periodic_sampling(std::time::Duration::from_millis(250));
 
@@ -108,7 +108,7 @@ pub(crate) fn run_full_analysis(
     let discoverer = FileDiscoverer::with_config(Arc::clone(&registry), discovery_config.clone());
     let files = discoverer.discover(root)?;
 
-    let snapshot_path = rbuilder_graph::snapshot::MmappedGraphSnapshot::default_path(root);
+    let snapshot_path = rgbuilder_graph::snapshot::MmappedGraphSnapshot::default_path(root);
     let mut file_tracker = FileTracker::load(root).unwrap_or_else(|_| FileTracker::new(root));
     let file_changes = file_tracker.detect_changes(&files)?;
 
@@ -144,7 +144,7 @@ pub(crate) fn run_full_analysis(
         };
         (stats, digest)
     } else {
-        std::fs::create_dir_all(root.join(".rbuilder"))?;
+        std::fs::create_dir_all(rgbuilder_graph::paths::artifact_dir(root))?;
         let (stats, digest) = pipeline.process_repository_to_snapshot(root, &snapshot_path)?;
         if verbose {
             debug!(
@@ -208,7 +208,7 @@ pub(crate) fn run_full_analysis(
     // Initialize columnar analysis results
     use crate::analysis::AnalysisResults;
     use crate::analysis::NodeLookup;
-    use rbuilder_graph::schema::NodeType;
+    use rgbuilder_graph::schema::NodeType;
     let mut node_ids = cold.store().all_node_ids();
     node_ids.sort_unstable();
     let mut analysis_results = AnalysisResults::new(node_ids);
@@ -371,7 +371,7 @@ pub(crate) fn run_full_analysis(
             .community
             .as_ref()
             .and_then(|c| c.infrastructure_community_id);
-        let _ = rbuilder_analysis::fill_community_labels(&mut analysis_results, infra, |uuid| {
+        let _ = rgbuilder_analysis::fill_community_labels(&mut analysis_results, infra, |uuid| {
             cold.get_node(uuid)
                 .ok()
                 .flatten()
@@ -431,7 +431,7 @@ pub(crate) fn run_full_analysis(
         profile.security.secs = secs(security_start.elapsed());
     }
 
-    let output_dir = root.join(".rbuilder/analysis");
+    let output_dir = rgbuilder_graph::paths::artifact_path(root, "analysis");
 
     // CFG/PDG (+ optional taint) — opt-in with --with-cfg / --with-taint
     if run_cfg_pass {
@@ -663,7 +663,7 @@ pub(crate) fn run_full_analysis(
     // Flat graphs use on-demand reachability: skip bulk fill so discover does not
     // serialize ~O(functions) blast rows into macro_call_index / analysis_results
     // (linux cold: ~976s macro_index, multi‑GB artifacts). Live `blast-radius` still
-    // works via the engine snapshot. See sshaaf/rBuilder#28 (won't fix).
+    // works via the engine snapshot. See sshaaf/rgBuilder#28 (won't fix).
     let query_start = Instant::now();
     let skip_bulk_blast = engine.uses_on_demand_reachability();
     if skip_bulk_blast && verbose {
@@ -740,7 +740,7 @@ pub(crate) fn run_full_analysis(
     {
         use crate::analysis::MacroCallIndex;
         use crate::analysis::MacroCallLookupDb;
-        let macro_path = root.join(".rbuilder/macro_call_index.bin");
+        let macro_path = rgbuilder_graph::paths::artifact_path(root, "macro_call_index.bin");
         let lookup_db_path = MacroCallLookupDb::default_path(root);
 
         if MacroCallIndex::caches_are_current_counts(
@@ -877,8 +877,8 @@ pub(crate) fn run_full_analysis(
 
     // Save analysis results (columnar format - separate from graph!)
     let save_analysis_start = Instant::now();
-    let analysis_path = root.join(".rbuilder/analysis_results.bin");
-    std::fs::create_dir_all(root.join(".rbuilder"))?;
+    let analysis_path = rgbuilder_graph::paths::artifact_path(root, "analysis_results.bin");
+    std::fs::create_dir_all(rgbuilder_graph::paths::artifact_dir(root))?;
     analysis_results.save(&analysis_path)?;
     profile.save_analysis.secs = secs(save_analysis_start.elapsed());
 
@@ -908,10 +908,10 @@ pub(crate) fn run_full_analysis(
     // Graph mmap snapshot was written early (before topology/analysis) to avoid
     // co-residency of PreparedGraphSnapshot with the live backend (#33).
 
-    let mut hydrated: Option<rbuilder_graph::code_graph::CodeGraph> = None;
+    let mut hydrated: Option<rgbuilder_graph::code_graph::CodeGraph> = None;
     let need_hydrate = write_json_graph || with_dashboard || export_migration_hints;
     if need_hydrate {
-        hydrated = Some(rbuilder_graph::code_graph::CodeGraph::open_snapshot(
+        hydrated = Some(rgbuilder_graph::code_graph::CodeGraph::open_snapshot(
             &snapshot_path,
         )?);
     }
@@ -931,14 +931,14 @@ pub(crate) fn run_full_analysis(
 
     // Export static dashboard bundle only when requested (#31).
     let save_dashboard_start = Instant::now();
-    let dashboard_dir = root.join(".rbuilder/dashboard");
+    let dashboard_dir = rgbuilder_graph::paths::artifact_path(root, "dashboard");
     if with_dashboard {
         let graph = hydrated.as_ref().expect("hydrated for dashboard");
-        match rbuilder_dashboard::export_dashboard_bundle_if_changed_with_context(
+        match rgbuilder_dashboard::export_dashboard_bundle_if_changed_with_context(
             graph.backend(),
             root,
             &snapshot_path,
-            rbuilder_dashboard::DashboardExportContext::with_analysis(&analysis_results),
+            rgbuilder_dashboard::DashboardExportContext::with_analysis(&analysis_results),
         ) {
             Ok(true) => {
                 if human_output {
@@ -968,14 +968,14 @@ pub(crate) fn run_full_analysis(
         let plan_path = ctx
             .output
             .clone()
-            .unwrap_or_else(|| root.join(".rbuilder/migration_plan.json"));
+            .unwrap_or_else(|| rgbuilder_graph::paths::artifact_path(root, "migration_plan.json"));
         let graph = hydrated.as_ref().expect("hydrated for migration");
-        match rbuilder_dashboard::write_migration_plan_from_repo(
+        match rgbuilder_dashboard::write_migration_plan_from_repo(
             graph.backend(),
             root,
             &plan_path,
             migration_preset,
-            rbuilder_analysis::MigrationOrderMode::parse(migration_order),
+            rgbuilder_analysis::MigrationOrderMode::parse(migration_order),
         ) {
             Ok(plan) => {
                 if json_output && ctx.output.is_none() {
@@ -1021,7 +1021,7 @@ pub(crate) fn run_full_analysis(
             build_discover_response(&index_stats, run_start.elapsed().as_millis() as u64);
         ctx.emit_json_value(&serde_json::to_value(&response)?)?;
     } else {
-        info!("[✓] Saved to .rbuilder/ ({:.1} MB total)", analysis_size);
+        info!("[✓] Saved to .rgbuilder/ ({:.1} MB total)", analysis_size);
 
         info!(
             "[✓] Completed in {:.1}s (peak {:.0} MB; ingest {:.0} MB, analysis {:.0} MB)",
@@ -1044,10 +1044,10 @@ pub(crate) fn run_full_analysis(
 
         info!("");
         info!("[i] Next steps:");
-        info!("   rbuilder gql \"MATCH (n:Function) RETURN n\"  # Query the graph");
-        info!("   rbuilder slice <file> --line <N> --variable <VAR>");
+        info!("   rgbuilder gql \"MATCH (n:Function) RETURN n\"  # Query the graph");
+        info!("   rgbuilder slice <file> --line <N> --variable <VAR>");
         if dashboard_dir.join("manifest.json").is_file() {
-            info!("   rbuilder serve --open   # Dashboard + query API at http://127.0.0.1:8080");
+            info!("   rgbuilder serve --open   # Dashboard + query API at http://127.0.0.1:8080");
         }
     }
 

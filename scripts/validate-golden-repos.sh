@@ -3,7 +3,7 @@
 #
 # Usage:
 #   ./scripts/validate-golden-repos.sh
-#   RBUILDER_DASHBOARD_GOLDEN_REPO=/path/to/gbuilder ./scripts/validate-golden-repos.sh
+#   RGBUILDER_DASHBOARD_GOLDEN_REPO=/path/to/gbuilder ./scripts/validate-golden-repos.sh
 #
 # Requires: Node.js + Playwright (dashboard/), golden repo checkouts, embedded dashboard dist.
 
@@ -12,9 +12,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-GBUILDER="${RBUILDER_DASHBOARD_GOLDEN_REPO:-/Users/sshaaf/git/java/gbuilder}"
-METASFRESH="${RBUILDER_METASFRESH_REPO:-$ROOT/example/metasfresh-4.9.8b}"
-SERVE_PORT="${RBUILDER_SERVE_PORT:-8080}"
+GBUILDER="${RGBUILDER_DASHBOARD_GOLDEN_REPO:-/Users/sshaaf/git/java/gbuilder}"
+METASFRESH="${RGBUILDER_METASFRESH_REPO:-$ROOT/example/metasfresh-4.9.8b}"
+SERVE_PORT="${RGBUILDER_SERVE_PORT:-8080}"
 DASHBOARD_URL="http://127.0.0.1:${SERVE_PORT}/"
 
 log() { echo "[validate-golden-repos] $*"; }
@@ -33,9 +33,9 @@ run_discover_all() {
   log "discover --with-cfg --with-security --with-taint in $repo"
   local start=$SECONDS
   if [[ -n "$langs" ]]; then
-    "$ROOT/target/release/rbuilder" -r "$repo" discover . --with-cfg --with-security --with-taint --languages "$langs"
+    "$ROOT/target/release/rgbuilder" -r "$repo" discover . --with-cfg --with-security --with-taint --languages "$langs"
   else
-    "$ROOT/target/release/rbuilder" -r "$repo" discover . --with-cfg --with-security --with-taint
+    "$ROOT/target/release/rgbuilder" -r "$repo" discover . --with-cfg --with-security --with-taint
   fi
   local elapsed=$((SECONDS - start))
   echo "$elapsed"
@@ -55,7 +55,7 @@ else
   log "no build-dashboard.sh — assuming dashboard/dist already embedded"
 fi
 
-log "Building release rbuilder..."
+log "Building release rgbuilder..."
 cargo build --release
 
 GBUILDER_DISCOVER_S=""
@@ -72,13 +72,13 @@ if require_dir "$METASFRESH"; then
 fi
 
 serve_repo="${GBUILDER}"
-if [[ ! -d "$serve_repo/.rbuilder/dashboard" && -d "$METASFRESH/.rbuilder/dashboard" ]]; then
+if [[ ! -d "$serve_repo/.rgbuilder/dashboard" && -d "$METASFRESH/.rgbuilder/dashboard" ]]; then
   serve_repo="$METASFRESH"
 fi
 
-if [[ -d "$serve_repo/.rbuilder/dashboard" ]]; then
-  log "Starting rbuilder serve on port ${SERVE_PORT} for ${serve_repo}"
-  "$ROOT/target/release/rbuilder" -r "$serve_repo" serve --port "$SERVE_PORT" &
+if [[ -d "$serve_repo/.rgbuilder/dashboard" ]]; then
+  log "Starting rgbuilder serve on port ${SERVE_PORT} for ${serve_repo}"
+  "$ROOT/target/release/rgbuilder" -r "$serve_repo" serve --port "$SERVE_PORT" &
   SERVE_PID=$!
   cleanup() { kill "$SERVE_PID" 2>/dev/null || true; }
   trap cleanup EXIT

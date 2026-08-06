@@ -1,10 +1,10 @@
 //! Map / symbol-resolution collision QE (OpenSpec `qe-sanity-gates`).
 //!
-//! Policy: required failures stay red until fixed (see `rbuilder-tests/correctness/QE.md`).
+//! Policy: required failures stay red until fixed (see `rgbuilder-tests/correctness/QE.md`).
 
-use rbuilder::analysis::resolve_unique_symbol;
-use rbuilder::graph::backend::{GraphBackend, MemoryBackend};
-use rbuilder::graph::schema::{Node, NodeType};
+use rgbuilder::analysis::resolve_unique_symbol;
+use rgbuilder::graph::backend::{GraphBackend, MemoryBackend};
+use rgbuilder::graph::schema::{Node, NodeType};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -15,8 +15,8 @@ fn fixture_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/collision_repo")
 }
 
-fn rbuilder_bin() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_rbuilder"))
+fn rgbuilder_bin() -> PathBuf {
+    PathBuf::from(env!("CARGO_BIN_EXE_rgbuilder"))
 }
 
 fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
@@ -49,10 +49,10 @@ impl Sandbox {
     }
 
     fn run(&self, args: &[&str]) -> Output {
-        let mut cmd = Command::new(rbuilder_bin());
+        let mut cmd = Command::new(rgbuilder_bin());
         cmd.arg("-r").arg(&self.repo);
         cmd.args(args);
-        cmd.output().expect("spawn rbuilder")
+        cmd.output().expect("spawn rgbuilder")
     }
 
     fn parse_stdout_json(&self, output: &Output) -> Value {
@@ -140,7 +140,7 @@ fn rust_twin_short_name_is_ambiguous() {
 
 /// Qualified-index lossiness: two nodes with the same FQN must not collapse to a
 /// single definitive qualified lookup. See GraphBuilder unit tests in
-/// `rbuilder-extraction` — this subprocess check ensures both function nodes survive discover.
+/// `rgbuilder-extraction` — this subprocess check ensures both function nodes survive discover.
 #[test]
 fn duplicate_bare_names_both_nodes_survive_discover() {
     let sandbox = Sandbox::new();

@@ -38,7 +38,7 @@ export async function fetchSemanticStatus(): Promise<SemanticStatus> {
   if (!res.ok) {
     return {
       available: false,
-      message: `Semantic API unavailable (HTTP ${res.status}). Use \`rbuilder serve\`, not a static file server.`,
+      message: `Semantic API unavailable (HTTP ${res.status}). Use \`rgbuilder serve\`, not a static file server.`,
     };
   }
   return (await res.json()) as SemanticStatus;

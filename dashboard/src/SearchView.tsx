@@ -34,7 +34,7 @@ export function SearchView({ manifest }: SearchViewProps) {
         setStatus({
           available: false,
           message:
-            "Could not reach /api/semantic/status — start with `rbuilder serve --open` (not python -m http.server).",
+            "Could not reach /api/semantic/status — start with `rgbuilder serve --open` (not python -m http.server).",
         }),
       );
   }, []);
@@ -68,14 +68,14 @@ export function SearchView({ manifest }: SearchViewProps) {
         <p class="text-muted small mb-0">
           Natural-language and keyword search over indexed functions (code-daemon, vocab, or
           hash embeddings → Hamming retrieval, optional fusion re-ranking). Offline builds:
-          <code>rbuilder semantic index --embedder vocab</code>.
+          <code>rgbuilder semantic index --embedder vocab</code>.
         </p>
       </div>
 
       {!available && (
         <div class="alert alert-warning py-2 small" role="status">
           {status?.message ??
-            "Semantic index not built yet. Run `rbuilder semantic index`, then `rbuilder serve --open`."}
+            "Semantic index not built yet. Run `rgbuilder semantic index`, then `rgbuilder serve --open`."}
         </div>
       )}
 

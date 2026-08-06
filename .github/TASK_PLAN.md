@@ -1,4 +1,4 @@
-# rBuilder - Detailed Task Plan with Testing & Performance Benchmarks
+# rgBuilder - Detailed Task Plan with Testing & Performance Benchmarks
 
 **Project Goal**: Build a knowledge graph system that arms AI coding agents with deep, queryable codebase understanding.
 
@@ -42,7 +42,7 @@
 - 👁️ **File System Watching**: notify crate with configurable debouncing (default 500ms) - 6 tests ✅
 - 🪝 **Git Hooks**: Pre-commit risk blocking, post-commit graph updates, post-checkout branch switch - 5 tests ✅
 - 🔔 **MCP Notifications**: stdio push (notifications/graph_updated) + HTTP polling (/notifications/latest) - 4 tests ✅
-- 🖥️ **CLI Commands**: `rbuilder watch`, `rbuilder init-hooks`, `rbuilder mcp serve --watch` ✅
+- 🖥️ **CLI Commands**: `rgbuilder watch`, `rgbuilder init-hooks`, `rgbuilder mcp serve --watch` ✅
 - 📦 **Implementation**: `src/watch.rs` (461 lines), `src/hooks/mod.rs` (245 lines), MCP integration (3 files)
 - 🧪 **Testing**: 31 tests ✅ **Exceeds target** (15 needed, 207% coverage)
 - 📚 **Documentation**: `docs/automation.md` (170 lines) ✅
@@ -1085,11 +1085,11 @@ fn bench_parallel_parsing_100_files(b: &mut Bencher) {
 
 ---
 
-### Task 1.6.3: Implement CLI: `rbuilder init` ⬜
+### Task 1.6.3: Implement CLI: `rgbuilder init` ⬜
 **Description**: Build CLI command to initialize graph for a repository
 
 **Acceptance Criteria**:
-- [ ] `rbuilder init <path>` command
+- [ ] `rgbuilder init <path>` command
 - [ ] Language filtering (--languages flag)
 - [ ] Exclusion patterns (--exclude flag)
 - [ ] Progress reporting
@@ -1099,7 +1099,7 @@ fn bench_parallel_parsing_100_files(b: &mut Bencher) {
 **Tests**:
 ```bash
 # Integration test
-rbuilder init ./test-repo --languages rust,python
+rgbuilder init ./test-repo --languages rust,python
 # Should output:
 # Processed 150 files
 # Created 1,234 nodes
@@ -1151,7 +1151,7 @@ fn test_graph_export_import() {
 **Deliverables**:
 - [ ] `src/graph/export.rs`
 - [ ] Test suite
-- [ ] CLI command `rbuilder export`
+- [ ] CLI command `rgbuilder export`
 
 ---
 
@@ -1162,7 +1162,7 @@ fn test_graph_export_import() {
 
 **Test Plan**:
 1. Clone test repository (e.g., small Rust project from GitHub)
-2. Run `rbuilder init`
+2. Run `rgbuilder init`
 3. Validate graph structure
 4. Validate performance
 
@@ -1434,7 +1434,7 @@ fn test_impact_radius() {
 **Deliverables**:
 - [ ] `src/analysis/dependency.rs`
 - [ ] Test suite
-- [ ] CLI command `rbuilder analyze --circular-deps`
+- [ ] CLI command `rgbuilder analyze --circular-deps`
 
 ---
 
@@ -1469,7 +1469,7 @@ fn test_unused_config_detection() {
 **Deliverables**:
 - [ ] `src/config/analyzer.rs`
 - [ ] Test suite
-- [ ] CLI command `rbuilder config --unused`
+- [ ] CLI command `rgbuilder config --unused`
 
 ---
 
@@ -1501,7 +1501,7 @@ fn test_missing_env_detection() {
 **Deliverables**:
 - [ ] Missing env var detection
 - [ ] Test suite
-- [ ] CLI command `rbuilder config --missing-env`
+- [ ] CLI command `rgbuilder config --missing-env`
 
 ---
 
@@ -1538,7 +1538,7 @@ debug: true
 **Deliverables**:
 - [ ] `src/config/secret_detector.rs`
 - [ ] Test suite with false positive filtering
-- [ ] CLI command `rbuilder config --secrets`
+- [ ] CLI command `rgbuilder config --secrets`
 
 ---
 
@@ -1781,11 +1781,11 @@ fn test_cache_similarity_search() {
 
 ---
 
-### Task 2.3.6: Implement CLI: `rbuilder ask` ⬜
+### Task 2.3.6: Implement CLI: `rgbuilder ask` ⬜
 **Description**: Natural language query command
 
 **Acceptance Criteria**:
-- [ ] `rbuilder ask "question"` command
+- [ ] `rgbuilder ask "question"` command
 - [ ] Pattern-based translation
 - [ ] Execute query on graph
 - [ ] Format results (human-readable)
@@ -1795,10 +1795,10 @@ fn test_cache_similarity_search() {
 **Tests**:
 ```bash
 # Integration tests
-rbuilder ask "How many React components?"
+rgbuilder ask "How many React components?"
 # Output: "Found 156 React components"
 
-rbuilder ask "What calls verify_token?" --explain
+rgbuilder ask "What calls verify_token?" --explain
 # Output:
 # Translated query:
 # MATCH (caller)-[:Calls]->(target {name: "verify_token"}) RETURN caller
@@ -2000,11 +2000,11 @@ fn test_rule_actions() {
 
 ---
 
-### Task 3.1.4: Implement CLI: `rbuilder label` ⬜
+### Task 3.1.4: Implement CLI: `rgbuilder label` ⬜
 **Description**: Apply rules from ruleset file
 
 **Acceptance Criteria**:
-- [ ] `rbuilder label --ruleset <path>` command
+- [ ] `rgbuilder label --ruleset <path>` command
 - [ ] Load rules from JSON file
 - [ ] Apply to graph
 - [ ] Summary report (nodes matched, labels added)
@@ -2012,7 +2012,7 @@ fn test_rule_actions() {
 
 **Tests**:
 ```bash
-rbuilder label --ruleset security-rules.json --dry-run
+rgbuilder label --ruleset security-rules.json --dry-run
 # Output:
 # Would apply 3 rules to 1,234 nodes:
 # - critical_security_function: 23 matches
@@ -2128,18 +2128,18 @@ fn test_plugin_loading() {
 
 ---
 
-### Task 3.2.6: Implement CLI: `rbuilder plugin` ⬜
+### Task 3.2.6: Implement CLI: `rgbuilder plugin` ⬜
 **Description**: Plugin management commands
 
 **Acceptance Criteria**:
-- [ ] `rbuilder plugin install <path>` - Install external plugin
-- [ ] `rbuilder plugin list` - List all plugins
-- [ ] `rbuilder plugin info <id>` - Show plugin details
-- [ ] `rbuilder plugin uninstall <id>` - Remove plugin
+- [ ] `rgbuilder plugin install <path>` - Install external plugin
+- [ ] `rgbuilder plugin list` - List all plugins
+- [ ] `rgbuilder plugin info <id>` - Show plugin details
+- [ ] `rgbuilder plugin uninstall <id>` - Remove plugin
 
 **Tests**:
 ```bash
-rbuilder plugin list
+rgbuilder plugin list
 # Output:
 # Built-in plugins:
 # - rust (v1.0.0)
@@ -2147,7 +2147,7 @@ rbuilder plugin list
 # ...
 #
 # External plugins:
-# - custom-lang (v0.1.0) at ~/.rbuilder/plugins/libcustom.so
+# - custom-lang (v0.1.0) at ~/.rgbuilder/plugins/libcustom.so
 ```
 
 **Deliverables**:
@@ -2184,7 +2184,7 @@ rbuilder plugin list
 
 **Test Plan**:
 1. Build sample external plugin
-2. Load via `rbuilder plugin install`
+2. Load via `rgbuilder plugin install`
 3. Parse files with external plugin
 4. Validate symbol extraction
 
@@ -2308,18 +2308,18 @@ fn test_proto_generation() {
 
 ---
 
-### Task 4.1.4: Implement CLI: `rbuilder idl` ⬜
+### Task 4.1.4: Implement CLI: `rgbuilder idl` ⬜
 **Description**: Generate IDL files for modules
 
 **Acceptance Criteria**:
-- [ ] `rbuilder idl --format proto --module <name>` command
+- [ ] `rgbuilder idl --format proto --module <name>` command
 - [ ] Generate IDL for all functions in module
 - [ ] Output to file or stdout
 - [ ] Multiple format support
 
 **Tests**:
 ```bash
-rbuilder idl --format proto --module auth --output-dir ./idl
+rgbuilder idl --format proto --module auth --output-dir ./idl
 # Generates: idl/auth.proto
 ```
 
@@ -2501,13 +2501,13 @@ fn test_incremental_update() {
 
 ---
 
-### Task 5.1.3: Implement CLI: `rbuilder update` ⬜
+### Task 5.1.3: Implement CLI: `rgbuilder update` ⬜
 **Description**: Incremental update command
 
 **Acceptance Criteria**:
-- [ ] `rbuilder update` - Update since last index
-- [ ] `rbuilder update --since <commit>` - Update since git commit
-- [ ] `rbuilder update --force` - Full rebuild
+- [ ] `rgbuilder update` - Update since last index
+- [ ] `rgbuilder update --since <commit>` - Update since git commit
+- [ ] `rgbuilder update --force` - Full rebuild
 - [ ] Progress reporting
 - [ ] Summary (files changed, nodes updated)
 
@@ -2517,7 +2517,7 @@ fn test_incremental_update() {
 echo "fn new() {}" >> src/new.rs
 
 # Incremental update
-rbuilder update
+rgbuilder update
 # Output:
 # Detected 1 changed file
 # Updated 5 nodes
@@ -2777,23 +2777,23 @@ fn test_context_efficient_response() {
 
 ---
 
-### Task 6.1.4: Implement CLI: `rbuilder mcp serve` ⬜
+### Task 6.1.4: Implement CLI: `rgbuilder mcp serve` ⬜
 **Description**: Start MCP server for AI agent integration
 
 **Acceptance Criteria**:
-- [ ] `rbuilder mcp serve --transport stdio` - stdio mode (Claude Code)
-- [ ] `rbuilder mcp serve --transport http --port 3000` - HTTP server
+- [ ] `rgbuilder mcp serve --transport stdio` - stdio mode (Claude Code)
+- [ ] `rgbuilder mcp serve --transport http --port 3000` - HTTP server
 - [ ] Graceful shutdown
 - [ ] Request logging (optional)
 
 **Tests**:
 ```bash
 # Start stdio server
-rbuilder mcp serve --transport stdio
+rgbuilder mcp serve --transport stdio
 # Claude Code can now connect
 
 # Start HTTP server
-rbuilder mcp serve --transport http --port 3000
+rgbuilder mcp serve --transport http --port 3000
 # Test: curl http://localhost:3000/tools
 ```
 
@@ -2805,10 +2805,10 @@ rbuilder mcp serve --transport http --port 3000
 ---
 
 ### Task 6.1.5: Claude Code Integration Testing ⬜
-**Description**: Test rBuilder MCP server with real Claude Code
+**Description**: Test rgBuilder MCP server with real Claude Code
 
 **Test Plan**:
-1. Configure Claude Code to use rBuilder MCP server
+1. Configure Claude Code to use rgBuilder MCP server
 2. Ask Claude: "How many functions are in this codebase?"
 3. Ask Claude: "What would break if I change verify_token?"
 4. Ask Claude: "Find high-complexity security functions"
@@ -2861,11 +2861,11 @@ fn test_conversation_context() {
 
 ---
 
-### Task 6.2.2: Implement CLI: `rbuilder chat` ⬜
+### Task 6.2.2: Implement CLI: `rgbuilder chat` ⬜
 **Description**: Interactive conversational mode
 
 **Acceptance Criteria**:
-- [ ] `rbuilder chat` command
+- [ ] `rgbuilder chat` command
 - [ ] REPL interface
 - [ ] Context retention across queries
 - [ ] History navigation (up/down arrows)
@@ -2873,21 +2873,21 @@ fn test_conversation_context() {
 
 **Tests**:
 ```bash
-$ rbuilder chat
+$ rgbuilder chat
 
-rBuilder> How many services do I have?
+rgBuilder> How many services do I have?
 Found 12 services.
 
-rBuilder> Which ones are in the auth module?
+rgBuilder> Which ones are in the auth module?
 3 services in the 'auth' community:
 1. AuthenticationService
 2. AuthorizationService
 3. TokenManagementService
 
-rBuilder> What's the complexity of AuthenticationService?
+rgBuilder> What's the complexity of AuthenticationService?
 AuthenticationService has cyclomatic complexity: 45 (CRITICAL)
 
-rBuilder> exit
+rgBuilder> exit
 Goodbye!
 ```
 
@@ -2948,18 +2948,18 @@ fn test_api_graph_stats() {
 
 ---
 
-### Task 6.3.3: Implement CLI: `rbuilder serve` ⬜
+### Task 6.3.3: Implement CLI: `rgbuilder serve` ⬜
 **Description**: Start web server for graph browser
 
 **Acceptance Criteria**:
-- [ ] `rbuilder serve --port 8080` - Start server
-- [ ] `rbuilder serve --open` - Auto-open browser
+- [ ] `rgbuilder serve --port 8080` - Start server
+- [ ] `rgbuilder serve --open` - Auto-open browser
 - [ ] Serve static frontend files
 - [ ] API endpoints
 
 **Tests**:
 ```bash
-rbuilder serve --port 8080 --open
+rgbuilder serve --port 8080 --open
 # Opens http://localhost:8080 in browser
 ```
 
@@ -3076,7 +3076,7 @@ rbuilder serve --port 8080 --open
 ```toml
 [metadata]
 version = "1.0"
-description = "rBuilder tree-sitter language configuration"
+description = "rgBuilder tree-sitter language configuration"
 
 [languages.rust]
 crate = "tree-sitter-rust"
@@ -3230,7 +3230,7 @@ cargo clippy -- -D warnings
 
 ## 7.2 Procedural Macro Development (Week 21) ✅
 
-### Task 7.2.1: Create `rbuilder-macros` Crate ✅
+### Task 7.2.1: Create `rgbuilder-macros` Crate ✅
 **Description**: Set up proc-macro crate structure
 
 **Acceptance Criteria**:
@@ -3240,9 +3240,9 @@ cargo clippy -- -D warnings
 - [x] Documentation with examples
 
 **Deliverables**:
-- [x] `rbuilder-macros/` directory
-- [x] `rbuilder-macros/Cargo.toml`
-- [x] `rbuilder-macros/src/lib.rs` (129 lines)
+- [x] `rgbuilder-macros/` directory
+- [x] `rgbuilder-macros/Cargo.toml`
+- [x] `rgbuilder-macros/src/lib.rs` (129 lines)
 
 ---
 
@@ -3795,7 +3795,7 @@ fn insert_edges_batch(&mut self, edges: Vec<Edge>) -> Result<()>;
 - ⏸️ MCP tool integration
 
 **Remaining Work**:
-- [ ] CLI integration (`rbuilder init --workspace <path>`)
+- [ ] CLI integration (`rgbuilder init --workspace <path>`)
 - [ ] Web UI visualization for multi-repo graphs
 - [ ] MCP tools for cross-repo queries
 - [ ] Performance optimization for large workspaces
@@ -4345,7 +4345,7 @@ fn test_sql_foreign_key_relations() {
 **Deliverables**:
 - [ ] `src/languages/sql.rs` plugin
 - [ ] Feature flag: `lang-sql`
-- [ ] Integration with `rbuilder analyze` command
+- [ ] Integration with `rgbuilder analyze` command
 - [ ] Documentation: "Analyzing Database Schemas"
 
 ---
@@ -4371,8 +4371,8 @@ COPY src ./src
 RUN cargo build --release
 
 FROM debian:bookworm-slim
-COPY --from=builder /app/target/release/rbuilder /usr/local/bin/
-ENTRYPOINT ["/usr/local/bin/rbuilder"]
+COPY --from=builder /app/target/release/rgbuilder /usr/local/bin/
+ENTRYPOINT ["/usr/local/bin/rgbuilder"]
 ```
 
 **Expected Graph**:
@@ -5072,7 +5072,7 @@ fn test_backward_slice_reduction() {
 **Deliverables**:
 - [ ] `src/analysis/slicing.rs`
 - [ ] MCP tool: `backward_slice`
-- [ ] CLI: `rbuilder slice --criterion "file.rs:42:var_name"`
+- [ ] CLI: `rgbuilder slice --criterion "file.rs:42:var_name"`
 - [ ] Integration with blast radius analysis
 - [ ] Benchmark: 80%+ reduction on real codebases
 
@@ -5184,7 +5184,7 @@ fn test_blast_radius_leaf_function() {
 **Deliverables**:
 - [ ] `src/analysis/blast_radius.rs`
 - [ ] MCP tool integration in `src/mcp/tools.rs`
-- [ ] CLI command: `rbuilder blast-radius <symbol>`
+- [ ] CLI command: `rgbuilder blast-radius <symbol>`
 - [ ] Integration tests
 - [ ] Performance target: <500ms for 10K node graph
 
@@ -5306,7 +5306,7 @@ fn test_detect_changes_mcp_tool() {
 **Deliverables**:
 - [ ] MCP tool implementation
 - [ ] Integration with git to detect staged files
-- [ ] CLI command: `rbuilder detect-changes`
+- [ ] CLI command: `rgbuilder detect-changes`
 - [ ] Documentation
 
 ---
@@ -5413,7 +5413,7 @@ fn bench_semantic_search(b: &mut Bencher) {
 - [ ] `src/nlp/semantic_search.rs`
 - [ ] Feature flag: `semantic-search` (optional, due to model size)
 - [ ] MCP tool: `semantic_search`
-- [ ] CLI integration: `rbuilder query --semantic "..."`
+- [ ] CLI integration: `rgbuilder query --semantic "..."`
 - [ ] Offline model bundling (no network required)
 - [ ] Performance target: <10ms query latency
 
@@ -5428,7 +5428,7 @@ fn bench_semantic_search(b: &mut Bencher) {
 
 **Acceptance Criteria**:
 - [ ] Primary Agent: High-level reasoning, generates natural language sub-queries
-- [ ] Translation Agent: Converts NL → rBuilder query patterns
+- [ ] Translation Agent: Converts NL → rgBuilder query patterns
 - [ ] Iterative refinement: Multiple queries per round
 - [ ] Context accumulation: Analyze aggregated results
 - [ ] 90%+ query accuracy vs 60% single-agent baseline
@@ -5451,7 +5451,7 @@ pub struct PrimaryAgent {
 }
 
 pub struct TranslationAgent {
-    // Converts NL sub-queries to rBuilder patterns
+    // Converts NL sub-queries to rgBuilder patterns
     // Trained/prompted with examples:
     //   "auth functions" → "type:Function|name:*auth*"
     //   "high complexity" → "type:Function|complexity:>20"
@@ -5924,7 +5924,7 @@ fn test_execute_multi_hop() {
 - [ ] Multi-hop traversal algorithm
 - [ ] Aggregation functions
 - [ ] MCP tool: `execute_graph_query`
-- [ ] CLI: `rbuilder query-lang "<query>"`
+- [ ] CLI: `rgbuilder query-lang "<query>"`
 - [ ] Performance benchmarks
 
 ---
@@ -5998,7 +5998,7 @@ impl QueryOptimizer {
 
 **Effort:** 1 week
 
-**Example** (`rbuilder.toml`):
+**Example** (`rgbuilder.toml`):
 ```toml
 [query_macros]
 hotspots = "type:Function|complexity:>20|calls:>10"
@@ -6008,15 +6008,15 @@ api_surface = "type:Function|visibility:public|repo:backend"
 
 **Usage**:
 ```bash
-rbuilder query @hotspots
-rbuilder query @api_surface|name:auth
+rgbuilder query @hotspots
+rgbuilder query @api_surface|name:auth
 ```
 
 **Tests**:
 ```rust
 #[test]
 fn test_query_macro_expansion() {
-    let config = load_config("fixtures/rbuilder.toml").unwrap();
+    let config = load_config("fixtures/rgbuilder.toml").unwrap();
     let expanded = expand_macro(&config, "@hotspots").unwrap();
     assert_eq!(expanded, "type:Function|complexity:>20|calls:>10");
 }
@@ -6036,7 +6036,7 @@ fn test_query_macro_expansion() {
 
 **Example**:
 ```bash
-rbuilder query --explain "repo:backend|type:Function|name:needle"
+rgbuilder query --explain "repo:backend|type:Function|name:needle"
 
 Query Plan:
   1. Apply selectivity ranking: name:needle (est. 1 results)
@@ -6105,7 +6105,7 @@ Total: 0.2ms
 
 ## Motivation
 
-**Research-Driven Enhancement**: Analysis of Codebadger and CodexGraph papers revealed critical gaps in rBuilder's program analysis capabilities:
+**Research-Driven Enhancement**: Analysis of Codebadger and CodexGraph papers revealed critical gaps in rgBuilder's program analysis capabilities:
 1. ❌ No taint analysis for security vulnerability detection
 2. ❌ No interprocedural analysis (single-function only)
 3. ❌ Basic control dependencies (no dominance analysis)
@@ -6511,7 +6511,7 @@ cargo bench --features bundle-minimal --bench analysis_benchmarks
   - `src/mcp/protocol.rs` - Added `graph_updated_notification()`
   - `src/changes/mod.rs` - Enhanced risk classification tests
 - **Tests**: **31 tests** (14 automation + 4 MCP + 6 watch + 5 hooks + 2 changes)
-- **CLI Commands**: `rbuilder watch`, `rbuilder init-hooks`, `rbuilder mcp serve --watch`
+- **CLI Commands**: `rgbuilder watch`, `rgbuilder init-hooks`, `rgbuilder mcp serve --watch`
 - **Completed Tasks**: **5/5 (100%)**
 - **Test Coverage**: ✅ **Excellent** - 31/15 tests (207% of target)
 - **Documentation**: ✅ **Complete** - docs/automation.md
@@ -6611,7 +6611,7 @@ fn test_watch_mode_modify_file() {
 
 **Deliverables**:
 - [x] `src/watch.rs` (461 lines) - File watcher + debouncing + MCP integration
-- [x] CLI command: `rbuilder watch`
+- [x] CLI command: `rgbuilder watch`
 - [x] Performance target: <500ms update latency (debounce configurable)
 - [x] Integration tests (6 tests in src/watch.rs + 14 in tests/automation.rs)
 - [x] Documentation (`docs/automation.md` - 170 lines)
@@ -6649,7 +6649,7 @@ fn test_watch_mode_modify_file() {
   - HTTP: `/notifications/latest` endpoint in src/mcp/server.rs (polling)
   - NotificationStore for HTTP clients (shared state)
 - [x] Updated MCP server to enable watch mode:
-  - `rbuilder mcp serve --watch` flag in src/cli/mcp.rs
+  - `rgbuilder mcp serve --watch` flag in src/cli/mcp.rs
   - spawn_watch_with_state integrated with AppState
 - [x] Integration tests (4 tests in tests/mcp_watch.rs)
 - [ ] Client example (Claude Code integration) ⚠️ **Optional**: Not critical, documented in automation.md
@@ -6668,12 +6668,12 @@ fn test_watch_mode_modify_file() {
 - [x] Runs `detect_changes` on staged files
 - [x] Blocks commit if risk level > threshold (CRITICAL blocks, HIGH warns)
 - [x] Prints blast radius report to stderr
-- [x] Configurable via `rbuilder.toml` (hooks.pre_commit setting)
+- [x] Configurable via `rgbuilder.toml` (hooks.pre_commit setting)
 
 **Hook Script** (`.git/hooks/pre-commit`):
 ```bash
 #!/bin/bash
-# Generated by rbuilder
+# Generated by rgbuilder
 
 STAGED=$(git diff --cached --name-only)
 
@@ -6681,7 +6681,7 @@ if [ -z "$STAGED" ]; then
   exit 0
 fi
 
-RESULT=$(rbuilder detect-changes --json $STAGED)
+RESULT=$(rgbuilder detect-changes --json $STAGED)
 RISK=$(echo $RESULT | jq -r '.summary.risk_level')
 
 if [ "$RISK" == "CRITICAL" ]; then
@@ -6706,7 +6706,7 @@ fi
 exit 0
 ```
 
-**Configuration** (`rbuilder.toml`):
+**Configuration** (`rgbuilder.toml`):
 ```toml
 [hooks]
 pre_commit = true
@@ -6718,7 +6718,7 @@ blast_radius_threshold = 50
 ```bash
 # Integration test
 cd fixtures/test_repo
-rbuilder init-hooks
+rgbuilder init-hooks
 
 # Make high-risk change
 echo "// Breaking change" >> src/core.rs
@@ -6730,7 +6730,7 @@ git commit -m "test" && exit 1 || echo "Blocked as expected"
 
 **Deliverables**:
 - [x] Hook template script (PRE_COMMIT in src/hooks/mod.rs - 245 lines total)
-- [x] CLI command: `rbuilder init-hooks` (installs all hooks)
+- [x] CLI command: `rgbuilder init-hooks` (installs all hooks)
 - [x] Config parsing for hook options (RbuilderConfig::hooks)
 - [x] Tests (5 tests in src/hooks/mod.rs + 14 in tests/automation.rs)
 - [x] Documentation (`docs/automation.md` - Git hooks section)
@@ -6745,7 +6745,7 @@ git commit -m "test" && exit 1 || echo "Blocked as expected"
 **Acceptance Criteria**:
 - [x] Git post-commit hook script (POST_COMMIT template in src/hooks/mod.rs)
 - [x] Runs incremental update on committed files
-- [x] Updates `.rbuilder/` directory
+- [x] Updates `.rgbuilder/` directory
 - [x] Logs update stats
 
 **Hook Script** (`.git/hooks/post-commit`):
@@ -6755,7 +6755,7 @@ COMMITTED=$(git diff-tree --no-commit-id --name-only -r HEAD)
 
 if [ ! -z "$COMMITTED" ]; then
   echo "Updating knowledge graph..."
-  rbuilder update --files $COMMITTED
+  rgbuilder update --files $COMMITTED
   echo "Graph updated."
 fi
 ```
@@ -6777,7 +6777,7 @@ fi
 **Acceptance Criteria**:
 - [x] Git post-checkout hook (POST_CHECKOUT template in src/hooks/mod.rs)
 - [x] Compares old vs new HEAD (uses git diff $PREV $CURR)
-- [x] Incrementally updates for file differences (rbuilder update --files)
+- [x] Incrementally updates for file differences (rgbuilder update --files)
 - [x] Fast (<3s for typical branch switch) - incremental updates are fast
 
 **Deliverables**:
@@ -6812,7 +6812,7 @@ fi
 - ✅ Pre-commit risk blocking (CRITICAL blocks, HIGH warns)
 - ✅ Post-commit automatic graph updates
 - ✅ Post-checkout branch switch detection
-- ✅ Git hook installation CLI (`rbuilder init-hooks`)
+- ✅ Git hook installation CLI (`rgbuilder init-hooks`)
 - ✅ MCP stdio notifications (notifications/graph_updated push)
 - ✅ MCP HTTP polling (/notifications/latest endpoint)
 - ✅ Comprehensive documentation with examples
@@ -6861,7 +6861,7 @@ fi
 - [x] Output: Mermaid markdown syntax
 - [x] Diagram types: flowchart, class diagram, dependency graph
 - [x] MCP tool: `generate_diagram`
-- [x] CLI command: `rbuilder diagram <query> --format mermaid`
+- [x] CLI command: `rgbuilder diagram <query> --format mermaid`
 
 **Example Output** (Flowchart):
 ```mermaid
@@ -6929,7 +6929,7 @@ fn test_mermaid_class_diagram() {
 - [x] Support layouts: dot, neato, fdp, circo
 - [x] Node styling based on type (function=box, class=ellipse)
 - [x] Edge styling based on type (calls=solid, inherits=dashed)
-- [x] CLI: `rbuilder diagram <query> --format dot -o output.dot`
+- [x] CLI: `rgbuilder diagram <query> --format dot -o output.dot`
 
 **Example Output**:
 ```dot
@@ -6948,7 +6948,7 @@ digraph CodeGraph {
 
 **Render**:
 ```bash
-rbuilder diagram functions --format dot -o graph.dot
+rgbuilder diagram functions --format dot -o graph.dot
 dot -Tpng graph.dot -o graph.png
 ```
 
@@ -6981,11 +6981,11 @@ fn test_dot_generation() {
 - [x] Depends on Graphviz CLI (`dot` command)
 - [x] Auto-detect if Graphviz installed
 - [x] Generate PNG/SVG/PDF directly
-- [x] CLI: `rbuilder diagram <query> --output graph.png`
+- [x] CLI: `rgbuilder diagram <query> --output graph.png`
 
 **Tests**:
 ```bash
-rbuilder diagram "repo:backend|type:Function" --output arch.png
+rgbuilder diagram "repo:backend|type:Function" --output arch.png
 test -f arch.png
 file arch.png | grep PNG
 ```
@@ -7082,7 +7082,7 @@ IndraDB (code graph data)
 **Acceptance Criteria**:
 - [x] Generate valid GraphML XML
 - [x] Preserve node properties, edge types
-- [x] CLI: `rbuilder export --format graphml -o graph.graphml`
+- [x] CLI: `rgbuilder export --format graphml -o graph.graphml`
 
 **Example Output**:
 ```xml
@@ -7184,7 +7184,7 @@ GET    /api/v1/health                    # Health check
 ```yaml
 openapi: 3.0.0
 info:
-  title: rBuilder Code Graph API
+  title: rgBuilder Code Graph API
   version: 1.0.0
 paths:
   /api/v1/query:
@@ -7290,7 +7290,7 @@ async fn test_rest_api_query() {
 **Deliverables**:
 - [ ] `src/server/rest.rs`
 - [ ] Feature flag: `http-server`
-- [ ] CLI command: `rbuilder serve --mode http --port 8080`
+- [ ] CLI command: `rgbuilder serve --mode http --port 8080`
 - [ ] Integration tests
 - [ ] Postman collection for manual testing
 
@@ -7303,7 +7303,7 @@ async fn test_rest_api_query() {
 
 **Usage**:
 ```rust
-use rbuilder_client::Client;
+use rgbuilder_client::Client;
 
 let client = Client::new("http://localhost:8080")?;
 let results = client.query("type:Function|complexity:>20").await?;
@@ -7314,7 +7314,7 @@ for node in results {
 ```
 
 **Deliverables**:
-- [ ] `rbuilder-client` crate
+- [ ] `rgbuilder-client` crate
 - [ ] Published to crates.io
 - [ ] Documentation + examples
 
@@ -7376,7 +7376,7 @@ async fn test_concurrent_queries() {
 **Acceptance Criteria**:
 - [ ] Feature flag: `api-auth`
 - [ ] Support API keys and JWT
-- [ ] Config file: `rbuilder.toml`
+- [ ] Config file: `rgbuilder.toml`
 - [ ] Middleware for auth validation
 - [ ] Admin API for key management
 
@@ -7420,17 +7420,17 @@ COPY src ./src
 RUN cargo build --release --features http-server
 
 FROM debian:bookworm-slim
-COPY --from=builder /app/target/release/rbuilder /usr/local/bin/
+COPY --from=builder /app/target/release/rgbuilder /usr/local/bin/
 EXPOSE 8080
-ENTRYPOINT ["/usr/local/bin/rbuilder", "serve", "--mode", "http"]
+ENTRYPOINT ["/usr/local/bin/rgbuilder", "serve", "--mode", "http"]
 ```
 
 **Docker Compose**:
 ```yaml
 version: '3.8'
 services:
-  rbuilder:
-    image: rbuilder:latest
+  rgbuilder:
+    image: rgbuilder:latest
     ports:
       - "8080:8080"
     volumes:
@@ -7839,19 +7839,19 @@ fn test_ansible_graph_construction() {
 **Query Examples**:
 ```bash
 # Find all playbooks
-rbuilder query "type:AnsiblePlaybook"
+rgbuilder query "type:AnsiblePlaybook"
 
 # Find tasks that use specific module
-rbuilder query "type:AnsibleTask module:apt"
+rgbuilder query "type:AnsibleTask module:apt"
 
 # Find role dependencies
-rbuilder query "type:AnsibleRole" --with-edges DependsOnRole
+rgbuilder query "type:AnsibleRole" --with-edges DependsOnRole
 
 # Find variables used in templates
-rbuilder query "type:AnsibleVariable" --used-by AnsibleTemplate
+rgbuilder query "type:AnsibleVariable" --used-by AnsibleTemplate
 
 # Blast radius: what's affected if this role changes?
-rbuilder analyze blast-radius "ansible/roles/nginx"
+rgbuilder analyze blast-radius "ansible/roles/nginx"
 ```
 
 **Deliverables**:
@@ -7948,19 +7948,19 @@ fn test_detect_hardcoded_secrets() {
 **Commands**:
 ```bash
 # Index Ansible project
-rbuilder index --type ansible ./ansible-project
+rgbuilder index --type ansible ./ansible-project
 
 # Show role dependencies
-rbuilder ansible roles --show-deps
+rgbuilder ansible roles --show-deps
 
 # Validate playbooks
-rbuilder ansible validate
+rgbuilder ansible validate
 
 # Security scan
-rbuilder ansible security-scan
+rgbuilder ansible security-scan
 
 # Export role graph
-rbuilder diagram "type:AnsibleRole" --format mermaid
+rgbuilder diagram "type:AnsibleRole" --format mermaid
 ```
 
 **Deliverables**:
@@ -8428,16 +8428,16 @@ fn test_chef_graph_construction() {
 **Query Examples**:
 ```bash
 # Find all cookbooks
-rbuilder query "type:ChefCookbook"
+rgbuilder query "type:ChefCookbook"
 
 # Find recipes using specific resource
-rbuilder query "type:ChefResource resource_type:package"
+rgbuilder query "type:ChefResource resource_type:package"
 
 # Find cookbook dependencies
-rbuilder query "type:ChefCookbook" --with-edges DependsOnCookbook
+rgbuilder query "type:ChefCookbook" --with-edges DependsOnCookbook
 
 # Blast radius: what's affected if this cookbook changes?
-rbuilder analyze blast-radius "cookbooks/nginx"
+rgbuilder analyze blast-radius "cookbooks/nginx"
 ```
 
 **Deliverables**:
@@ -8507,10 +8507,10 @@ impl ChefSecurityScanner {
 
 **Commands**:
 ```bash
-rbuilder index --type chef ./cookbooks
-rbuilder chef cookbooks --show-deps
-rbuilder chef validate
-rbuilder chef security-scan
+rgbuilder index --type chef ./cookbooks
+rgbuilder chef cookbooks --show-deps
+rgbuilder chef validate
+rgbuilder chef security-scan
 ```
 
 **Deliverables**:
@@ -8907,16 +8907,16 @@ fn test_puppet_graph_construction() {
 **Query Examples**:
 ```bash
 # Find all Puppet modules
-rbuilder query "type:PuppetModule"
+rgbuilder query "type:PuppetModule"
 
 # Find classes using specific resource
-rbuilder query "type:PuppetResource resource_type:package"
+rgbuilder query "type:PuppetResource resource_type:package"
 
 # Find module dependencies
-rbuilder query "type:PuppetModule" --with-edges DependsOnModule
+rgbuilder query "type:PuppetModule" --with-edges DependsOnModule
 
 # Blast radius: what's affected if this module changes?
-rbuilder analyze blast-radius "modules/nginx"
+rgbuilder analyze blast-radius "modules/nginx"
 ```
 
 **Deliverables**:
@@ -8955,10 +8955,10 @@ rbuilder analyze blast-radius "modules/nginx"
 
 **Commands**:
 ```bash
-rbuilder index --type puppet ./modules
-rbuilder puppet modules --show-deps
-rbuilder puppet validate
-rbuilder puppet security-scan
+rgbuilder index --type puppet ./modules
+rgbuilder puppet modules --show-deps
+rgbuilder puppet validate
+rgbuilder puppet security-scan
 ```
 
 **Deliverables**:
@@ -9018,7 +9018,7 @@ rbuilder puppet security-scan
 
 ## Overview
 
-Systematic code review of the entire rBuilder codebase to ensure:
+Systematic code review of the entire rgBuilder codebase to ensure:
 - Adherence to Rust idioms and best practices
 - Consistent architecture patterns across all language plugins
 - Security best practices in all security scanning modules
@@ -9328,9 +9328,9 @@ remediation: Some("Fix security issue".into())
 **CLI Pattern Validation**:
 ```rust
 // All IaC tools should support:
-rbuilder <tool> cookbooks/roles/modules --show-deps
-rbuilder <tool> validate <path>
-rbuilder <tool> security-scan <path> --min-severity <level> --format <format>
+rgbuilder <tool> cookbooks/roles/modules --show-deps
+rgbuilder <tool> validate <path>
+rgbuilder <tool> security-scan <path> --min-severity <level> --format <format>
 ```
 
 **Deliverables**:
@@ -9446,10 +9446,10 @@ cargo tarpaulin --out Html --output-dir coverage/
 **Profiling Tools**:
 ```bash
 cargo install cargo-flamegraph
-cargo flamegraph --bin rbuilder -- init ./large-repo
+cargo flamegraph --bin rgbuilder -- init ./large-repo
 
 # Or use perf
-perf record target/release/rbuilder init ./large-repo
+perf record target/release/rgbuilder init ./large-repo
 perf report
 ```
 
@@ -9492,7 +9492,7 @@ cargo install cargo-bloat
 cargo bloat --release --crates
 
 # Memory profiling
-valgrind --tool=massif target/release/rbuilder init ./repo
+valgrind --tool=massif target/release/rgbuilder init ./repo
 ```
 
 **Patterns to Find**:
@@ -9550,8 +9550,8 @@ cargo doc 2>&1 | grep "missing documentation"
 /// # Examples
 ///
 /// ```
-/// use rbuilder::security::chef::ChefSecurityScanner;
-/// use rbuilder::graph::schema::{Node, NodeType};
+/// use rgbuilder::security::chef::ChefSecurityScanner;
+/// use rgbuilder::graph::schema::{Node, NodeType};
 ///
 /// let scanner = ChefSecurityScanner::new();
 /// let node = Node::new(NodeType::ChefResource, "test".into());

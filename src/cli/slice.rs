@@ -1,4 +1,4 @@
-//! `rbuilder slice` — line-level slicing and taint policy checks.
+//! `rgbuilder slice` — line-level slicing and taint policy checks.
 
 use super::args::{OutputFormat, SliceDirection, SliceView};
 use super::context::{language_from_path, CliContext};

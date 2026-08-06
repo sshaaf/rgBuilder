@@ -1,0 +1,123 @@
+{
+  "schema_version": 2,
+  "preset": "hybrid_default",
+  "preset_label": "Hybrid Default",
+  "weights": {
+    "alpha": 0.33,
+    "beta": 0.33,
+    "gamma": 0.34
+  },
+  "order_mode": "scheduled",
+  "steps": [
+    {
+      "step": 1,
+      "community_id": 0,
+      "label": "Ecommerce.Services",
+      "priority_score": 0.32499999999999996,
+      "schedule_step": 1,
+      "priority_rank": 1,
+      "avg_pagerank": 0.0036160399194625093,
+      "avg_harmonic": 0.0,
+      "max_blast": 0.0
+    },
+    {
+      "step": 2,
+      "community_id": 3,
+      "label": "Ecommerce.Coolstore.Services",
+      "priority_score": 0.09716859785263385,
+      "schedule_step": 2,
+      "priority_rank": 2,
+      "avg_pagerank": 0.0023171371896751223,
+      "avg_harmonic": 0.0,
+      "max_blast": 0.0
+    },
+    {
+      "step": 3,
+      "community_id": 5,
+      "label": "Ecommerce.Correctness",
+      "priority_score": 0.07692426302567287,
+      "schedule_step": 3,
+      "priority_rank": 3,
+      "avg_pagerank": 0.0022017210463268887,
+      "avg_harmonic": 0.0,
+      "max_blast": 0.0
+    },
+    {
+      "step": 4,
+      "community_id": 1,
+      "label": "Ecommerce.Repositories",
+      "priority_score": 0.07376857744358514,
+      "schedule_step": 4,
+      "priority_rank": 4,
+      "avg_pagerank": 0.0021837299854885186,
+      "avg_harmonic": 0.0,
+      "max_blast": 0.0
+    },
+    {
+      "step": 5,
+      "community_id": 4,
+      "label": "Ecommerce.Coolstore",
+      "priority_score": 0.018516937918657855,
+      "schedule_step": 5,
+      "priority_rank": 5,
+      "avg_pagerank": 0.0018687316809188235,
+      "avg_harmonic": 0.0,
+      "max_blast": 0.0
+    },
+    {
+      "step": 6,
+      "community_id": 2,
+      "label": "Ecommerce.Controllers",
+      "priority_score": -0.0050000000000000044,
+      "schedule_step": 6,
+      "priority_rank": 6,
+      "avg_pagerank": 0.0017346579115837812,
+      "avg_harmonic": 0.0,
+      "max_blast": 0.0
+    },
+    {
+      "step": 7,
+      "community_id": 6,
+      "label": "Ecommerce.Coolstore.Models",
+      "priority_score": -0.0050000000000000044,
+      "schedule_step": 7,
+      "priority_rank": 7,
+      "avg_pagerank": 0.0017346579115837812,
+      "avg_harmonic": 0.0,
+      "max_blast": 0.0
+    },
+    {
+      "step": 8,
+      "community_id": 7,
+      "label": "Ecommerce.Data",
+      "priority_score": -0.0050000000000000044,
+      "schedule_step": 8,
+      "priority_rank": 8,
+      "avg_pagerank": 0.0017346579115837812,
+      "avg_harmonic": 0.0,
+      "max_blast": 0.0
+    },
+    {
+      "step": 9,
+      "community_id": 8,
+      "label": "Ecommerce.Security",
+      "priority_score": -0.0050000000000000044,
+      "schedule_step": 9,
+      "priority_rank": 9,
+      "avg_pagerank": 0.0017346579115837812,
+      "avg_harmonic": 0.0,
+      "max_blast": 0.0
+    },
+    {
+      "step": 10,
+      "community_id": 9,
+      "label": "Ecommerce.Exceptions",
+      "priority_score": -0.0050000000000000044,
+      "schedule_step": 10,
+      "priority_rank": 10,
+      "avg_pagerank": 0.0017346579115837812,
+      "avg_harmonic": 0.0,
+      "max_blast": 0.0
+    }
+  ]
+}

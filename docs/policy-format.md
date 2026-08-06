@@ -53,7 +53,7 @@ Assign domains via GQL (`RETURN n` includes node `id`) or from blast-radius JSON
 ### One-off blast-radius gate
 
 ```bash
-rbuilder -r "$REPO" -f json blast-radius ShoppingCartService \
+rgbuilder -r "$REPO" -f json blast-radius ShoppingCartService \
   --policy-file policy.json
 ```
 
@@ -62,13 +62,13 @@ Exit code **1** when the policy is violated (`gatekeeping.policy_status` = `VIOL
 ### CI check on changed functions
 
 ```bash
-rbuilder -r "$REPO" -f json check --policy-file policy.json
+rgbuilder -r "$REPO" -f json check --policy-file policy.json
 ```
 
 Evaluates symbols touched in the git working tree (or the full graph if git is unavailable). Exit **1** when `passed` is false.
 
 ```bash
-rbuilder -f json check --policy-file policy.json | jq '{passed, violations: (.violations | length)}'
+rgbuilder -f json check --policy-file policy.json | jq '{passed, violations: (.violations | length)}'
 ```
 
 ---

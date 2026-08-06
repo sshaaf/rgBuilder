@@ -1,9 +1,9 @@
-//! Code graph types and helpers (re-exported from `rbuilder-graph`).
+//! Code graph types and helpers (re-exported from `rgbuilder-graph`).
 
-pub use rbuilder_graph::CodeGraph;
-pub use rbuilder_graph::*;
+pub use rgbuilder_graph::CodeGraph;
+pub use rgbuilder_graph::*;
 
-use rbuilder_error::Result;
+use rgbuilder_error::Result;
 use std::path::Path;
 
 /// Build a code graph from a repository (workspace entry point).

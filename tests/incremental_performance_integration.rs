@@ -1,11 +1,11 @@
 //! Phase 5 integration tests: incremental updates and performance
 
-use rbuilder::graph::backend::GraphBackend;
-use rbuilder::graph::schema::{Node, NodeType};
-use rbuilder::graph::CodeGraph;
-use rbuilder::incremental::{FileTracker, IncrementalUpdater, UpdateOptions};
-use rbuilder::languages::registry::LanguageRegistry;
-use rbuilder::pipeline::{PipelineConfig, ProcessingPipeline};
+use rgbuilder::graph::backend::GraphBackend;
+use rgbuilder::graph::schema::{Node, NodeType};
+use rgbuilder::graph::CodeGraph;
+use rgbuilder::incremental::{FileTracker, IncrementalUpdater, UpdateOptions};
+use rgbuilder::languages::registry::LanguageRegistry;
+use rgbuilder::pipeline::{PipelineConfig, ProcessingPipeline};
 use std::fs;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -145,7 +145,7 @@ fn test_incremental_update_ten_files() {
     let (mut graph, _) = pipeline.process_repository(root).unwrap();
     graph.save_to_repo(root).unwrap();
 
-    let discoverer = rbuilder::discovery::FileDiscoverer::new(Arc::clone(&registry));
+    let discoverer = rgbuilder::discovery::FileDiscoverer::new(Arc::clone(&registry));
     let files = discoverer.discover(root).unwrap();
     let mut tracker = FileTracker::new(root);
     tracker.index_files(&files, &graph).unwrap();

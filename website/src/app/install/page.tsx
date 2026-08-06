@@ -14,7 +14,7 @@ export default function InstallPage() {
     <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
       <Badge className="mb-4">Get started</Badge>
       <h1 className="text-3xl tracking-tight text-[var(--ink)] sm:text-4xl">
-        Install rBuilder
+        Install rgBuilder
       </h1>
       <p className="mt-3 text-[var(--body)]">
         Prefer a release binary for day-to-day use. Build from source when you
@@ -34,10 +34,10 @@ export default function InstallPage() {
           >
             Releases
           </a>
-          , put <code className="font-mono text-[var(--body-strong)]">rbuilder</code>{" "}
+          , put <code className="font-mono text-[var(--body-strong)]">rgbuilder</code>{" "}
           on your <code className="font-mono">PATH</code>, then:
         </p>
-        <TerminalBlock lines={["rbuilder --version"]} />
+        <TerminalBlock lines={["rgbuilder --version"]} />
         <Button variant="ghost" asChild>
           <a href={GITHUB_RELEASES} target="_blank" rel="noreferrer">
             Open releases
@@ -49,13 +49,13 @@ export default function InstallPage() {
         <h2 className="text-lg text-[var(--ink)]">Option B — Build from source</h2>
         <TerminalBlock
           lines={[
-            "git clone https://github.com/sshaaf/rBuilder.git",
-            "cd rBuilder",
+            "git clone https://github.com/sshaaf/rgBuilder.git",
+            "cd rgBuilder",
             "# Optional: default semantic embedder (code-daemon ONNX ~206 MB)",
             "# Skip if you only use: semantic index --embedder vocab|hash",
             "git lfs pull",
             "cargo build --release",
-            "./target/release/rbuilder --version",
+            "./target/release/rgbuilder --version",
           ]}
         />
       </section>
@@ -65,16 +65,16 @@ export default function InstallPage() {
         <p className="text-sm text-[var(--body)]">
           Use the in-tree{" "}
           <code className="font-mono text-[var(--body-strong)]">
-            rbuilder-tests/ecommerce-java
+            rgbuilder-tests/ecommerce-java
           </code>{" "}
           fixture (canonical walkthrough in the User Guide).
         </p>
         <TerminalBlock
           lines={[
-            "cd rbuilder-tests/ecommerce-java",
-            "rbuilder discover .",
-            "rbuilder -f json gql --macro-name all_functions unused | jq '.count'",
-            'rbuilder -f json blast-radius "priceShoppingCart" --depth 2',
+            "cd rgbuilder-tests/ecommerce-java",
+            "rgbuilder discover .",
+            "rgbuilder -f json gql --macro-name all_functions unused | jq '.count'",
+            'rgbuilder -f json blast-radius "priceShoppingCart" --depth 2',
           ]}
         />
         <p className="text-sm text-[var(--mute)]">

@@ -1,0 +1,54 @@
+1
+00:00:01,603 --> 00:00:08,141
+Overview
+Discover metrics · graph snapshot ready
+
+2
+00:00:08,609 --> 00:00:15,146
+Graph
+Package call graph (GQL structure)
+
+3
+00:00:16,023 --> 00:00:22,560
+Search
+Semantic query · vocab Hamming + fusion
+
+4
+00:00:23,305 --> 00:00:29,842
+Functions
+PageRank · betweenness · blast hotspots
+
+5
+00:00:31,830 --> 00:00:38,368
+CFG
+Control-flow blocks & edges
+
+6
+00:00:38,810 --> 00:00:53,147
+Dataflow
+CPG field mutations · PDG · dominator tree
+
+7
+00:01:10,138 --> 00:01:16,676
+Slice
+Backward slice · criterion & highlights
+
+8
+00:01:42,249 --> 00:01:48,784
+Blast radius
+Upstream impact score & callers
+
+9
+00:01:54,604 --> 00:02:01,143
+Taint
+Source → sink flows
+
+10
+00:02:01,993 --> 00:02:08,531
+Migration
+Package roadmap · presets & ordering
+
+11
+00:02:10,943 --> 00:02:17,480
+Query Guide
+CLI cookbook · check & export recipes

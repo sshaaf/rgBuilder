@@ -1,4 +1,4 @@
-//! `rbuilder blast-radius` — SCC macro impact analysis.
+//! `rgbuilder blast-radius` — SCC macro impact analysis.
 
 use super::args::OutputFormat;
 use super::blast_radius_output::{
@@ -16,7 +16,7 @@ use crate::analysis::{
 };
 use crate::graph::backend::GraphBackend;
 use anyhow::Result;
-use rbuilder_graph::SnapshotNodeStore;
+use rgbuilder_graph::SnapshotNodeStore;
 use std::path::Path;
 use uuid::Uuid;
 
@@ -274,7 +274,7 @@ fn resolve_target_uuid_impl(
         )?
     };
     if candidates.is_empty() {
-        return Err(rbuilder_error::Error::NodeNotFound(parsed.target_name.clone()).into());
+        return Err(rgbuilder_error::Error::NodeNotFound(parsed.target_name.clone()).into());
     }
 
     if let Ok(Some(index)) = MacroCallIndex::load(&MacroCallIndex::default_path(&ctx.repo)) {

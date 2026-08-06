@@ -8,11 +8,11 @@ use analysis_helpers::{
     analyze_taint_with_types, build_dominance, build_sample_backend_with_chain, call_graph_from,
     large_graph, run_taint_security,
 };
-use rbuilder::analysis::{
+use rgbuilder::analysis::{
     InterproceduralCFG, InterproceduralSlicer, ProgramDependenceGraph, SliceCriterion, TaintSink,
 };
-use rbuilder::gql::execute;
-use rbuilder::security::default_cwe_patterns;
+use rgbuilder::gql::execute;
+use rgbuilder::security::default_cwe_patterns;
 use std::collections::HashMap;
 
 macro_rules! e2e_test {

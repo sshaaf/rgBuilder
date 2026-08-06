@@ -1,6 +1,6 @@
 # Language guide
 
-rBuilder indexes source and config files through **language plugins**. This guide lists what ships in the binary and how depth of analysis varies by language.
+rgBuilder indexes source and config files through **language plugins**. This guide lists what ships in the binary and how depth of analysis varies by language.
 
 **Contributor checklist for new Tier 1 languages:** [tier-1-language-support.md](tier-1-language-support.md)
 
@@ -37,17 +37,17 @@ These nine use dedicated tree-sitter plugins and custom extractors:
 Filter at discover time:
 
 ```bash
-rbuilder discover . -l java,go,rust
-rbuilder discover . -e node_modules,target,.git
+rgbuilder discover . -l java,go,rust
+rgbuilder discover . -e node_modules,target,.git
 ```
 
 ---
 
 ## Config, docs, and IaC (additional plugins)
 
-Beyond Tier 1, rBuilder registers plugins for common **config and markup** formats (JSON, YAML, TOML, properties, Markdown, CI YAML, Ansible, Chef, Puppet, and related paths). These contribute **config and structure nodes** to the graph; they do not run the CFG/PDG pipeline.
+Beyond Tier 1, rgBuilder registers plugins for common **config and markup** formats (JSON, YAML, TOML, properties, Markdown, CI YAML, Ansible, Chef, Puppet, and related paths). These contribute **config and structure nodes** to the graph; they do not run the CFG/PDG pipeline.
 
-Exact plugin set evolves with releases — search `crates/rbuilder-config-formats` and `crates/rbuilder-lang-*` for the current list.
+Exact plugin set evolves with releases — search `crates/rgbuilder-config-formats` and `crates/rgbuilder-lang-*` for the current list.
 
 ---
 

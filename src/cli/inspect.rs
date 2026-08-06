@@ -1,4 +1,4 @@
-//! `rbuilder inspect` — raw CFG / PDG / dominance debugging.
+//! `rgbuilder inspect` — raw CFG / PDG / dominance debugging.
 
 use super::args::{InspectLayer, OutputFormat, PdgEdgeLayer};
 use super::context::{language_from_path, CliContext};
@@ -117,8 +117,8 @@ fn dom_to_mermaid(dom: &DominatorTree) -> String {
 fn resolve_symbol_function(
     ctx: &CliContext,
     symbol: &str,
-) -> Result<(rbuilder_graph::schema::Node, String)> {
-    use rbuilder_graph::schema::NodeType;
+) -> Result<(rgbuilder_graph::schema::Node, String)> {
+    use rgbuilder_graph::schema::NodeType;
     use std::fs;
 
     let graph = ctx.load_graph()?;

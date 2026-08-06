@@ -1,6 +1,6 @@
-# Introduction to rBuilder
+# Introduction to rgBuilder
 
-This document explains **what rBuilder is**, how a **code knowledge graph** works, and what each capability is for — before you run commands. For install steps and copy-paste examples, use the **[User Guide](user-guide.md)**.
+This document explains **what rgBuilder is**, how a **code knowledge graph** works, and what each capability is for — before you run commands. For install steps and copy-paste examples, use the **[User Guide](user-guide.md)**.
 
 **Audience:** architects, team leads, security engineers, and developers who want the concepts first.  
 **Hands-on next step:** [User Guide → ecommerce-java example](user-guide.md#3-example-project-ecommerce-java)
@@ -9,9 +9,9 @@ This document explains **what rBuilder is**, how a **code knowledge graph** work
 
 ## Table of contents
 
-1. [What problem does rBuilder solve?](#what-problem-does-rbuilder-solve)
+1. [What problem does rgBuilder solve?](#what-problem-does-rgbuilder-solve)
 2. [What is a code knowledge graph?](#what-is-a-code-knowledge-graph)
-3. [How rBuilder fits together](#how-rbuilder-fits-together)
+3. [How rgBuilder fits together](#how-rgbuilder-fits-together)
 4. [Indexing the repository (`discover`)](#indexing-the-repository-discover)
 5. [Graph queries (GQL)](#graph-queries-gql)
 6. [Blast radius (change impact)](#blast-radius-change-impact)
@@ -30,7 +30,7 @@ This document explains **what rBuilder is**, how a **code knowledge graph** work
 
 ---
 
-## What problem does rBuilder solve?
+## What problem does rgBuilder solve?
 
 Modern codebases are too large to hold in your head. When you change a function, you need to know:
 
@@ -39,7 +39,7 @@ Modern codebases are too large to hold in your head. When you change a function,
 - Could this change affect security-sensitive paths?
 - Where is complexity concentrated?
 
-Reading files one by one is slow and error-prone. **rBuilder turns your repository into a structured graph** — functions, classes, calls, imports, and more — so you can **ask structural questions** and get answers in seconds instead of hours.
+Reading files one by one is slow and error-prone. **rgBuilder turns your repository into a structured graph** — functions, classes, calls, imports, and more — so you can **ask structural questions** and get answers in seconds instead of hours.
 
 The tool is built in **Rust** for speed and predictable memory use: large enterprise repos (hundreds of thousands of nodes) can be indexed in one pass, with analysis results stored in compact on-disk caches rather than loading everything into RAM.
 
@@ -49,15 +49,15 @@ The tool is built in **Rust** for speed and predictable memory use: large enterp
 
 Think of your codebase as a **map**, not a pile of files.
 
-| Everyday idea | In rBuilder |
+| Everyday idea | In rgBuilder |
 |---------------|-------------|
 | Places on the map | **Nodes** — functions, classes, files, modules, config keys, … |
 | Roads between places | **Edges** — typed **relations** between nodes |
-| A travel guide | The **graph** stored under `.rbuilder/` after indexing |
+| A travel guide | The **graph** stored under `.rgbuilder/` after indexing |
 
 ### Relations (edges)
 
-rBuilder records many relation types, for example:
+rgBuilder records many relation types, for example:
 
 - **CALLS** — one function invokes another  
 - **CONTAINS** — a class or file holds a member  
@@ -70,13 +70,13 @@ Together, these form a **rich relation matrix**: you see not only “what exists
 
 Many questions are really reachability questions: *“If I change X, what else can be affected along call paths?”*
 
-rBuilder pre-computes **reachability** over the call graph (who can reach whom upstream) and stores it in a **compressed snapshot** (sparse bitsets instead of a multi-gigabyte dense matrix). That is what makes **blast radius** queries fast on large graphs — the “R” in rBuilder aligns with **reachability** and **relations** as first-class ideas.
+rgBuilder pre-computes **reachability** over the call graph (who can reach whom upstream) and stores it in a **compressed snapshot** (sparse bitsets instead of a multi-gigabyte dense matrix). That is what makes **blast radius** queries fast on large graphs — the “R” in rgBuilder aligns with **reachability** and **relations** as first-class ideas.
 
 You do not need graph theory to use the CLI; it helps to know that **indexing builds the map**, and **commands query the map**.
 
 ---
 
-## How rBuilder fits together
+## How rgBuilder fits together
 
 ```text
   Your repo (source files)
@@ -85,7 +85,7 @@ You do not need graph theory to use the CLI; it helps to know that **indexing bu
       discover          ← scan, parse, build graph + caches
            │
            ▼
-  .rbuilder/            ← graph snapshot, blast engine, indexes
+  .rgbuilder/            ← graph snapshot, blast engine, indexes
            │
      ┌─────┴─────┬─────────────┬──────────────┐
      ▼           ▼             ▼              ▼
@@ -93,7 +93,7 @@ You do not need graph theory to use the CLI; it helps to know that **indexing bu
                                               migration plan
 ```
 
-1. **Once per repo (or after big changes):** run `discover` to build `.rbuilder/`.  
+1. **Once per repo (or after big changes):** run `discover` to build `.rgbuilder/`.  
 2. **Many times:** run query commands (`gql`, `blast-radius`, …) against that cache.  
 3. **Optional:** open the **dashboard** for interactive exploration ([dashboard user guide](dashboard-user-guide.md)), or use **`-f json`** for automation ([JSON API](json-api.md)).
 
@@ -109,7 +109,7 @@ Turn a folder of source code into a **persistent, queryable graph** plus pre-com
 
 ### Description
 
-`discover` walks the repository, uses language-aware parsers to extract symbols and relationships, and writes artifacts to `.rbuilder/`. The **primary graph** is a columnar binary snapshot (`graph.snapshot.bin`); GQL and most commands read that via mmap — **not** a SQL database. Also written: a blast-radius engine snapshot, a **SQLite blast-radius lookup cache** (`macro_call_index.db`, `blast-radius` fast path only), and optionally per-function control-flow and taint data when you enable deeper modes (`--with-cfg` or `--with-taint`).
+`discover` walks the repository, uses language-aware parsers to extract symbols and relationships, and writes artifacts to `.rgbuilder/`. The **primary graph** is a columnar binary snapshot (`graph.snapshot.bin`); GQL and most commands read that via mmap — **not** a SQL database. Also written: a blast-radius engine snapshot, a **SQLite blast-radius lookup cache** (`macro_call_index.db`, `blast-radius` fast path only), and optionally per-function control-flow and taint data when you enable deeper modes (`--with-cfg` or `--with-taint`).
 
 Default discover is tuned for speed. Deeper modes trade time for semantic detail (slicing, taint, inspect overlays).
 
@@ -190,7 +190,7 @@ Answer: **“Which lines of this function actually affect this variable at this 
 
 ### Description
 
-**Slicing** is a precision tool for debugging and review. You point at a **file**, **line**, **variable**, and enclosing **method name** (`--function`); rBuilder computes the **slice** — the minimal set of statements that influence (or are influenced by) that point. This uses control-flow and program-dependence structure inside the function.
+**Slicing** is a precision tool for debugging and review. You point at a **file**, **line**, **variable**, and enclosing **method name** (`--function`); rgBuilder computes the **slice** — the minimal set of statements that influence (or are influenced by) that point. This uses control-flow and program-dependence structure inside the function.
 
 Slicing reads source from disk; richer cross-function context is available when the repo was indexed with `discover --with-cfg`. The dashboard **Program Slicing** tab runs the same analysis in the browser with highlighted source.
 
@@ -309,10 +309,10 @@ It does **not** replace GQL or blast-radius — use it when you know the *intent
 ### How to run it
 
 ```bash
-rbuilder discover .
-rbuilder semantic index                  # or: --embedder vocab|hash
-rbuilder -f json semantic query "checkout flow" --limit 10
-rbuilder serve --open                    # Search tab (needs index + HTTP API)
+rgbuilder discover .
+rgbuilder semantic index                  # or: --embedder vocab|hash
+rgbuilder -f json semantic query "checkout flow" --limit 10
+rgbuilder serve --open                    # Search tab (needs index + HTTP API)
 ```
 
 → [User Guide §12 — Semantic search](user-guide.md#12-semantic-search)  
@@ -368,7 +368,7 @@ Two orderings are available:
 - **Scheduled step** — Kahn topological sort so callees appear before callers (dependency-aware)  
 - **Priority rank** — score-only ordering without dependency constraints  
 
-Strategy **presets** (Hybrid Default, Foundational First, Dense Cluster Extraction, Risk Mitigation) adjust α/β/γ. The dashboard **Migration** tab lets you tune weights live and explore a ForceAtlas2 layout (cluster color from **label-propagation communities** — UI field still named `louvain_community_id`; see [community naming](design/graph-metrics-design.md#31-community-detection-naming) — node size from priority). **With `--with-dashboard`**, discover writes `migration_graph.json` and a default `migration_plan.json` under **`.rbuilder/dashboard/`** when analysis metrics are available. Use `--export-migration-hints` for a preset-tuned plan file (default **`.rbuilder/migration_plan.json`**, or `-o`). Dashboard and migration JSON are **opt-in**.
+Strategy **presets** (Hybrid Default, Foundational First, Dense Cluster Extraction, Risk Mitigation) adjust α/β/γ. The dashboard **Migration** tab lets you tune weights live and explore a ForceAtlas2 layout (cluster color from **label-propagation communities** — UI field still named `louvain_community_id`; see [community naming](design/graph-metrics-design.md#31-community-detection-naming) — node size from priority). **With `--with-dashboard`**, discover writes `migration_graph.json` and a default `migration_plan.json` under **`.rgbuilder/dashboard/`** when analysis metrics are available. Use `--export-migration-hints` for a preset-tuned plan file (default **`.rgbuilder/migration_plan.json`**, or `-o`). Dashboard and migration JSON are **opt-in**.
 
 ### Key benefits
 
@@ -380,8 +380,8 @@ Strategy **presets** (Hybrid Default, Foundational First, Dense Cluster Extracti
 ### How to run it
 
 ```bash
-rbuilder discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints
-rbuilder serve --open   # http://127.0.0.1:8080/ → Migration tab + query API
+rgbuilder discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints
+rgbuilder serve --open   # http://127.0.0.1:8080/ → Migration tab + query API
 ```
 
 → Engineering detail: **[Migration planner design](design/migration-planner-design.md)** · **[All feature designs](design/README.md)**  
@@ -392,7 +392,7 @@ rbuilder serve --open   # http://127.0.0.1:8080/ → Migration tab + query API
 
 ### Goal
 
-**Take the graph (or a subgraph) out of rBuilder** for other tools — spreadsheets, GraphML viewers, documentation, or custom pipelines.
+**Take the graph (or a subgraph) out of rgBuilder** for other tools — spreadsheets, GraphML viewers, documentation, or custom pipelines.
 
 ### Description
 
@@ -443,7 +443,7 @@ Serve the **dashboard** and **GQL HTTP API** in one process, or keep a legacy so
 
 ### Description
 
-**`serve`** (default) binds `http://127.0.0.1:8080/` — dashboard at `/`, queries at `POST /api/query`. Use **`serve --daemon`** for the older Unix-socket path (`.rbuilder/query.sock`) that only accelerates blast-radius auto-connect.
+**`serve`** (default) binds `http://127.0.0.1:8080/` — dashboard at `/`, queries at `POST /api/query`. Use **`serve --daemon`** for the older Unix-socket path (`.rgbuilder/query.sock`) that only accelerates blast-radius auto-connect.
 
 ### Key benefits
 
@@ -465,7 +465,7 @@ Serve the **dashboard** and **GQL HTTP API** in one process, or keep a legacy so
 
 ### Description
 
-After `discover --with-dashboard`, rBuilder writes a static bundle under **`.rbuilder/dashboard/`** (`index.html`, `manifest.json`, graph payload, metagraph, migration indexes when analysis is available, and per-feature indexes for CFG, slice, blast, taint, etc.). Dashboard export is **off by default**. Serve that folder over HTTP (WASM graph engine requires a real server, not `file://`).
+After `discover --with-dashboard`, rgBuilder writes a static bundle under **`.rgbuilder/dashboard/`** (`index.html`, `manifest.json`, graph payload, metagraph, migration indexes when analysis is available, and per-feature indexes for CFG, slice, blast, taint, etc.). Dashboard export is **off by default**. Serve that folder over HTTP (WASM graph engine requires a real server, not `file://`).
 
 The dashboard complements the CLI: same underlying graph and analysis artifacts. The **Migration** tab mirrors the Rust planner in TypeScript for live preset and weight changes. The **Query Guide** tab lists CLI commands for each view.
 
@@ -489,9 +489,9 @@ The dashboard complements the CLI: same underlying graph and analysis artifacts.
 ### How to run it
 
 ```bash
-rbuilder discover . --with-dashboard   # writes .rbuilder/dashboard/
-rbuilder serve --open                  # recommended: dashboard + /api/query
-# or: cd .rbuilder/dashboard && python3 -m http.server 8765
+rgbuilder discover . --with-dashboard   # writes .rgbuilder/dashboard/
+rgbuilder serve --open                  # recommended: dashboard + /api/query
+# or: cd .rgbuilder/dashboard && python3 -m http.server 8765
 ```
 
 → **[Dashboard user guide](dashboard-user-guide.md)** · **[Feature designs](design/README.md)** · Install: [User Guide §1–3](user-guide.md#1-installation)
@@ -521,11 +521,11 @@ rbuilder serve --open                  # recommended: dashboard + /api/query
 | Dashboard engineering / WASM phases | **[Dashboard design](dashboard-design.md)** |
 | Blast-radius caches and automated perf gates | **[CLI I/O sanity QE](cli-io-sanity-qe.md)** · **[Graph storage architecture](graph-storage-architecture.md)** |
 | All docs by persona | **[Documentation index](README.md)** |
-| Papers implemented, inspired, and contribution ideas | **[Further reading](further-reading.md#research-foundations-in-rbuilder)** |
+| Papers implemented, inspired, and contribution ideas | **[Further reading](further-reading.md#research-foundations-in-rgbuilder)** |
 
 **Suggested first hour**
 
 1. Read this introduction (you are here).  
-2. Follow [User Guide §1–4](user-guide.md#1-installation) — install, index [`rbuilder-tests/ecommerce-java`](../rbuilder-tests/ecommerce-java) (`discover`), try CoolStore `/services/*` + `cpg mutations --type ShoppingCart`.  
+2. Follow [User Guide §1–4](user-guide.md#1-installation) — install, index [`rgbuilder-tests/ecommerce-java`](../rgbuilder-tests/ecommerce-java) (`discover`), try CoolStore `/services/*` + `cpg mutations --type ShoppingCart`.  
 3. Run one **GQL** query and one **blast-radius** on a function you recognize.  
 4. Optionally open the **dashboard** (try the **Migration** tab after `discover --with-cfg --with-security --with-taint --export-migration-hints`) or try `-f json` with [JSON API](json-api.md).

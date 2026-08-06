@@ -1,6 +1,6 @@
 # CI Policy Checks — Engineering Design
 
-**`rbuilder check`** — fail CI when blast-radius policy rules are violated on symbols touched in the current git working tree. Complements interactive **`blast-radius --policy-file`** gatekeeping.
+**`rgbuilder check`** — fail CI when blast-radius policy rules are violated on symbols touched in the current git working tree. Complements interactive **`blast-radius --policy-file`** gatekeeping.
 
 ![Blast scores that feed policy thresholds (gbuilder)](../images/design/ci-policy-checks/policy-blast-scores.png)
 
@@ -29,7 +29,7 @@ flowchart TB
     G[graph + analysis_results]
   end
 
-  subgraph check["rbuilder check"]
+  subgraph check["rgbuilder check"]
     RES[resolve_unique_symbol]
     ENG[BlastRadiusEngine.analyze]
     POLCHK[analyze_with_policy]
@@ -73,8 +73,8 @@ Example files: [policy-permissive.json](../examples/policy-permissive.json), [po
 | `check` command | `src/cli/check.rs` |
 | JSON output | `src/cli/check_output.rs` |
 | Policy load | `src/cli/policy_file.rs` |
-| Engine | `crates/rbuilder-analysis/src/blast_radius_scc.rs` |
-| Centrality | `crates/rbuilder-analysis/src/centrality.rs` |
+| Engine | `crates/rgbuilder-analysis/src/blast_radius_scc.rs` |
+| Centrality | `crates/rgbuilder-analysis/src/centrality.rs` |
 | Git diff symbols | `src/cli/check.rs` (`changed_function_symbols`) |
 
 ---
@@ -93,14 +93,14 @@ Policy is **CLI-first**. The dashboard helps **calibrate** thresholds:
 
 ```bash
 # One-off blast with policy gate
-rbuilder -f json blast-radius ShoppingCartService --policy-file policy.json
+rgbuilder -f json blast-radius ShoppingCartService --policy-file policy.json
 
 # CI on PR — evaluate changed functions
-rbuilder check --policy-file policy.json
-rbuilder -f json check --policy-file policy.json | jq '.passed, .violations'
+rgbuilder check --policy-file policy.json
+rgbuilder -f json check --policy-file policy.json | jq '.passed, .violations'
 ```
 
-Typical GitHub Actions pattern: run `discover` in a setup job, then `check` on each PR with the same `.rbuilder/` cache artifact.
+Typical GitHub Actions pattern: run `discover` in a setup job, then `check` on each PR with the same `.rgbuilder/` cache artifact.
 
 ---
 

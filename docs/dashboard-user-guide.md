@@ -2,7 +2,7 @@
 
 Interactive browser UI for exploring a repository after `discover`. This guide is for **end users**; engineering detail lives in [dashboard-design.md](dashboard-design.md).
 
-**CLI equivalents:** each tab’s **Query Guide** panel lists matching `rbuilder` commands.
+**CLI equivalents:** each tab’s **Query Guide** panel lists matching `rgbuilder` commands.
 
 ---
 
@@ -12,19 +12,19 @@ Interactive browser UI for exploring a repository after `discover`. This guide i
 
 ```bash
 cd /path/to/your/repo
-rbuilder discover . --with-dashboard          # graph + dashboard bundle
+rgbuilder discover . --with-dashboard          # graph + dashboard bundle
 # or
-rbuilder discover . --with-cfg --with-security --with-taint --with-dashboard    # CFG, PDG, taint + dashboard
+rgbuilder discover . --with-cfg --with-security --with-taint --with-dashboard    # CFG, PDG, taint + dashboard
 ```
 
 2. Open the dashboard over **HTTP** (required for WASM):
 
 ```bash
 # Option A — integrated server (dashboard + query API)
-rbuilder serve --open
+rgbuilder serve --open
 
 # Option B — static files only
-cd .rbuilder/dashboard && python3 -m http.server 8765
+cd .rgbuilder/dashboard && python3 -m http.server 8765
 # open http://localhost:8765/
 ```
 
@@ -54,14 +54,14 @@ Screenshot placeholders (capture with `dashboard/scripts/capture-migration-scree
 
 - Natural-language and keyword search over indexed functions (default **code-daemon**; offline **`vocab`** or **`hash`** via CLI).
 - **Late fusion** (on by default) blends Hamming similarity with blast score, PageRank, name overlap, and token-bloom sketches.
-- Requires `rbuilder semantic index` (choose embedder at index time) and **`rbuilder serve`** (HTTP API at `/api/semantic/*` — not static-only hosting). Restart `serve` after rebuilding the index.
+- Requires `rgbuilder semantic index` (choose embedder at index time) and **`rgbuilder serve`** (HTTP API at `/api/semantic/*` — not static-only hosting). Restart `serve` after rebuilding the index.
 - Status badge shows `model_id` (e.g. `vocab-accumulate-v1`).
 - **CLI:** `semantic index [--embedder vocab]`, `semantic query "…"` (`--keyword-and`, `--no-fusion`, `--expand neighbors`)
 
 ### Graph
 
 - **Package metagraph** — zoomable WebGL view of communities / packages.
-- **Community names** — heuristic labels (package path, dominant tokens, infrastructure hubs), not anonymous `Community N` when inference succeeds. Refresh with `rbuilder communities label --write`.
+- **Community names** — heuristic labels (package path, dominant tokens, infrastructure hubs), not anonymous `Community N` when inference succeeds. Refresh with `rgbuilder communities label --write`.
 - **Drill-down** — click a package node to expand member functions (WASM `expand`).
 - **Filters** — search box, community filter, function/class type mask.
 - **CLI:** `gql --macro-name all_communities`, `communities list`, `export`, `metrics --communities`
@@ -112,7 +112,7 @@ Screenshot placeholders (capture with `dashboard/scripts/capture-migration-scree
 
 - Scrollable **CLI cookbook** organized by tab (prerequisites, commands, notes).
 - Validated against gbuilder: `dashboard/scripts/validate-guide-cli-gbuilder.sh`
-- Live GQL in the browser requires `rbuilder serve` ([HTTP API](http-api.md)).
+- Live GQL in the browser requires `rgbuilder serve` ([HTTP API](http-api.md)).
 
 ---
 
@@ -122,7 +122,7 @@ Screenshot placeholders (capture with `dashboard/scripts/capture-migration-scree
 |---------|-------|--------|
 | CFG tab shows warning, no graph | `archive_only` mode (too many functions for inline JSON) | Click **Load CFG graph** per function |
 | Slow first tab load | Large `graph_payload.bin` | Normal; WASM parses columnar snapshot once |
-| Blank graph | Served over `file://` | Use `python3 -m http.server` or `rbuilder serve` |
+| Blank graph | Served over `file://` | Use `python3 -m http.server` or `rgbuilder serve` |
 
 ---
 
@@ -130,11 +130,11 @@ Screenshot placeholders (capture with `dashboard/scripts/capture-migration-scree
 
 | Problem | Fix |
 |---------|-----|
-| “Graph not found” / empty stats | Run `rbuilder discover . --with-dashboard` in repo root |
+| “Graph not found” / empty stats | Run `rgbuilder discover . --with-dashboard` in repo root |
 | WASM engine error in notifications | Rebuild dashboard (`npm run build` in `dashboard/`) and re-run `discover --with-dashboard` |
 | Stale data after git pull | Re-run `discover` (with `--with-dashboard` if using UI) |
-| Semantic search empty / warning | `rbuilder semantic index` then `rbuilder serve --open` |
-| Migration tab empty | `rbuilder discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints` |
+| Semantic search empty / warning | `rgbuilder semantic index` then `rgbuilder serve --open` |
+| Migration tab empty | `rgbuilder discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints` |
 
 ---
 
@@ -142,4 +142,4 @@ Screenshot placeholders (capture with `dashboard/scripts/capture-migration-scree
 
 - [Introduction — Dashboard](Introduction.md#dashboard-visual-exploration)
 - [User Guide](user-guide.md)
-- [HTTP API](http-api.md) — `rbuilder serve` query endpoint
+- [HTTP API](http-api.md) — `rgbuilder serve` query endpoint

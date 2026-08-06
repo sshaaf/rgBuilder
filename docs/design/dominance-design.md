@@ -39,9 +39,9 @@ For each edge `A → B` in the CFG, if `B` does not strictly dominate `A`, add c
 ## 3. CLI output
 
 ```bash
-rbuilder inspect Symbol dom
-rbuilder inspect Symbol dom --frontiers
-rbuilder -f json inspect Symbol dom -o dom.json
+rgbuilder inspect Symbol dom
+rgbuilder inspect Symbol dom --frontiers
+rgbuilder -f json inspect Symbol dom -o dom.json
 ```
 
 JSON includes `nodes[]` with `idom`, `frontier_size` when `--frontiers` is set.
@@ -52,9 +52,9 @@ JSON includes `nodes[]` with `idom`, `frontier_size` when `--frontiers` is set.
 
 | Component | Path |
 |-----------|------|
-| Dominator algorithm | `crates/rbuilder-analysis/src/dominance.rs` |
-| CFG integration | `crates/rbuilder-analysis/src/cfg.rs` |
-| PDG control edges | `crates/rbuilder-analysis/src/pdg.rs` |
+| Dominator algorithm | `crates/rgbuilder-analysis/src/dominance.rs` |
+| CFG integration | `crates/rgbuilder-analysis/src/cfg.rs` |
+| PDG control edges | `crates/rgbuilder-analysis/src/pdg.rs` |
 | CLI inspect | `src/cli/inspect.rs` |
 
 ---
@@ -74,7 +74,7 @@ JSON includes `nodes[]` with `idom`, `frontier_size` when `--frontiers` is set.
 
 | Layer | Location |
 |-------|----------|
-| Dominance tests | `crates/rbuilder-analysis/src/dominance.rs` |
+| Dominance tests | `crates/rgbuilder-analysis/src/dominance.rs` |
 | Semantic verification | `scripts/semantic-verification.sh` |
 
 Screenshots: `capture-design-screenshots.mjs` → `docs/images/design/dominance/`.

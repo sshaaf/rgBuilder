@@ -14,7 +14,7 @@ A clear and concise description of the bug.
 
 Steps to reproduce the behavior:
 
-1. Run command `rbuilder ...`
+1. Run command `rgbuilder ...`
 2. With file `example.rs` containing...
 3. See error
 
@@ -32,7 +32,7 @@ Paste error output here
 
 ## Environment
 
-- **rBuilder version**: (run `rbuilder --version`)
+- **rgBuilder version**: (run `rgbuilder --version`)
 - **OS**: (e.g., macOS 13.4, Ubuntu 22.04, Windows 11)
 - **Rust version**: (run `rustc --version`)
 - **Feature flags**: (e.g., `proc-macros`, custom)

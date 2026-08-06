@@ -1,4 +1,4 @@
-//! `rbuilder discover` — index and analyze a repository.
+//! `rgbuilder discover` — index and analyze a repository.
 
 use super::context::CliContext;
 use anyhow::Result;
@@ -19,7 +19,7 @@ pub struct DiscoverArgs {
     pub with_ast_skeleton: bool,
     /// Also write legacy JSON graph files (`graph.db` / `graph.json`).
     pub write_json_graph: bool,
-    /// Export `.rbuilder/dashboard/` bundle. Default off.
+    /// Export `.rgbuilder/dashboard/` bundle. Default off.
     pub with_dashboard: bool,
     /// Write a migration roadmap JSON after analysis completes.
     pub export_migration_hints: bool,

@@ -1,0 +1,17 @@
+{
+  "name": "rgbuilder-wasm",
+  "type": "module",
+  "description": "WASM graph engine for rgBuilder dashboard",
+  "version": "0.4.3",
+  "license": "MIT OR Apache-2.0",
+  "files": [
+    "rgbuilder_wasm_bg.wasm",
+    "rgbuilder_wasm.js",
+    "rgbuilder_wasm.d.ts"
+  ],
+  "main": "rgbuilder_wasm.js",
+  "types": "rgbuilder_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

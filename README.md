@@ -1,16 +1,16 @@
-# rBuilder
+# rgBuilder
 
 **A code knowledge graph built for LLM agents — accurate answers, minimal tokens, maximum speed.**
 
-[![CI](https://github.com/sshaaf/rBuilder/actions/workflows/ci.yml/badge.svg)](https://github.com/sshaaf/rBuilder/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/sshaaf/rBuilder?display_name=tag&label=release)](https://github.com/sshaaf/rBuilder/releases/latest)
+[![CI](https://github.com/sshaaf/rgBuilder/actions/workflows/ci.yml/badge.svg)](https://github.com/sshaaf/rgBuilder/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/sshaaf/rgBuilder?display_name=tag&label=release)](https://github.com/sshaaf/rgBuilder/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![User Guide](https://img.shields.io/badge/docs-User%20Guide-0A7EA4)](docs/user-guide.md)
 [![Rust](https://img.shields.io/badge/Made%20with-Rust-orange?logo=rust)](https://www.rust-lang.org/)
 
-**Try it now:** [User Guide](docs/user-guide.md) (install → index → query) · [Download latest release](https://github.com/sshaaf/rBuilder/releases/latest) · [Agent skill](skills/rbuilder/SKILL.md) · [AGENTS.md](AGENTS.md) for LLM workflows
+**Try it now:** [User Guide](docs/user-guide.md) (install → index → query) · [Download latest release](https://github.com/sshaaf/rgBuilder/releases/latest) · [Agent skill](skills/rgbuilder/SKILL.md) · [AGENTS.md](AGENTS.md) for LLM workflows
 
-AI coding agents default to reading files sequentially. That burns context, misses structure, and produces confident wrong answers about impact and dependencies. **rBuilder indexes the whole repository once** into a rich graph with pre-computed **reachability**, then serves **compact, deterministic query results** — so agents (and humans) get the right slice of the codebase without loading it into the prompt.
+AI coding agents default to reading files sequentially. That burns context, misses structure, and produces confident wrong answers about impact and dependencies. **rgBuilder indexes the whole repository once** into a rich graph with pre-computed **reachability**, then serves **compact, deterministic query results** — so agents (and humans) get the right slice of the codebase without loading it into the prompt.
 
 ## Demo
 
@@ -28,14 +28,14 @@ https://github.com/user-attachments/assets/d8fd1d23-1c15-4e8c-800e-4e29420fa4b9
 
 **Goal:** make LLM-assisted development **more accurate** while **using fewer tokens**.
 
-| Without rBuilder | With rBuilder |
+| Without rgBuilder | With rgBuilder |
 |------------------|---------------|
 | Agent reads dozens of files to guess dependencies | Agent calls `blast-radius Symbol` → structured impact JSON |
 | “What calls this?” requires search + inference | `gql` returns exact graph matches |
 | Migration planning from partial context | **Migration planner** — package roadmap, dual ordering, tunable scores, interactive graph |
 | Repeated file dumps every turn | One `discover`, then cache-backed queries via CLI or `-f json` |
 
-rBuilder answers **reachability and relation questions deterministically** from the indexed graph. The LLM reasons on **summaries and facts**, not raw repo grep — fewer tokens, less hallucination, faster turns.
+rgBuilder answers **reachability and relation questions deterministically** from the indexed graph. The LLM reasons on **summaries and facts**, not raw repo grep — fewer tokens, less hallucination, faster turns.
 
 **Primary outputs for agents:** `-f json` on `discover`, `gql`, `blast-radius`, `metrics`, `semantic`, `communities`, `cpg`, `check`, `slice`, and `inspect`. File export uses `export --export-format` (not stdout JSON). See **[JSON API](docs/json-api.md)**.
 
@@ -43,7 +43,7 @@ rBuilder answers **reachability and relation questions deterministically** from 
 
 ## Where most tools stop
 
-Most codebase tools stop at **text search**, **file trees**, or a **shallow call graph**. rBuilder goes further — compiler-grade structure and security analysis, pre-computed at index time, queryable in milliseconds. That is what makes agent answers trustworthy.
+Most codebase tools stop at **text search**, **file trees**, or a **shallow call graph**. rgBuilder goes further — compiler-grade structure and security analysis, pre-computed at index time, queryable in milliseconds. That is what makes agent answers trustworthy.
 
 | Feature | What it gives you | Design doc |
 |---------|-------------------|------------|
@@ -61,7 +61,7 @@ Most codebase tools stop at **text search**, **file trees**, or a **shallow call
 | **Migration planner** | **Package-level roadmap** — PageRank + harmonic centrality − blast radius; dependency-aware schedule and priority rank; ForceAtlas2 graph in the dashboard | [migration-planner-design.md](docs/design/migration-planner-design.md) |
 | **CI policy checks** | **`check`** — fail builds when blast-radius rules are violated on touched symbols | [ci-policy-checks-design.md](docs/design/ci-policy-checks-design.md) |
 
-All of the above share one index: run [`discover`](docs/Introduction.md#indexing-the-repository-discover) once (use [`discover --with-cfg`](docs/Introduction.md#indexing-the-repository-discover) / `--with-taint` for CFG/PDG/taint archives; add `--with-dashboard` / `--export-migration-hints` for UI and migration exports). **Semantic search** is opt-in: `rbuilder semantic index` after discover. Explore in the CLI, pipe **JSON** to agents, or open the **[dashboard](docs/Introduction.md#dashboard-visual-exploration)** (including **Search** and **Migration** tabs).
+All of the above share one index: run [`discover`](docs/Introduction.md#indexing-the-repository-discover) once (use [`discover --with-cfg`](docs/Introduction.md#indexing-the-repository-discover) / `--with-taint` for CFG/PDG/taint archives; add `--with-dashboard` / `--export-migration-hints` for UI and migration exports). **Semantic search** is opt-in: `rgbuilder semantic index` after discover. Explore in the CLI, pipe **JSON** to agents, or open the **[dashboard](docs/Introduction.md#dashboard-visual-exploration)** (including **Search** and **Migration** tabs).
 
 **Deep dive on every feature → [Introduction](docs/Introduction.md) · [Feature designs](docs/design/README.md)**
 
@@ -69,7 +69,7 @@ All of the above share one index: run [`discover`](docs/Introduction.md#indexing
 
 ## Speed by design
 
-rBuilder is **async and parallel by design** — discovery walks the tree, parses languages concurrently, and builds analytics on the graph in parallel (Rayon + Tokio throughout the pipeline).
+rgBuilder is **async and parallel by design** — discovery walks the tree, parses languages concurrently, and builds analytics on the graph in parallel (Rayon + Tokio throughout the pipeline).
 
 - **Full discovery in seconds** on typical repos (not minutes of ad-hoc agent exploration)
 - **Reachability compressed** — enterprise-scale call graphs stored in compact on-disk snapshots, not gigabytes in RAM
@@ -81,10 +81,10 @@ Index once → query many times. That is the agent workflow.
   Agent / script / human
            │
            ▼
-    rbuilder gql | blast-radius | metrics | semantic | export -f json
+    rgbuilder gql | blast-radius | metrics | semantic | export -f json
            │
            ▼
-  .rbuilder/  ← graph snapshot + reachability engine + indexes
+  .rgbuilder/  ← graph snapshot + reachability engine + indexes
            ▲
            │
       discover .     ← async parallel index (seconds)
@@ -114,11 +114,11 @@ After deep discover + dashboard flags, open the dashboard **Migration** tab or e
 - **Package macro graph** — aggregates functions into path-derived package labels (Java package paths, Rust/C `/src/` modules)
 - **Dual ordering** — **scheduled step** (Kahn topological sort, callee before caller) and **priority rank** (score-only)
 - **Scoring** — `Priority = α·PageRank + β·Harmonic − γ·Blast`; presets include Hybrid Default, Foundational First, Dense Cluster Extraction, Risk Mitigation
-- **CLI export** — pass `--with-dashboard` to write `migration_graph.json` / default plan under `.rbuilder/dashboard/`; use `--export-migration-hints` (alias `--export-migration-plan`) for a preset-tuned plan (default `.rbuilder/migration_plan.json`, override with `-o`)
+- **CLI export** — pass `--with-dashboard` to write `migration_graph.json` / default plan under `.rgbuilder/dashboard/`; use `--export-migration-hints` (alias `--export-migration-plan`) for a preset-tuned plan (default `.rgbuilder/migration_plan.json`, override with `-o`)
 
 ```bash
-rbuilder discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints
-rbuilder serve   # http://127.0.0.1:8080/ → Migration tab
+rgbuilder discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints
+rgbuilder serve   # http://127.0.0.1:8080/ → Migration tab
 ```
 
 Design → **[Migration planner design](docs/design/migration-planner-design.md)** · Workflow → **[Building a migration plan](docs/building-migration-plan.md)**  
@@ -126,7 +126,7 @@ All feature designs → **[docs/design/](docs/design/README.md)**
 
 ### Community detection naming
 
-rBuilder does **not** run the Leiden algorithm today. What ships is **label propagation** (Raghavan et al., 2007) with Newman modularity scoring, plus hub stripping and deterministic tie-breaking. Docs/UI still say “Louvain” in places (`louvain_community_id`, migration layout), and `TASK_PLAN.md` lists Leiden as planned but unimplemented.
+rgBuilder does **not** run the Leiden algorithm today. What ships is **label propagation** (Raghavan et al., 2007) with Newman modularity scoring, plus hub stripping and deterministic tie-breaking. Docs/UI still say “Louvain” in places (`louvain_community_id`, migration layout), and `TASK_PLAN.md` lists Leiden as planned but unimplemented.
 
 | Name in repo | What it actually is |
 |--------------|---------------------|
@@ -138,17 +138,17 @@ Full detail → **[Graph metrics — community naming](docs/design/graph-metrics
 
 Walkthrough on the in-tree Spring Boot fixture → **[ecommerce-java example](docs/user-guide.md#3-example-project-ecommerce-java)** (User Guide).
 
-**Research map** — which papers rBuilder implements, which inspire the roadmap, and where to propose changes → **[Further reading](docs/further-reading.md#research-foundations-in-rbuilder)**.
+**Research map** — which papers rgBuilder implements, which inspire the roadmap, and where to propose changes → **[Further reading](docs/further-reading.md#research-foundations-in-rgbuilder)**.
 
 ---
 
 ## Quick start
 
-**Install** from [GitHub Releases](https://github.com/sshaaf/rBuilder/releases) or build from source:
+**Install** from [GitHub Releases](https://github.com/sshaaf/rgBuilder/releases) or build from source:
 
 ```bash
-git clone https://github.com/sshaaf/rBuilder.git
-cd rBuilder
+git clone https://github.com/sshaaf/rgBuilder.git
+cd rgBuilder
 git lfs pull   # bundled code-daemon ONNX weights (~206 MB)
 cargo build --release
 ```
@@ -158,25 +158,25 @@ cargo build --release
 ```bash
 git clone https://github.com/konveyor-ecosystem/coolstore.git
 cd coolstore
-rbuilder discover .
+rgbuilder discover .
 # agent-friendly telemetry:
-rbuilder -f json discover . | jq '.metrics'
+rgbuilder -f json discover . | jq '.metrics'
 ```
 
 **Query** (compact answers instead of file dumps):
 
 ```bash
 # Graph inventory for the agent
-rbuilder -f json gql 'MATCH (n:Function) RETURN n LIMIT 10'
+rgbuilder -f json gql 'MATCH (n:Function) RETURN n LIMIT 10'
 
 # Impact — critical before the agent edits a symbol
-rbuilder -f json blast-radius ShoppingCartService
+rgbuilder -f json blast-radius ShoppingCartService
 
 # Hotspots — where migration/refactor pain concentrates
-rbuilder -f json metrics --pagerank --communities
+rgbuilder -f json metrics --pagerank --communities
 
 # Package migration roadmap (graph + plan JSON for agents)
-rbuilder discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints
+rgbuilder discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints
 ```
 
 Concepts → **[Introduction](docs/Introduction.md)** · Commands → **[User Guide](docs/user-guide.md)**
@@ -184,11 +184,11 @@ Concepts → **[Introduction](docs/Introduction.md)** · Commands → **[User Gu
 Example deep-analysis commands (after `discover --with-cfg`):
 
 ```bash
-rbuilder inspect checkout cfg              # CFG / PDG / dominance (function symbol)
-rbuilder slice src/Foo.java --line 42 --variable x
-rbuilder slice src/Foo.java --line 10 --variable req --taint
-rbuilder semantic index --embedder vocab   # offline; or default code-daemon after git lfs pull
-rbuilder -f json semantic query "checkout flow" --limit 10
+rgbuilder inspect checkout cfg              # CFG / PDG / dominance (function symbol)
+rgbuilder slice src/Foo.java --line 42 --variable x
+rgbuilder slice src/Foo.java --line 10 --variable req --taint
+rgbuilder semantic index --embedder vocab   # offline; or default code-daemon after git lfs pull
+rgbuilder -f json semantic query "checkout flow" --limit 10
 ```
 
 ---
@@ -201,9 +201,9 @@ rbuilder -f json semantic query "checkout flow" --limit 10
 | **Reachability** | Pre-computed call reachability (sparse bitsets, not multi‑GB dense matrices) so “what breaks if I change this?” stays sub-second |
 | **Rich** code graph | 30+ typed relations — CALLS, IMPORTS, CONTAINS, IMPLEMENTS, and more — not just files and folders |
 
-Together: **rBuilder** is the **reachability builder** — it constructs the graph and the compressed reachability engine agents need for trustworthy structural reasoning.
+Together: **rgBuilder** is the **reachability builder** — it constructs the graph and the compressed reachability engine agents need for trustworthy structural reasoning.
 
-Algorithm and complexity details: crate READMEs under `crates/rbuilder-analysis/` and [CLI I/O sanity QE](docs/cli-io-sanity-qe.md) for automated perf gates.
+Algorithm and complexity details: crate READMEs under `crates/rgbuilder-analysis/` and [CLI I/O sanity QE](docs/cli-io-sanity-qe.md) for automated perf gates.
 
 ---
 
@@ -226,7 +226,7 @@ Quick links into **[Introduction](docs/Introduction.md)** — see [Where most to
 | `check` | [CI policy](docs/Introduction.md#ci-policy-checks) |
 | `serve` | [HTTP server](docs/Introduction.md#http-server-serve) |
 
-**Dashboard** — visual exploration after `discover --with-dashboard` (`.rbuilder/dashboard/`). See **[Feature designs](docs/design/README.md)** for per-tab engineering docs.  
+**Dashboard** — visual exploration after `discover --with-dashboard` (`.rgbuilder/dashboard/`). See **[Feature designs](docs/design/README.md)** for per-tab engineering docs.  
 **Migration export** — `discover --export-migration-hints` (alias `--export-migration-plan`; optional `--migration-preset`, `--migration-order scheduled|priority`).  
 **Languages** — nine Tier 1 languages (Rust, Python, Java, Go, TypeScript, JavaScript, C#, C, C++) plus config/IaC plugins. See [Language guide](docs/LANGUAGE_GUIDE.md).
 
@@ -240,11 +240,11 @@ Quick links into **[Introduction](docs/Introduction.md)** — see [Where most to
 | **[Introduction](docs/Introduction.md)** | Concepts — graph, reachability, each feature |
 | **[User Guide](docs/user-guide.md)** | Install, ecommerce-java fixture, every CLI command |
 | **[Dashboard user guide](docs/dashboard-user-guide.md)** | Browser UI tab-by-tab |
-| **[Agent skill](skills/rbuilder/SKILL.md)** | **Canonical agent playbook** — NL routing + CLI samples |
+| **[Agent skill](skills/rgbuilder/SKILL.md)** | **Canonical agent playbook** — NL routing + CLI samples |
 | **[AGENTS.md](AGENTS.md)** | Minimal agent contract (points at skill) |
 | **[Agent recipes](docs/agent-recipes.md)** | Copy-paste automation workflows |
 | **[JSON API](docs/json-api.md)** | Parse `-f json` payloads |
-| **[HTTP API](docs/http-api.md)** | `rbuilder serve` → `/api/query` and `/api/semantic/*` |
+| **[HTTP API](docs/http-api.md)** | `rgbuilder serve` → `/api/query` and `/api/semantic/*` |
 | **[Policy format](docs/policy-format.md)** | `check` / blast policy JSON |
 | **[Language guide](docs/LANGUAGE_GUIDE.md)** | Supported languages and tiers |
 | **[Further reading](docs/further-reading.md)** | Research implemented vs inspired |

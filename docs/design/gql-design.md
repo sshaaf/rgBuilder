@@ -42,7 +42,7 @@ flowchart TB
   end
 
   subgraph surfaces["Surfaces"]
-    CLI[rbuilder gql]
+    CLI[rgbuilder gql]
     HTTP[POST /api/query]
     WASM[WASM expand / list_nodes]
   end
@@ -79,10 +79,10 @@ MATCH (n:Class) WHERE n.qualified_name = 'com.example.Foo' RETURN n
 
 | Component | Path |
 |-----------|------|
-| Parser / AST | `crates/rbuilder-gql/src/parser.rs`, `ast.rs` |
-| Optimizer | `crates/rbuilder-gql/src/optimizer.rs` |
-| Executor | `crates/rbuilder-gql/src/executor.rs` |
-| Macros | `crates/rbuilder-gql/src/macros.rs` |
+| Parser / AST | `crates/rgbuilder-gql/src/parser.rs`, `ast.rs` |
+| Optimizer | `crates/rgbuilder-gql/src/optimizer.rs` |
+| Executor | `crates/rgbuilder-gql/src/executor.rs` |
+| Macros | `crates/rgbuilder-gql/src/macros.rs` |
 | CLI | `src/cli/gql.rs` |
 | HTTP | `src/cli/http_serve.rs` (`/api/query`) |
 
@@ -103,12 +103,12 @@ There is no dedicated GQL tab. Exploration maps to:
 ## 6. CLI and HTTP usage
 
 ```bash
-rbuilder discover .
-rbuilder gql 'MATCH (n:Function) RETURN n LIMIT 5'
-rbuilder -f json gql --macro-name all_functions unused
-rbuilder gql --explain 'MATCH (n:Function) WHERE n.name = "Foo" RETURN n'
+rgbuilder discover .
+rgbuilder gql 'MATCH (n:Function) RETURN n LIMIT 5'
+rgbuilder -f json gql --macro-name all_functions unused
+rgbuilder gql --explain 'MATCH (n:Function) WHERE n.name = "Foo" RETURN n'
 
-rbuilder serve --open
+rgbuilder serve --open
 curl -sS -X POST http://127.0.0.1:8080/api/query \
   -H 'Content-Type: application/json' \
   -d '{"macro":"all_functions"}' | jq '.count'
@@ -118,7 +118,7 @@ See [http-api.md](../http-api.md).
 
 ### Virtual communities (analysis overlay)
 
-Communities are **not** stored in `graph.snapshot.bin`. After discover, `gql` / `/api/query` join `.rbuilder/analysis_results.bin`:
+Communities are **not** stored in `graph.snapshot.bin`. After discover, `gql` / `/api/query` join `.rgbuilder/analysis_results.bin`:
 
 | Pattern | Meaning |
 |---------|---------|
@@ -134,7 +134,7 @@ Labels are heuristic; see [community-query-and-naming-plan.md](community-query-a
 
 | Layer | Location |
 |-------|----------|
-| GQL crate tests | `crates/rbuilder-gql/src/` |
+| GQL crate tests | `crates/rgbuilder-gql/src/` |
 | CLI subprocess | `tests/cli_output/all_commands_sanity.rs` |
 | Query Guide validation | `dashboard/scripts/validate-guide-cli-gbuilder.sh` |
 

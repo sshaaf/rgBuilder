@@ -1,12 +1,12 @@
 # CLI output schemas
 
-Reference for JSON (and related) output shapes emitted by rBuilder CLI commands.
+Reference for JSON (and related) output shapes emitted by rgBuilder CLI commands.
 
 **Programmatic parsing guide:** [json-api.md](json-api.md) — invocation, TypeScript shapes, jq recipes, on-disk JSON, exit codes.
 
 **Global flag:** `-f json` / `--format json`
 
-**Architecture:** Each JSON command has a typed serializer in `src/cli/*_output.rs`. Commands build domain results in workspace crates (`rbuilder-analysis`, `rbuilder-pipeline`, …) and serialize in the CLI layer only — see [Code_structure.md](Code_structure.md) §2 (CLI is thin).
+**Architecture:** Each JSON command has a typed serializer in `src/cli/*_output.rs`. Commands build domain results in workspace crates (`rgbuilder-analysis`, `rgbuilder-pipeline`, …) and serialize in the CLI layer only — see [Code_structure.md](Code_structure.md) §2 (CLI is thin).
 
 ---
 
@@ -43,7 +43,7 @@ cargo test --test cli_output --test subprocess_golden_path --test all_commands_s
 **Command:**
 
 ```bash
-rbuilder -f json blast-radius <SYMBOL> [--depth N] [--policy-file PATH] [--with-slices] [--class CLASS] [--file PATH]
+rgbuilder -f json blast-radius <SYMBOL> [--depth N] [--policy-file PATH] [--with-slices] [--class CLASS] [--file PATH]
 ```
 
 **Flags:**
@@ -55,10 +55,10 @@ rbuilder -f json blast-radius <SYMBOL> [--depth N] [--policy-file PATH] [--with-
 | `--with-slices` | Populate `gatekeeping.handoffs` (requires full graph path) |
 | `--class` / `--file` | Disambiguate overloads |
 
-**Optional warm path:** `rbuilder serve` serves the dashboard and `POST /api/query` on port 8080. Legacy blast socket: `rbuilder serve --daemon` (auto-connect to `.rbuilder/query.sock` unless `RBUILDER_NO_QUERY_DAEMON=1`). See [http-api.md](http-api.md).
+**Optional warm path:** `rgbuilder serve` serves the dashboard and `POST /api/query` on port 8080. Legacy blast socket: `rgbuilder serve --daemon` (auto-connect to `.rgbuilder/query.sock` unless `RGBUILDER_NO_QUERY_DAEMON=1`). See [http-api.md](http-api.md).
 
 **Source:** `src/cli/blast_radius_output.rs`  
-**Cache enrichment:** `crates/rbuilder-analysis/src/macro_call_index.rs`, `macro_call_lookup.rs`
+**Cache enrichment:** `crates/rgbuilder-analysis/src/macro_call_index.rs`, `macro_call_lookup.rs`
 
 ### Top-level
 
@@ -168,7 +168,7 @@ rbuilder -f json blast-radius <SYMBOL> [--depth N] [--policy-file PATH] [--with-
 
 **FQN policy:** route on `target.canonical_fqn` (`Class::method`) and `topology.*.id` (UUID). Treat `topology.*.fqn` as language-native display text only.
 
-**Cache:** target metadata is written at `discover` into `macro_call_index.db` / `.bin`. Re-run `discover` after upgrading rBuilder to populate v2 fields on cache hits.
+**Cache:** target metadata is written at `discover` into `macro_call_index.db` / `.bin`. Re-run `discover` after upgrading rgBuilder to populate v2 fields on cache hits.
 
 ### Example (Java, cache path)
 
@@ -220,7 +220,7 @@ rbuilder -f json blast-radius <SYMBOL> [--depth N] [--policy-file PATH] [--with-
 **Default (HTTP):**
 
 ```bash
-rbuilder serve -r REPO [--open]
+rgbuilder serve -r REPO [--open]
 ```
 
 Binds `http://127.0.0.1:8080/` — dashboard at `/`, GQL at `POST /api/query`. See [http-api.md](http-api.md).
@@ -228,14 +228,14 @@ Binds `http://127.0.0.1:8080/` — dashboard at `/`, GQL at `POST /api/query`. S
 **Legacy socket daemon (`--daemon`):**
 
 ```bash
-rbuilder serve -r REPO --daemon [--socket PATH] [--idle-secs SECS]
+rgbuilder serve -r REPO --daemon [--socket PATH] [--idle-secs SECS]
 ```
 
-**Defaults:** socket `{repo}/.rbuilder/query.sock`, idle exit 300s.
+**Defaults:** socket `{repo}/.rgbuilder/query.sock`, idle exit 300s.
 
 **Role:** Loads mmap graph + blast engine once; answers NDJSON RPC (`ping`, `blast_radius`) over a Unix socket. Lite `blast-radius` (no `--with-slices`, no `--policy-file`) auto-connects when the socket exists.
 
-**Environment:** `RBUILDER_NO_QUERY_DAEMON=1` disables client auto-connect.
+**Environment:** `RGBUILDER_NO_QUERY_DAEMON=1` disables client auto-connect.
 
 **Requires:** prior `discover` producing `graph.snapshot.bin` and `blast_engine.snapshot.bin`.
 
@@ -246,12 +246,12 @@ rbuilder serve -r REPO --daemon [--socket PATH] [--idle-secs SECS]
 **Command:**
 
 ```bash
-rbuilder -f json discover PATH [--languages LANGS] [--exclude PATTERNS] [--with-security] [--with-cfg] [--with-taint] [--write-json-graph]
+rgbuilder -f json discover PATH [--languages LANGS] [--exclude PATTERNS] [--with-security] [--with-cfg] [--with-taint] [--write-json-graph]
 ```
 
 **Source:** `src/cli/discover_output.rs`, `src/cli/discover_impl.rs`
 
-With `-f json`, discover **suppresses** progress bars and human status lines on stderr (logging quiet unless `-v`). **Stdout** receives a single telemetry object after ingestion completes. Artifacts under `.rbuilder/` are still written.
+With `-f json`, discover **suppresses** progress bars and human status lines on stderr (logging quiet unless `-v`). **Stdout** receives a single telemetry object after ingestion completes. Artifacts under `.rgbuilder/` are still written.
 
 ```json
 {
@@ -283,16 +283,16 @@ Without `-f json`, discover remains human-readable text progress (unchanged).
 
 | Path | When | Format |
 |------|------|--------|
-| `.rbuilder/graph.snapshot.bin` | Always (default canonical graph) | Binary graph snapshot |
-| `.rbuilder/blast_engine.snapshot.bin` | Always | Binary blast engine snapshot |
-| `.rbuilder/macro_call_index.db` | Always | SQLite **blast-radius lookup cache** only (+ UUID + v2 target columns) |
-| `.rbuilder/macro_call_index.bin` | Always | Bincode companion index (same data family as `.db`) |
-| `.rbuilder/analysis_results.bin` | Always | Columnar analysis tables |
-| `.rbuilder/dashboard/` | When export succeeds | Static dashboard bundle (`index.html`, `manifest.json`, …) |
-| `.rbuilder/graph.db` / `.rbuilder/graph.json` | `--write-json-graph` only | Legacy full graph JSON |
-| `.rbuilder/analysis/cfg_pdg.archive.bin` | `--with-cfg` or `--with-taint` | CFG + PDG for `--with-slices` |
-| `.rbuilder/analysis/*.json` | `--with-cfg` or `--with-taint` | Per-function analysis storage (taint, CFG, PDG) |
-| `.rbuilder/dashboard/taint_index.json` | `--with-cfg` or `--with-taint` | Dashboard taint catalog (see [json-api.md](json-api.md) §12) |
+| `.rgbuilder/graph.snapshot.bin` | Always (default canonical graph) | Binary graph snapshot |
+| `.rgbuilder/blast_engine.snapshot.bin` | Always | Binary blast engine snapshot |
+| `.rgbuilder/macro_call_index.db` | Always | SQLite **blast-radius lookup cache** only (+ UUID + v2 target columns) |
+| `.rgbuilder/macro_call_index.bin` | Always | Bincode companion index (same data family as `.db`) |
+| `.rgbuilder/analysis_results.bin` | Always | Columnar analysis tables |
+| `.rgbuilder/dashboard/` | When export succeeds | Static dashboard bundle (`index.html`, `manifest.json`, …) |
+| `.rgbuilder/graph.db` / `.rgbuilder/graph.json` | `--write-json-graph` only | Legacy full graph JSON |
+| `.rgbuilder/analysis/cfg_pdg.archive.bin` | `--with-cfg` or `--with-taint` | CFG + PDG for `--with-slices` |
+| `.rgbuilder/analysis/*.json` | `--with-cfg` or `--with-taint` | Per-function analysis storage (taint, CFG, PDG) |
+| `.rgbuilder/dashboard/taint_index.json` | `--with-cfg` or `--with-taint` | Dashboard taint catalog (see [json-api.md](json-api.md) §12) |
 
 ---
 
@@ -301,7 +301,7 @@ Without `-f json`, discover remains human-readable text progress (unchanged).
 **Command:**
 
 ```bash
-rbuilder -f json gql "<QUERY>" [--explain] [--macro NAME]
+rgbuilder -f json gql "<QUERY>" [--explain] [--macro NAME]
 ```
 
 **Source:** `src/cli/gql_output.rs`
@@ -344,7 +344,7 @@ rbuilder -f json gql "<QUERY>" [--explain] [--macro NAME]
 | `member_count` | number \| omitted | Community size |
 | `properties` | object \| omitted | Allowlisted extract properties (`is_lambda`, `throws`, …) |
 
-**Note:** The explain **plan** is not included in JSON; it prints to text mode only. Virtual `:Community` / `community_id` require `.rbuilder/analysis_results.bin` after `discover`.
+**Note:** The explain **plan** is not included in JSON; it prints to text mode only. Virtual `:Community` / `community_id` require `.rgbuilder/analysis_results.bin` after `discover`.
 
 ---
 
@@ -353,7 +353,7 @@ rbuilder -f json gql "<QUERY>" [--explain] [--macro NAME]
 **Command:**
 
 ```bash
-rbuilder -f json metrics [--pagerank] [--betweenness] [--communities] [--iterations N]
+rgbuilder -f json metrics [--pagerank] [--betweenness] [--communities] [--iterations N]
 ```
 
 **Source:** `src/cli/metrics_output.rs`, `src/cli/metrics.rs`
@@ -397,7 +397,7 @@ Omitted keys: sections not requested are **absent** (not `null`, not `[]`). Seri
 **Command:**
 
 ```bash
-rbuilder -f json check --policy-file PATH
+rgbuilder -f json check --policy-file PATH
 ```
 
 **Source:** `src/cli/check_output.rs`
@@ -445,7 +445,7 @@ rbuilder -f json check --policy-file PATH
 **Command:**
 
 ```bash
-rbuilder -f json slice FILE --line N --variable VAR [--view cfg|pdg|text] [--direction backward|forward] [--taint]
+rgbuilder -f json slice FILE --line N --variable VAR [--view cfg|pdg|text] [--direction backward|forward] [--taint]
 ```
 
 **Source:** `src/cli/slice_output.rs`
@@ -531,7 +531,7 @@ Includes line list **and** PDG subgraph topology for the slice:
 **Command:**
 
 ```bash
-rbuilder -f json inspect SYMBOL --layer cfg|pdg|dom [layer options]
+rgbuilder -f json inspect SYMBOL --layer cfg|pdg|dom [layer options]
 ```
 
 **Source:** `src/cli/inspect_output.rs`
@@ -591,7 +591,7 @@ Block references use stable **`block_index`** integers (sorted by `start_line`),
 **Command:**
 
 ```bash
-rbuilder export --export-format json --export-output graph.json [--query "…"]
+rgbuilder export --export-format json --export-output graph.json [--query "…"]
 ```
 
 Writes to `-o`; stdout is a one-line summary unless output is redirected via global `-o`.

@@ -1,6 +1,6 @@
 # Migration Planner — Engineering Design
 
-This document describes the **Software Migration & Blast Radius Planner** as implemented in rBuilder: data flow, algorithms, file formats, dashboard behavior, CLI, tests, and extension points.
+This document describes the **Software Migration & Blast Radius Planner** as implemented in rgBuilder: data flow, algorithms, file formats, dashboard behavior, CLI, tests, and extension points.
 
 ---
 
@@ -83,7 +83,7 @@ Exported as `migration_graph.json` with `"mode": "package_macro"`.
 
 ### 3.2 Package label derivation
 
-Implemented in `crates/rbuilder-analysis/src/migration.rs` as `package_label(file_path)` (same rules as `crates/rbuilder-dashboard/src/metagraph.rs`):
+Implemented in `crates/rgbuilder-analysis/src/migration.rs` as `package_label(file_path)` (same rules as `crates/rgbuilder-dashboard/src/metagraph.rs`):
 
 | Path pattern | Example | Label |
 |--------------|---------|-------|
@@ -126,14 +126,14 @@ Intra-package calls are omitted from the macro graph (they do not create macro e
 
 ### 3.5 Community id on macro nodes (`louvain_community_id`)
 
-Field: `louvain_community_id: Option<usize>` — **majority vote** of member functions’ label-propagation ids. The field name is historical (“Louvain”); rBuilder does **not** run Leiden or the Louvain library — see [Graph metrics — community naming](graph-metrics-design.md#31-community-detection-naming).
+Field: `louvain_community_id: Option<usize>` — **majority vote** of member functions’ label-propagation ids. The field name is historical (“Louvain”); rgBuilder does **not** run Leiden or the Louvain library — see [Graph metrics — community naming](graph-metrics-design.md#31-community-detection-naming).
 
 Used for:
 
 - **Graph node color** in the dashboard (cluster visually)
 - **ForceAtlas2 layout edge weighting** (intra- vs inter-cluster pull)
 
-Community detection itself lives in `crates/rbuilder-analysis/src/community.rs` (**label propagation** with modularity scoring). See [Graph metrics — community naming](graph-metrics-design.md#31-community-detection-naming).
+Community detection itself lives in `crates/rgbuilder-analysis/src/community.rs` (**label propagation** with modularity scoring). See [Graph metrics — community naming](graph-metrics-design.md#31-community-detection-naming).
 
 ---
 
@@ -215,7 +215,7 @@ Dashboard: **Roadmap sort** dropdown in Metrics & tuning.
 
 ### 6.1 `migration_graph.json` (schema v2)
 
-Written to `.rbuilder/dashboard/migration_graph.json` on `discover --with-dashboard`.
+Written to `.rgbuilder/dashboard/migration_graph.json` on `discover --with-dashboard`.
 
 ```json
 {
@@ -283,12 +283,12 @@ Migration uses pre-aggregated package metrics in `migration_graph.json`.
 
 | Component | Path |
 |-----------|------|
-| Graph build + plan compute | `crates/rbuilder-analysis/src/migration.rs` |
-| Public exports | `crates/rbuilder-analysis/src/lib.rs` |
-| Dashboard bundle write | `crates/rbuilder-dashboard/src/migration_export.rs` |
-| Discover integration | `crates/rbuilder-dashboard/src/lib.rs` → `export_dashboard_bundle` |
+| Graph build + plan compute | `crates/rgbuilder-analysis/src/migration.rs` |
+| Public exports | `crates/rgbuilder-analysis/src/lib.rs` |
+| Dashboard bundle write | `crates/rgbuilder-dashboard/src/migration_export.rs` |
+| Discover integration | `crates/rgbuilder-dashboard/src/lib.rs` → `export_dashboard_bundle` |
 | CLI flags | `src/cli/mod.rs`, `src/cli/discover.rs`, `src/cli/discover_impl.rs` |
-| Manifest fields | `crates/rbuilder-dashboard/src/manifest.rs` (`migration_available`, paths) |
+| Manifest fields | `crates/rgbuilder-dashboard/src/manifest.rs` (`migration_available`, paths) |
 
 Key functions:
 
@@ -367,19 +367,19 @@ Top → bottom:
 
 ```bash
 # Full analysis + dashboard bundle (includes migration_graph.json + default plan)
-rbuilder discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints
+rgbuilder discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints
 
 # Export plan to file (harmonic required for β term in ranking)
-rbuilder discover . --with-harmonic --export-migration-hints \
+rgbuilder discover . --with-harmonic --export-migration-hints \
   --migration-preset risk_mitigation \
   --migration-order priority \
   -o migration_plan.json
 
 # JSON to stdout (with discover JSON envelope)
-rbuilder discover . --with-harmonic --export-migration-hints -f json
+rgbuilder discover . --with-harmonic --export-migration-hints -f json
 
 # Serve dashboard (requires prior --with-dashboard discover)
-rbuilder serve -r /path/to/repo --open
+rgbuilder serve -r /path/to/repo --open
 ```
 
 Flags:
@@ -387,11 +387,11 @@ Flags:
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--with-harmonic` | off | Compute harmonic centrality (needed for migration β / dense_cluster) |
-| `--with-dashboard` | off | Write `.rbuilder/dashboard/` bundle |
+| `--with-dashboard` | off | Write `.rgbuilder/dashboard/` bundle |
 | `--export-migration-hints` | off | Write plan JSON (alias: `--export-migration-hints`) |
 | `--migration-preset` | `hybrid_default` | Strategy preset |
 | `--migration-order` | `scheduled` | `scheduled` or `priority` |
-| `-o` | `.rbuilder/migration_plan.json` | Output path (`--export-migration-hints`) |
+| `-o` | `.rgbuilder/migration_plan.json` | Output path (`--export-migration-hints`) |
 
 ---
 
@@ -399,7 +399,7 @@ Flags:
 
 | Layer | Location | What it checks |
 |-------|----------|----------------|
-| Rust unit | `crates/rbuilder-analysis/src/migration.rs` (`mod tests`) | package labels, aggregation, Kahn order, dual rank, tie-break, presets |
+| Rust unit | `crates/rgbuilder-analysis/src/migration.rs` (`mod tests`) | package labels, aggregation, Kahn order, dual rank, tie-break, presets |
 | Vitest | `dashboard/src/migration/engine.test.ts` | scoring, schedule vs priority, preset matching |
 | CLI integration | `tests/migration_plan_cli.rs` | export file, stdout JSON, presets, `--migration-order` |
 | Dashboard harness | `tests/dashboard_harness.rs` | `migration_graph.json` + plan schema v2 fields on discover |
@@ -409,7 +409,7 @@ Flags:
 Run locally:
 
 ```bash
-cargo test -p rbuilder-analysis migration::
+cargo test -p rgbuilder-analysis migration::
 cargo test --test migration_plan_cli
 cd dashboard && npm run test:unit
 DASHBOARD_URL=http://127.0.0.1:8080/ node dashboard/scripts/test-migration-gbuilder.mjs
@@ -424,7 +424,7 @@ After dashboard UI changes:
 ```bash
 cd dashboard && npm run build
 cargo build --release   # embeds dashboard/dist
-rbuilder discover . --with-cfg --with-security --with-taint   # refresh .rbuilder/dashboard static JSON
+rgbuilder discover . --with-cfg --with-security --with-taint   # refresh .rgbuilder/dashboard static JSON
 ```
 
 ---
@@ -463,7 +463,7 @@ Consider bumping `mode` string (e.g. `cargo_crate`) for forward compatibility.
 
 Any change to normalization, edge direction for scheduling, or tie-breaking **must** be applied in:
 
-- `crates/rbuilder-analysis/src/migration.rs`
+- `crates/rgbuilder-analysis/src/migration.rs`
 - `dashboard/src/migration/*.ts`
 
 Add paired unit tests with the same fixture expectations.
@@ -486,8 +486,8 @@ Add paired unit tests with the same fixture expectations.
 ## 13. File checklist (quick reference)
 
 ```
-crates/rbuilder-analysis/src/migration.rs     # core algorithms
-crates/rbuilder-dashboard/src/migration_export.rs
+crates/rgbuilder-analysis/src/migration.rs     # core algorithms
+crates/rgbuilder-dashboard/src/migration_export.rs
 dashboard/src/MigrationView.tsx               # UI
 dashboard/src/migration/                        # TS engine
 dashboard/scripts/capture-design-screenshots.mjs
@@ -504,9 +504,9 @@ tests/migration_plan_cli.rs
 
 ```bash
 cargo build --release
-rbuilder -r ~/git/java/gbuilder discover . --with-cfg --with-security --with-taint
+rgbuilder -r ~/git/java/gbuilder discover . --with-cfg --with-security --with-taint
 # → migration_graph.json: ~30 packages, mode package_macro
-rbuilder serve -r ~/git/java/gbuilder
+rgbuilder serve -r ~/git/java/gbuilder
 # Migration tab → tune presets → inspect package graph + paginated table
 ```
 
