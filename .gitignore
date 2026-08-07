@@ -31,8 +31,8 @@ Cargo.lock
 skills-lock.json
 /dist
 
-# Generated graph data
-.rgbuilder/
+# Generated graph data (any depth — never commit local indexes)
+**/.rgbuilder/
 /coverage
 *.profraw
 *.profdata
