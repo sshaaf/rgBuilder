@@ -43,10 +43,10 @@ pub fn export_function_metrics(
         return Ok(());
     }
 
-    if source_node_count >= COMMUNITY_ONLY_THRESHOLD {
-        write_community_only(out_dir)?;
-        return Ok(());
-    }
+    // Large graphs still get per-function centrality rows so the Functions tab can
+    // sort by PR / BC / Harm / Blast. Metagraph view may remain community-only.
+    let sparse_mode = (source_node_count >= COMMUNITY_ONLY_THRESHOLD)
+        .then_some("community_only".to_string());
 
     let repo_root = snapshot_path
         .parent()
@@ -104,7 +104,7 @@ pub fn export_function_metrics(
     }
 
     rows.sort_by_key(|a| a.index);
-    write_payload(out_dir, rows, None)
+    write_payload(out_dir, rows, sparse_mode)
 }
 
 fn write_payload(
@@ -143,8 +143,4 @@ fn write_payload(
 
 fn write_empty(out_dir: &Path) -> Result<(), String> {
     write_payload(out_dir, Vec::new(), None)
-}
-
-fn write_community_only(out_dir: &Path) -> Result<(), String> {
-    write_payload(out_dir, Vec::new(), Some("community_only".into()))
 }

@@ -1,54 +1,54 @@
 1
-00:00:01,603 --> 00:00:08,141
+00:00:01,920 --> 00:00:08,478
 Overview
 Discover metrics · graph snapshot ready
 
 2
-00:00:08,609 --> 00:00:15,146
+00:00:08,950 --> 00:00:15,504
 Graph
-Package call graph (GQL structure)
+Communities · metagraph overview
 
 3
-00:00:16,023 --> 00:00:22,560
+00:00:21,842 --> 00:00:28,396
 Search
-Semantic query · vocab Hamming + fusion
+Semantic query · results ranked by fusion
 
 4
-00:00:23,305 --> 00:00:29,842
+00:00:29,196 --> 00:00:35,763
 Functions
 PageRank · betweenness · blast hotspots
 
 5
-00:00:31,830 --> 00:00:38,368
+00:00:38,231 --> 00:00:44,785
 CFG
 Control-flow blocks & edges
 
 6
-00:00:38,810 --> 00:00:53,147
+00:00:45,239 --> 00:01:20,060
 Dataflow
 CPG field mutations · PDG · dominator tree
 
 7
-00:01:10,138 --> 00:01:16,676
+00:01:22,494 --> 00:01:29,048
 Slice
 Backward slice · criterion & highlights
 
 8
-00:01:42,249 --> 00:01:48,784
+00:01:31,809 --> 00:01:38,364
 Blast radius
 Upstream impact score & callers
 
 9
-00:01:54,604 --> 00:02:01,143
+00:01:40,414 --> 00:01:46,966
 Taint
 Source → sink flows
 
 10
-00:02:01,993 --> 00:02:08,531
+00:01:47,842 --> 00:01:54,399
 Migration
 Package roadmap · presets & ordering
 
 11
-00:02:10,943 --> 00:02:17,480
+00:01:56,808 --> 00:02:03,360
 Query Guide
 CLI cookbook · check & export recipes
