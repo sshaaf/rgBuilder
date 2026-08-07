@@ -61,7 +61,7 @@ flowchart TB
 - **Impact zone**: transitive upstream callers; capped by `--depth N`
 - **Canonical identity**: `target.canonical_fqn` + UUIDs (not display `fqn` alone)
 
-CLI JSON: [cli-output-schemas.md](../cli-output-schemas.md) §1 · [json-api.md](../json-api.md) §6.
+CLI JSON: [json-api.md](../json-api.md) (blast-radius + field catalogs).
 
 ---
 
@@ -69,9 +69,9 @@ CLI JSON: [cli-output-schemas.md](../cli-output-schemas.md) §1 · [json-api.md]
 
 | Component | Path |
 |-----------|------|
-| Engine + reachability | `crates/rbuilder-analysis/src/blast_radius_scc.rs` |
-| Engine snapshot | `crates/rbuilder-analysis/src/blast_engine_snapshot.rs` |
-| T0 lookup cache | `crates/rbuilder-analysis/src/macro_call_lookup.rs` |
+| Engine + reachability | `crates/rgbuilder-analysis/src/blast_radius_scc.rs` |
+| Engine snapshot | `crates/rgbuilder-analysis/src/blast_engine_snapshot.rs` |
+| T0 lookup cache | `crates/rgbuilder-analysis/src/macro_call_lookup.rs` |
 | CLI orchestration | `src/cli/blast_radius.rs` |
 | Socket daemon | `src/cli/query_daemon.rs` (`serve --daemon`) |
 | Policy integration | `src/cli/policy_file.rs`, `engine.analyze_with_policy` |
@@ -92,11 +92,11 @@ CLI JSON: [cli-output-schemas.md](../cli-output-schemas.md) §1 · [json-api.md]
 ## 6. CLI usage
 
 ```bash
-rbuilder discover .
-rbuilder -f json blast-radius ShoppingCartService
-rbuilder -f json blast-radius process --class OrderService --depth 3
-rbuilder -f json blast-radius Foo --policy-file policy.json   # exit 1 if VIOLATED
-rbuilder serve --daemon   # optional blast socket warm path
+rg-build discover .
+rg-build -f json blast-radius ShoppingCartService
+rg-build -f json blast-radius process --class OrderService --depth 3
+rg-build -f json blast-radius Foo --policy-file policy.json   # exit 1 if VIOLATED
+rg-build serve --daemon   # optional blast socket warm path
 ```
 
 ---
@@ -113,7 +113,7 @@ rbuilder serve --daemon   # optional blast socket warm path
 Regenerate screenshots:
 
 ```bash
-rbuilder -r ~/git/java/gbuilder serve --port 8080
+rg-build -r ~/git/java/gbuilder serve --port 8080
 DASHBOARD_URL=http://127.0.0.1:8080/ node dashboard/scripts/capture-design-screenshots.mjs
 ```
 

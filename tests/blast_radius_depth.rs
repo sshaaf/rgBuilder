@@ -1,11 +1,11 @@
 //! Blast-radius `--depth` hop limiting.
 
-use rbuilder::analysis::{
+use rgbuilder::analysis::{
     filter_impact_by_caller_depth, impact_score_from_counts, BlastRadiusEngine, PetGraphView,
 };
-use rbuilder::graph::backend::GraphBackend;
-use rbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rbuilder::graph::CodeGraph;
+use rgbuilder::graph::backend::GraphBackend;
+use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
+use rgbuilder::graph::CodeGraph;
 
 fn build_chain() -> (CodeGraph, uuid::Uuid, uuid::Uuid, uuid::Uuid) {
     let mut graph = CodeGraph::new();

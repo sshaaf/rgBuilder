@@ -27,14 +27,14 @@ const dmMono = DM_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "rBuilder — code knowledge graph for AI agents",
-    template: "%s · rBuilder",
+    default: "rgBuilder — code knowledge graph for AI agents",
+    template: "%s · rgBuilder",
   },
   description:
     "Open-source code knowledge graph for LLM agents. Index once, query compact JSON — blast radius, GQL, semantic search, migration planning.",
-  metadataBase: new URL("https://shaaf.dev/rBuilder"),
+  metadataBase: new URL("https://shaaf.dev/rgBuilder"),
   openGraph: {
-    title: "rBuilder",
+    title: "rgBuilder",
     description:
       "Open-source code knowledge graph for LLM agents — accurate answers, fewer tokens.",
     type: "website",

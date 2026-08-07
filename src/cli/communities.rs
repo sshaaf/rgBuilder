@@ -1,24 +1,24 @@
-//! `rbuilder communities` — list / refresh community labels.
+//! `rg-build communities` — list / refresh community labels.
 
 use super::args::OutputFormat;
 use super::context::CliContext;
 use anyhow::{bail, Context, Result};
-use rbuilder_analysis::{
+use rgbuilder_analysis::{
     fill_community_labels, AnalysisResults, CommunityQueryContext,
 };
-use rbuilder_graph::backend::GraphBackend;
+use rgbuilder_graph::backend::GraphBackend;
 use serde_json::json;
 
 pub struct CommunitiesLabelArgs {
-    /// Rewrite `.rbuilder/analysis_results.bin` labels (heuristic refresh).
+    /// Rewrite `.rgbuilder/analysis_results.bin` labels (heuristic refresh).
     pub write: bool,
 }
 
 pub fn run_label(ctx: &CliContext, args: CommunitiesLabelArgs) -> Result<()> {
-    let analysis_path = ctx.repo.join(".rbuilder/analysis_results.bin");
+    let analysis_path = ctx.repo.join(".rgbuilder/analysis_results.bin");
     if !analysis_path.is_file() {
         bail!(
-            "analysis results not found at {} (run `rbuilder discover` first)",
+            "analysis results not found at {} (run `rg-build discover` first)",
             analysis_path.display()
         );
     }

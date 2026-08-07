@@ -1,7 +1,7 @@
 //! Semantic search QE — index/query oracles (OpenSpec `qe-sanity-gates`).
 //!
 //! Distinct from `semantic_audit` / `semantic_boundary` (CFG/PDG). Policy: required red
-//! until fixed — see `rbuilder-tests/correctness/QE.md`.
+//! until fixed — see `rgbuilder-tests/correctness/QE.md`.
 
 use serde::Deserialize;
 use serde_json::Value;
@@ -18,8 +18,8 @@ fn oracles_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/semantic_oracles.json")
 }
 
-fn rbuilder_bin() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_rbuilder"))
+fn rgbuilder_bin() -> PathBuf {
+    PathBuf::from(env!("CARGO_BIN_EXE_rg_build"))
 }
 
 fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
@@ -82,10 +82,10 @@ impl Sandbox {
     }
 
     fn run(&self, args: &[&str]) -> Output {
-        let mut cmd = Command::new(rbuilder_bin());
+        let mut cmd = Command::new(rgbuilder_bin());
         cmd.arg("-r").arg(&self.repo);
         cmd.args(args);
-        cmd.output().expect("spawn rbuilder")
+        cmd.output().expect("spawn rg-build")
     }
 
     fn parse_json(&self, output: &Output) -> Value {

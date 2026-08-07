@@ -1,11 +1,11 @@
 //! Phase 14: Graphviz DOT export tests.
 
-use rbuilder::export::{generate_dot, GraphvizOptions, Layout, RankDir};
-use rbuilder::graph::backend::GraphBackend;
-use rbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
+use rgbuilder::export::{generate_dot, GraphvizOptions, Layout, RankDir};
+use rgbuilder::graph::backend::GraphBackend;
+use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
 
-fn mixed_backend() -> rbuilder::graph::backend::MemoryBackend {
-    let mut backend = rbuilder::graph::backend::MemoryBackend::new();
+fn mixed_backend() -> rgbuilder::graph::backend::MemoryBackend {
+    let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
     let func = Node::new(NodeType::Function, "run".into());
     let cls = Node::new(NodeType::Class, "Runner".into());
     let id_f = func.id;
@@ -61,7 +61,7 @@ fn test_dot_rankdir_horizontal() {
 
 #[test]
 fn test_dot_special_char_escaping() {
-    let mut backend = rbuilder::graph::backend::MemoryBackend::new();
+    let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
     backend
         .insert_node(Node::new(NodeType::Function, r#"fn "test""#.into()))
         .unwrap();
@@ -71,7 +71,7 @@ fn test_dot_special_char_escaping() {
 
 #[test]
 fn test_dot_layout_parsing() {
-    use rbuilder::export::parse_layout;
+    use rgbuilder::export::parse_layout;
     assert_eq!(parse_layout("neato"), Layout::Neato);
     assert_eq!(parse_layout("dot"), Layout::Dot);
 }

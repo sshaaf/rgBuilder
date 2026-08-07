@@ -1,4 +1,4 @@
-use rbuilder::cli::metrics_output::{
+use rgbuilder::cli::metrics_output::{
     build_metrics_response, fixture_metrics_json, metrics_response_to_json, MetricsPagerankSection,
     METRICS_SCHEMA_VERSION,
 };
@@ -36,7 +36,7 @@ fn test_metrics_json_schema_sanity() {
 
 #[test]
 fn test_metrics_wrap_adds_schema_version() {
-    use rbuilder::cli::metrics_output::wrap_metrics_payload;
+    use rgbuilder::cli::metrics_output::wrap_metrics_payload;
 
     let mut payload = json!({ "pagerank": { "top": [] } });
     wrap_metrics_payload(&mut payload);
@@ -68,7 +68,7 @@ fn test_metrics_betweenness_only_omits_other_sections() {
 
 #[test]
 fn test_metrics_communities_only_omits_other_sections() {
-    use rbuilder::cli::metrics_output::MetricsCommunitiesSection;
+    use rgbuilder::cli::metrics_output::MetricsCommunitiesSection;
 
     let response = build_metrics_response(
         None,

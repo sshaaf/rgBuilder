@@ -7,9 +7,9 @@ use crate::analysis::{
     ParsedSourceFile, PdgBuildOptions, ProgramDependenceGraph, TaintAnalyzer,
 };
 use rayon::prelude::*;
-use rbuilder_graph::code_index::hash_code;
-use rbuilder_graph::schema::Node;
-use rbuilder_pipeline::with_pool;
+use rgbuilder_graph::code_index::hash_code;
+use rgbuilder_graph::schema::Node;
+use rgbuilder_pipeline::with_pool;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};

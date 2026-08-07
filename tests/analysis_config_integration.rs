@@ -1,11 +1,11 @@
 //! Phase 2 integration tests: analysis and config scanning
 
-use rbuilder::analysis::{ComplexityAnalyzer, DependencyAnalyzer};
-use rbuilder::config::analyzer::ConfigAnalyzer;
-use rbuilder::config::secret_detector::SecretDetector;
-use rbuilder::graph::backend::GraphBackend;
-use rbuilder::graph::schema::{Edge, Node, NodeType};
-use rbuilder::graph::CodeGraph;
+use rgbuilder::analysis::{ComplexityAnalyzer, DependencyAnalyzer};
+use rgbuilder::config::analyzer::ConfigAnalyzer;
+use rgbuilder::config::secret_detector::SecretDetector;
+use rgbuilder::graph::backend::GraphBackend;
+use rgbuilder::graph::schema::{Edge, Node, NodeType};
+use rgbuilder::graph::CodeGraph;
 use std::fs;
 use tempfile::TempDir;
 
@@ -28,7 +28,7 @@ fn sample_graph() -> CodeGraph {
         .insert_edge(Edge::new(
             id1,
             id2,
-            rbuilder::graph::schema::EdgeType::Calls,
+            rgbuilder::graph::schema::EdgeType::Calls,
         ))
         .unwrap();
     graph
@@ -60,14 +60,14 @@ fn test_circular_dependency_via_analyzer() {
         .insert_edge(Edge::new(
             id_a,
             id_b,
-            rbuilder::graph::schema::EdgeType::Calls,
+            rgbuilder::graph::schema::EdgeType::Calls,
         ))
         .unwrap();
     backend
         .insert_edge(Edge::new(
             id_b,
             id_a,
-            rbuilder::graph::schema::EdgeType::Calls,
+            rgbuilder::graph::schema::EdgeType::Calls,
         ))
         .unwrap();
 
@@ -105,7 +105,7 @@ fn test_end_to_end_repo_graph_roundtrip() {
     )
     .unwrap();
 
-    let graph = rbuilder::code_graph_from_repository(temp.path()).unwrap();
+    let graph = rgbuilder::code_graph_from_repository(temp.path()).unwrap();
     graph.save_to_repo(temp.path()).unwrap();
 
     let loaded = CodeGraph::load_from_repo(temp.path()).unwrap();

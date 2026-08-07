@@ -42,7 +42,7 @@ export default function HomePage() {
             </em>
           </h1>
           <p className="mt-5 max-w-xl text-lg text-[var(--body)]">
-            rBuilder indexes your repository once, then answers reachability and
+            rgBuilder indexes your repository once, then answers reachability and
             structure questions in compact JSON — so coding agents use fewer
             tokens and make fewer confident mistakes.
           </p>
@@ -100,7 +100,7 @@ export default function HomePage() {
               <Link href="/agents/" className="text-[var(--ink)] underline">
                 AGENTS.md
               </Link>{" "}
-              into your agent workflow. The model calls rBuilder instead of
+              into your agent workflow. The model calls rgBuilder instead of
               grepping blindly — then reasons on structured impact.
             </p>
             <Button variant="ghost" asChild>
@@ -111,9 +111,9 @@ export default function HomePage() {
           </div>
           <TerminalBlock
             lines={[
-              "rbuilder discover .",
-              'rbuilder -f json semantic query "checkout flow" --limit 5',
-              'rbuilder -f json blast-radius "priceShoppingCart" --depth 2',
+              "rg-build discover .",
+              'rg-build -f json semantic query "checkout flow" --limit 5',
+              'rg-build -f json blast-radius "priceShoppingCart" --depth 2',
             ]}
           />
         </div>

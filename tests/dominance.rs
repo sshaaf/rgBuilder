@@ -5,7 +5,7 @@
 mod analysis_helpers;
 
 use analysis_helpers::{build_dominance, with_dominance};
-use rbuilder::analysis::{build_cfg_for_function, DominatorTree, ProgramDependenceGraph};
+use rgbuilder::analysis::{build_cfg_for_function, DominatorTree, ProgramDependenceGraph};
 
 macro_rules! dom_test {
     ($(#[$attr:meta])* $name:ident, $lang:expr, $code:expr, $fn:expr, $check:expr) => {

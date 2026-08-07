@@ -2,9 +2,9 @@
 # Validate Query Guide CLI workflows against gbuilder (read-only; no discover).
 set -uo pipefail
 
-REPO="${RBUILDER_DASHBOARD_GOLDEN_REPO:-/Users/sshaaf/git/java/gbuilder}"
-RB="${RBUILDER_BIN:-/Users/sshaaf/git/rust/rBuilder/target/release/rbuilder}"
-TMP="${TMPDIR:-/tmp}/rbuilder-guide-gbuilder-$$"
+REPO="${RGBUILDER_DASHBOARD_GOLDEN_REPO:-/Users/sshaaf/git/java/gbuilder}"
+RB="${RGBUILDER_BIN:-/Users/sshaaf/git/rust/rgBuilder/target/release/rg-build}"
+TMP="${TMPDIR:-/tmp}/rgbuilder-guide-gbuilder-$$"
 mkdir -p "$TMP"
 
 SLICE_FILE="src/main/java/dev/shaaf/gbuilder/lang/java/JavaTreeSitterExtractor.java"
@@ -43,8 +43,8 @@ echo "=== gbuilder Query Guide CLI validation ==="
 echo "REPO=$REPO"
 echo ""
 
-if [[ ! -d "$REPO/.rbuilder" ]]; then
-  echo "ERROR: no .rbuilder at $REPO — run discover first"
+if [[ ! -d "$REPO/.rgbuilder" ]]; then
+  echo "ERROR: no .rgbuilder at $REPO — run discover first"
   exit 1
 fi
 
@@ -118,9 +118,9 @@ run "gql Endpoint pattern (gbuilder: *main*)" \
   "$RB" -r "$REPO" gql "MATCH (n:Function) WHERE n.name LIKE '*main*' RETURN n LIMIT 10"
 
 echo "[migration]"
-if [[ -f "$REPO/.rbuilder/dashboard/migration_plan.json" ]]; then
+if [[ -f "$REPO/.rgbuilder/dashboard/migration_plan.json" ]]; then
   run "migration_plan.json readable" \
-    jq '.packages[:1]' "$REPO/.rbuilder/dashboard/migration_plan.json"
+    jq '.packages[:1]' "$REPO/.rgbuilder/dashboard/migration_plan.json"
 else
   skip "migration_plan.json" "run discover --all --export-migration-plan first"
 fi

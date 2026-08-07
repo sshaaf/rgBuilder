@@ -1,6 +1,6 @@
-# rbuilder-analysis Architecture
+# rgbuilder-analysis Architecture
 
-The `rbuilder-analysis` crate bridges the code knowledge graph (`rbuilder-graph`) with static-analysis algorithms. It organizes graph usage into three tiers.
+The `rgbuilder-analysis` crate bridges the code knowledge graph (`rgbuilder-graph`) with static-analysis algorithms. It organizes graph usage into three tiers.
 
 ## Tier 1: Repository graph (source of truth)
 
@@ -14,7 +14,7 @@ Nodes represent symbols (functions, types, modules). Edges carry `EdgeType` sema
 | Type | Module | Purpose |
 |------|--------|---------|
 | `PetGraphView` | `graph_utils` | Façade over typed bidirectional CSR (`StructuralTopology`); UUID maps |
-| `StructuralTopology` / `CodeGraphCsr` | `structural_topology` / `rbuilder-graph::csr` | Hot edge residency (~5 B/edge/dir); community/centrality/blast/dependency |
+| `StructuralTopology` / `CodeGraphCsr` | `structural_topology` / `rgbuilder-graph::csr` | Hot edge residency (~5 B/edge/dir); community/centrality/blast/dependency |
 | `ColdMetadataDb` | `cold_metadata` | Mmap-backed node payloads after early snapshot write |
 | `CallGraph` | `callgraph` | u32-indexed call-only adjacency for fast traversal |
 | `FlatGraphIndex` | `centrality` | Contiguous `usize` edge list for numeric algorithms |
@@ -27,10 +27,10 @@ Analysis opens `ColdMetadataDb` + CSR from the mmap; hydrate a `CodeGraph` only 
 `--with-dashboard` / migration / JSON. Share `&PetGraphView` / `StructuralTopology`
 across community / centrality / blast, then drop the view after the SCC engine is built.
 
-**Incremental updates:** when `.rbuilder/graph.snapshot.bin` exists,
-[`IncrementalUpdater`](../crates/rbuilder-incremental/src/updater.rs) extracts only
-changed files into a [`DeltaSegment`](../crates/rbuilder-graph/src/graph_compactor.rs),
-stream-compacts with [`GraphCompactor`](../crates/rbuilder-graph/src/graph_compactor.rs)
+**Incremental updates:** when `.rgbuilder/graph.snapshot.bin` exists,
+[`IncrementalUpdater`](../crates/rgbuilder-incremental/src/updater.rs) extracts only
+changed files into a [`DeltaSegment`](../crates/rgbuilder-graph/src/graph_compactor.rs),
+stream-compacts with [`GraphCompactor`](../crates/rgbuilder-graph/src/graph_compactor.rs)
 (alive UUID filter + edge row streaming; name/type indexes rebuilt during spill compile),
 atomically renames the new snapshot, then reloads. Force rebuild uses
 `process_repository_to_snapshot`. Without a snapshot, the legacy in-memory edit path remains.
@@ -51,7 +51,7 @@ Edges are **topology-only** for the digest: columnar rows do not store edge prop
 over the final live set (same helpers as spill compile) — never
 `hash(old_digest || delta)`.
 
-Sidecars under `.rbuilder/` that embed `graph_digest` (`blast_engine.snapshot.bin`,
+Sidecars under `.rgbuilder/` that embed `graph_digest` (`blast_engine.snapshot.bin`,
 macro call index/lookup, `analysis_results.bin`, semantic index, CFG/PDG archive) are
 **deleted after compact** so the next discover / blast-radius / macro path rebuilds
 against the new header instead of serving a stale hit. Do not copy the old digest into
@@ -116,6 +116,6 @@ See [internal/temp.md](internal/temp.md) for algorithm detail and kernel-scale m
 
 ## Further reading
 
-- Crate README: `crates/rbuilder-analysis/README.md`
-- OpenSpec design: `openspec/changes/review-rbuilder-analysis/design.md`
+- Crate README: `crates/rgbuilder-analysis/README.md`
+- OpenSpec design: `openspec/changes/review-rgbuilder-analysis/design.md`
 - Benchmarks: `cargo bench --bench graph_benchmarks` (workspace root)

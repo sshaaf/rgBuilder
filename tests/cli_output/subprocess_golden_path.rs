@@ -1,8 +1,8 @@
 //! CLI subprocess golden-path tests — Layer 2 (narrow end-to-end regressions).
 //!
-//! Spawns `CARGO_BIN_EXE_rbuilder` against a temp copy of
+//! Spawns `CARGO_BIN_EXE_rg_build` against a temp copy of
 //! `tests/fixtures/tiny_polyglot_repo`. Uses default graph storage under
-//! `{repo}/.rbuilder/` (unlike `all_commands_sanity.rs`, which forces `-d sandbox_graph.db`).
+//! `{repo}/.rgbuilder/` (unlike `all_commands_sanity.rs`, which forces `-d sandbox_graph.db`).
 //!
 //! | Test | Regression guarded |
 //! |------|-------------------|
@@ -21,8 +21,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-fn rbuilder_bin() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_rbuilder"))
+fn rgbuilder_bin() -> PathBuf {
+    PathBuf::from(env!("CARGO_BIN_EXE_rg_build"))
 }
 
 fn fixture_root() -> PathBuf {
@@ -50,11 +50,11 @@ fn materialize_fixture() -> tempfile::TempDir {
     dir
 }
 
-fn run_rbuilder(repo: &Path, args: &[&str]) -> std::process::Output {
-    let mut cmd = Command::new(rbuilder_bin());
+fn run_rgbuilder(repo: &Path, args: &[&str]) -> std::process::Output {
+    let mut cmd = Command::new(rgbuilder_bin());
     cmd.arg("-r").arg(repo);
     cmd.args(args);
-    cmd.output().expect("spawn rbuilder")
+    cmd.output().expect("spawn rg-build")
 }
 
 #[test]
@@ -62,7 +62,7 @@ fn discover_json_emits_telemetry_on_stdout() {
     let dir = materialize_fixture();
     let repo = dir.path();
 
-    let output = run_rbuilder(
+    let output = run_rgbuilder(
         repo,
         &["-f", "json", "discover", ".", "--languages", "java,rust"],
     );
@@ -127,7 +127,7 @@ fn discover_initializes_tiny_polyglot_repo() {
     let dir = materialize_fixture();
     let repo = dir.path();
 
-    let output = run_rbuilder(repo, &["discover", ".", "--languages", "java,rust"]);
+    let output = run_rgbuilder(repo, &["discover", ".", "--languages", "java,rust"]);
 
     assert!(
         output.status.success(),
@@ -136,11 +136,11 @@ fn discover_initializes_tiny_polyglot_repo() {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let graph_db = repo.join(".rbuilder/graph.db");
-    let snapshot = repo.join(".rbuilder/graph.snapshot.bin");
+    let graph_db = repo.join(".rgbuilder/graph.db");
+    let snapshot = repo.join(".rgbuilder/graph.snapshot.bin");
     assert!(
         graph_db.exists() || snapshot.exists(),
-        "discover should materialize graph artifacts under .rbuilder/"
+        "discover should materialize graph artifacts under .rgbuilder/"
     );
 }
 
@@ -149,10 +149,10 @@ fn blast_radius_json_exit_zero_after_discover() {
     let dir = materialize_fixture();
     let repo = dir.path();
 
-    let discover = run_rbuilder(repo, &["discover", ".", "--languages", "java,rust"]);
+    let discover = run_rgbuilder(repo, &["discover", ".", "--languages", "java,rust"]);
     assert!(discover.status.success(), "discover setup failed");
 
-    let output = run_rbuilder(
+    let output = run_rgbuilder(
         repo,
         &[
             "-f",
@@ -200,13 +200,13 @@ fn blast_radius_policy_violation_fails_closed_with_exit_one() {
     let dir = materialize_fixture();
     let repo = dir.path();
 
-    let discover = run_rbuilder(repo, &["discover", ".", "--languages", "java,rust"]);
+    let discover = run_rgbuilder(repo, &["discover", ".", "--languages", "java,rust"]);
     assert!(discover.status.success(), "discover setup failed");
 
     let policy_path = repo.join("strict_policy.json");
     fs::write(&policy_path, r#"{"max_impact_nodes": 0}"#).expect("write policy file");
 
-    let output = run_rbuilder(
+    let output = run_rgbuilder(
         repo,
         &[
             "-f",
@@ -241,10 +241,10 @@ fn blast_radius_with_slices_populates_handoffs() {
     let dir = materialize_fixture();
     let repo = dir.path();
 
-    let discover = run_rbuilder(repo, &["discover", ".", "--languages", "java,rust"]);
+    let discover = run_rgbuilder(repo, &["discover", ".", "--languages", "java,rust"]);
     assert!(discover.status.success(), "discover setup failed");
 
-    let output = run_rbuilder(
+    let output = run_rgbuilder(
         repo,
         &[
             "-f",
@@ -276,7 +276,7 @@ fn blast_radius_with_slices_under_30s_after_cfg_discover() {
     let dir = materialize_fixture();
     let repo = dir.path();
 
-    let discover = run_rbuilder(
+    let discover = run_rgbuilder(
         repo,
         &["discover", ".", "--languages", "java,rust", "--cfg"],
     );
@@ -286,12 +286,12 @@ fn blast_radius_with_slices_under_30s_after_cfg_discover() {
         String::from_utf8_lossy(&discover.stderr)
     );
     assert!(
-        repo.join(".rbuilder/analysis/cfg_pdg.archive.bin").exists(),
+        repo.join(".rgbuilder/analysis/cfg_pdg.archive.bin").exists(),
         "discover --cfg should write cfg_pdg archive"
     );
 
     let start = Instant::now();
-    let output = run_rbuilder(
+    let output = run_rgbuilder(
         repo,
         &[
             "-f",
@@ -327,11 +327,11 @@ fn blast_radius_fast_path_under_150ms() {
     let dir = materialize_fixture();
     let repo = dir.path();
 
-    let discover = run_rbuilder(repo, &["discover", ".", "--languages", "java,rust"]);
+    let discover = run_rgbuilder(repo, &["discover", ".", "--languages", "java,rust"]);
     assert!(discover.status.success(), "discover setup failed");
 
     let start = Instant::now();
-    let output = run_rbuilder(repo, &["-f", "json", "blast-radius", "publishEvent"]);
+    let output = run_rgbuilder(repo, &["-f", "json", "blast-radius", "publishEvent"]);
     let latency = start.elapsed();
 
     assert!(
@@ -356,13 +356,13 @@ fn check_policy_violation_fails_closed_with_exit_one() {
     let dir = materialize_fixture();
     let repo = dir.path();
 
-    let discover = run_rbuilder(repo, &["discover", ".", "--languages", "java,rust"]);
+    let discover = run_rgbuilder(repo, &["discover", ".", "--languages", "java,rust"]);
     assert!(discover.status.success(), "discover setup failed");
 
     let policy_path = repo.join("strict_policy.json");
     fs::write(&policy_path, r#"{"max_impact_nodes": 0}"#).expect("write policy file");
 
-    let output = run_rbuilder(
+    let output = run_rgbuilder(
         repo,
         &[
             "-f",

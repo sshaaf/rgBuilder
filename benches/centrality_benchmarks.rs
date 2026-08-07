@@ -4,10 +4,10 @@
 //! Large gate: `cargo test --release --test centrality_audit -- --ignored`
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use rbuilder::analysis::{FastPageRank, FlatGraphIndex, PetGraphView};
-use rbuilder::graph::backend::GraphBackend;
-use rbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rbuilder::graph::CodeGraph;
+use rgbuilder::analysis::{FastPageRank, FlatGraphIndex, PetGraphView};
+use rgbuilder::graph::backend::GraphBackend;
+use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
+use rgbuilder::graph::CodeGraph;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
@@ -67,8 +67,8 @@ fn bench_kafka_centrality_optional(c: &mut Criterion) {
         return;
     }
 
-    use rbuilder_pipeline::{PipelineConfig, ProcessingPipeline};
-    use rbuilder_registry::LanguageRegistry;
+    use rgbuilder_pipeline::{PipelineConfig, ProcessingPipeline};
+    use rgbuilder_registry::LanguageRegistry;
     use std::sync::Arc;
 
     let registry = Arc::new(LanguageRegistry::new());

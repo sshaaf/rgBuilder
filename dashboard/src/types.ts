@@ -510,7 +510,7 @@ export type WorkerOut =
   | { type: "error"; requestId?: number; message: string };
 
 export async function loadManifest(): Promise<DashboardManifest> {
-  const embedded = document.getElementById("rbuilder-manifest");
+  const embedded = document.getElementById("rgbuilder-manifest");
   if (embedded?.textContent) {
     return JSON.parse(embedded.textContent) as DashboardManifest;
   }

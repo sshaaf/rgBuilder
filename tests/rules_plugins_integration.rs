@@ -1,11 +1,11 @@
 //! Phase 3 integration tests: rule engine and plugins
 
-use rbuilder::graph::backend::GraphBackend;
-use rbuilder::graph::schema::{Node, NodeType};
-use rbuilder::graph::CodeGraph;
-use rbuilder::languages::plugin_loader::{PluginLoader, PluginRegistry, PLUGIN_REGISTRY_FILE};
-use rbuilder::languages::registry::LanguageRegistry;
-use rbuilder::rules::{RuleEngine, Ruleset};
+use rgbuilder::graph::backend::GraphBackend;
+use rgbuilder::graph::schema::{Node, NodeType};
+use rgbuilder::graph::CodeGraph;
+use rgbuilder::languages::plugin_loader::{PluginLoader, PluginRegistry, PLUGIN_REGISTRY_FILE};
+use rgbuilder::languages::registry::LanguageRegistry;
+use rgbuilder::rules::{RuleEngine, Ruleset};
 use std::fs;
 use std::path::Path;
 use tempfile::TempDir;
@@ -44,7 +44,7 @@ fn test_java_plugin_extraction() {
     )
     .unwrap();
 
-    let graph = rbuilder::code_graph_from_repository(temp.path()).unwrap();
+    let graph = rgbuilder::code_graph_from_repository(temp.path()).unwrap();
     let classes = graph.find_by_type(NodeType::Class).unwrap();
     assert!(classes.iter().any(|n| n.name == "App"));
 }
@@ -80,7 +80,7 @@ fn test_plugin_registry_install() {
     assert_eq!(registry.plugins.len(), 1);
     assert!(temp
         .path()
-        .join(".rbuilder")
+        .join(".rgbuilder")
         .join(PLUGIN_REGISTRY_FILE)
         .exists());
 }

@@ -3,10 +3,10 @@
 //! Run: `cargo bench --bench community_benchmarks`
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
-use rbuilder::analysis::{default_community_edge_types, CommunityDetector, PetGraphView};
-use rbuilder::graph::backend::GraphBackend;
-use rbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rbuilder::graph::CodeGraph;
+use rgbuilder::analysis::{default_community_edge_types, CommunityDetector, PetGraphView};
+use rgbuilder::graph::backend::GraphBackend;
+use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
+use rgbuilder::graph::CodeGraph;
 use std::time::{Duration, Instant};
 
 fn build_monorepo_mock(nodes: usize, edges: usize) -> CodeGraph {

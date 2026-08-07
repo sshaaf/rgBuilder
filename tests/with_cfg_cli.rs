@@ -2,7 +2,7 @@
 
 mod dashboard_harness;
 
-use dashboard_harness::{copy_dir_all, rbuilder_bin};
+use dashboard_harness::{copy_dir_all, rgbuilder_bin};
 use std::path::Path;
 use std::process::Command;
 
@@ -11,12 +11,12 @@ fn materialize() -> (tempfile::TempDir, std::path::PathBuf) {
     let tmp = tempfile::tempdir().expect("tempdir");
     let repo = tmp.path().join("repo");
     copy_dir_all(&fixture, &repo).expect("copy fixture");
-    let _ = std::fs::remove_dir_all(repo.join(".rbuilder"));
+    let _ = std::fs::remove_dir_all(repo.join(".rgbuilder"));
     (tmp, repo)
 }
 
 fn run_discover(repo: &Path, extra: &[&str]) -> std::process::Output {
-    let mut cmd = Command::new(rbuilder_bin());
+    let mut cmd = Command::new(rgbuilder_bin());
     cmd.args([
         "-r",
         repo.to_str().unwrap(),
@@ -26,7 +26,7 @@ fn run_discover(repo: &Path, extra: &[&str]) -> std::process::Output {
         "java,rust",
     ]);
     cmd.args(extra);
-    cmd.output().expect("spawn rbuilder discover")
+    cmd.output().expect("spawn rg-build discover")
 }
 
 fn assert_ok(output: &std::process::Output, label: &str) {
@@ -60,9 +60,9 @@ fn discover_with_cfg_writes_archive_without_requiring_taint() {
     let output = run_discover(&repo, &["--with-cfg"]);
     assert_ok(&output, "discover --with-cfg");
     assert!(
-        repo.join(".rbuilder/analysis/cfg_pdg.archive.bin")
+        repo.join(".rgbuilder/analysis/cfg_pdg.archive.bin")
             .is_file()
-            || repo.join(".rbuilder/analysis").is_dir(),
+            || repo.join(".rgbuilder/analysis").is_dir(),
         "CFG pass should create analysis artifacts"
     );
 }
@@ -76,7 +76,7 @@ fn discover_cfg_alias_still_works() {
 
 #[test]
 fn discover_help_lists_with_flags_not_all() {
-    let output = Command::new(rbuilder_bin())
+    let output = Command::new(rgbuilder_bin())
         .args(["discover", "--help"])
         .output()
         .expect("help");

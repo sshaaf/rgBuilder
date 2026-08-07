@@ -20,6 +20,9 @@ out/
 # copied from docs/videos at build/dev time
 public/demos/
 
+# copied from docs/ at build/dev time
+content/docs/
+
 # production
 build/
 dist/

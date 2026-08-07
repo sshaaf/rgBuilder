@@ -12,8 +12,8 @@ use crate::analysis::{
     SemanticExpandMode, SemanticFusionConfig, SemanticIndex,
 };
 use anyhow::{Context, Result};
-use rbuilder_graph::backend::GraphBackend;
-use rbuilder_graph::CodeGraph;
+use rgbuilder_graph::backend::GraphBackend;
+use rgbuilder_graph::CodeGraph;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
@@ -47,7 +47,7 @@ pub fn semantic_status(repo: &Path) -> SemanticStatusResponse {
             functions_indexed: None,
             graph_digest: None,
             message: Some(
-                "Semantic index not found — run `rbuilder semantic index` then refresh.".into(),
+                "Semantic index not found — run `rg-build semantic index` then refresh.".into(),
             ),
         };
     }
@@ -84,7 +84,7 @@ pub fn execute_semantic_query(
         tokenizer_path: args.tokenizer.clone(),
     };
 
-    let analysis_path = repo.join(".rbuilder/analysis_results.bin");
+    let analysis_path = repo.join(".rgbuilder/analysis_results.bin");
     let analysis = if analysis_path.is_file() {
         Some(
             AnalysisResults::load(&analysis_path)
@@ -104,7 +104,7 @@ pub fn execute_semantic_query(
     if args.scope == CliSemanticScope::Community {
         let analysis = analysis.ok_or_else(|| {
             anyhow::anyhow!(
-                "community semantic search requires analysis_results.bin (run `rbuilder discover`)"
+                "community semantic search requires analysis_results.bin (run `rg-build discover`)"
             )
         })?;
         let backend = graph.backend();

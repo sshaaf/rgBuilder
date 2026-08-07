@@ -1,24 +1,24 @@
 /**
- * Record an rBuilder dashboard feature montage — one beat per main tab.
+ * Record an rgBuilder dashboard feature montage — one beat per main tab.
  *
  * Timing: prepare each tab, then hold a fixed showcase window. SRT cues use
  * wall-clock timestamps from those showcase windows (no equal-slot guessing).
  * Encode stays near 1× so captions stay aligned.
  *
  * Prereq (ecommerce-java fixture recommended):
- *   rbuilder -r rbuilder-tests/ecommerce-java discover . -l java -e target \
+ *   rg-build -r rgbuilder-tests/ecommerce-java discover . -l java -e target \
  *     --with-cfg --with-security --with-taint --with-dashboard --with-harmonic \
  *     --export-migration-hints
- *   rbuilder -r rbuilder-tests/ecommerce-java semantic index --embedder vocab
- *   rbuilder -r rbuilder-tests/ecommerce-java serve --port 8080
+ *   rg-build -r rgbuilder-tests/ecommerce-java semantic index --embedder vocab
+ *   rg-build -r rgbuilder-tests/ecommerce-java serve --port 8080
  *
  * Usage:
  *   DASHBOARD_URL=http://127.0.0.1:8080/ node dashboard/scripts/record-feature-demo.mjs
  *
  * Outputs:
- *   docs/videos/rbuilder-feature-demo-no-captions.mp4
- *   docs/videos/rbuilder-feature-demo.srt
- *   docs/videos/rbuilder-feature-demo.raw.webm  (intermediate)
+ *   docs/videos/rgbuilder-feature-demo-no-captions.mp4
+ *   docs/videos/rgbuilder-feature-demo.srt
+ *   docs/videos/rgbuilder-feature-demo.raw.webm  (intermediate)
  */
 
 import { chromium } from "playwright";
@@ -29,9 +29,9 @@ import { spawnSync } from "node:child_process";
 const BASE = process.env.DASHBOARD_URL ?? "http://127.0.0.1:8080/";
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const OUT_DIR = path.join(ROOT, "docs/videos");
-const RAW_WEBM = path.join(OUT_DIR, "rbuilder-feature-demo.raw.webm");
-const OUT_NO_CAPTIONS = path.join(OUT_DIR, "rbuilder-feature-demo-no-captions.mp4");
-const OUT_SRT = path.join(OUT_DIR, "rbuilder-feature-demo.srt");
+const RAW_WEBM = path.join(OUT_DIR, "rgbuilder-feature-demo.raw.webm");
+const OUT_NO_CAPTIONS = path.join(OUT_DIR, "rgbuilder-feature-demo-no-captions.mp4");
+const OUT_SRT = path.join(OUT_DIR, "rgbuilder-feature-demo.srt");
 
 /** Showcase hold per tab (after prep). Override with DEMO_HOLD_SEC. */
 const HOLD_MS = Math.round(Number(process.env.DEMO_HOLD_SEC ?? "6.5") * 1000);
@@ -65,14 +65,14 @@ const TAB_SEGMENTS = [
     tab: "Graph Visualization",
     panel: ".graph-panel.h-100",
     caption: "Graph",
-    body: "Package call graph (GQL structure)",
+    body: "Communities · metagraph overview",
   },
   {
     key: "search",
     tab: "Search",
     panel: ".search-view",
     caption: "Search",
-    body: "Semantic query · vocab Hamming + fusion",
+    body: "Semantic query · results ranked by fusion",
   },
   {
     key: "functions",
@@ -173,12 +173,17 @@ async function clickTab(page, label) {
 }
 
 async function selectFunction(page, name) {
+  await page
+    .locator(".function-list-item")
+    .first()
+    .waitFor({ state: "visible", timeout: 90000 })
+    .catch(() => {});
   const search = page.locator('.function-list-sidebar input[type="search"]');
   if (await search.count()) {
     await search.fill("");
     await sleep(100);
     await search.fill(name);
-    await sleep(400);
+    await sleep(600);
   }
   const item = page.locator(".function-list-item", {
     has: page.locator(".function-list-item-name", { hasText: name }),
@@ -188,11 +193,32 @@ async function selectFunction(page, name) {
     await sleep(500);
     return;
   }
+  // Clear filter so we can pick a loaded row (large repos may omit rare names).
+  if (await search.count()) {
+    await search.fill("");
+    await sleep(400);
+  }
   const fallback = page.locator(".function-list-item").first();
   if (await fallback.count()) {
     await fallback.click();
-    await sleep(500);
+    await sleep(800);
   }
+}
+
+async function waitForBlastResults(page) {
+  await page.locator(".blast-view").waitFor({ state: "visible", timeout: 15000 });
+  await page.waitForFunction(
+    () => {
+      const view = document.querySelector(".blast-view");
+      if (!view) return false;
+      const text = view.textContent ?? "";
+      if (text.includes("Callers of")) return true;
+      const score = view.querySelector(".fs-4.fw-semibold.text-primary");
+      return !!(score && score.textContent && score.textContent.trim().length > 0);
+    },
+    { timeout: 90000 },
+  );
+  await sleep(350);
 }
 
 async function waitWasm(page) {
@@ -207,18 +233,6 @@ async function waitWasm(page) {
     { timeout: 90000 },
   );
   await sleep(1000);
-}
-
-async function waitForBlastResults(page) {
-  await page.getByText("Callers of", { exact: false }).waitFor({ state: "visible", timeout: 25000 });
-  await page.waitForFunction(
-    () => {
-      const el = document.querySelector(".blast-view .card-body .fs-4.fw-semibold.text-primary");
-      return el && el.textContent && el.textContent.trim().length > 0;
-    },
-    { timeout: 25000 },
-  );
-  await sleep(350);
 }
 
 async function clearHighlights(page) {
@@ -382,12 +396,21 @@ async function prepareSegment(page, key) {
       case "search": {
         const input = page.locator('.search-view input[type="search"]');
         await input.waitFor({ state: "visible", timeout: 15000 });
-        if (await input.isEnabled()) {
-          await input.fill(SEMANTIC_QUERY);
-          await page.locator('.search-view button[type="submit"]').click();
-          await page.locator(".search-results tbody tr").first().waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
-          await sleep(400);
-        }
+        // Wait until /api/semantic/status enables the form (not the empty placeholder row).
+        await page
+          .locator('.search-view input[type="search"]:not([disabled])')
+          .waitFor({ state: "visible", timeout: 60000 });
+        await input.click();
+        await input.fill("");
+        await input.fill(SEMANTIC_QUERY);
+        await sleep(300);
+        await page.locator('.search-view button[type="submit"]').click();
+        await page
+          .locator(".search-results tbody tr td.fn-name")
+          .first()
+          .waitFor({ state: "visible", timeout: 60000 });
+        // Hold a moment so the typed query + result rows are readable on camera.
+        await sleep(1200);
         break;
       }
       case "guide": {

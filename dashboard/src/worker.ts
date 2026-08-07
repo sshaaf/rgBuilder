@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import init, { EngineContext, parseCfgDetail } from "../wasm/rbuilder_wasm.js";
+import init, { EngineContext, parseCfgDetail } from "../wasm/rgbuilder_wasm.js";
 import { bundleDataUrl } from "./bundleUrl";
 import { fetchCfgRecordBytes, parseCfgRecordIndex } from "./cfgRecordIndex";
 import { computeSlice } from "./sliceEngine";

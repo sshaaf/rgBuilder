@@ -4,6 +4,11 @@
 
 use serde_json::Value;
 use std::path::{Path, PathBuf};
+
+fn env_rg(suffix: &str) -> Result<String, std::env::VarError> {
+    std::env::var(format!("RGBUILDER_{suffix}")).or_else(|_| std::env::var(format!("RBUILDER_{suffix}")))
+}
+
 use std::process::{Command, Output};
 use std::time::{Duration, Instant};
 
@@ -12,7 +17,7 @@ pub const DEFAULT_GOLDEN_REPO: &str = "/Users/sshaaf/git/java/gbuilder";
 
 fn in_tree_ecommerce(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("rbuilder-tests")
+        .join("rgbuilder-tests")
         .join(name)
 }
 
@@ -57,64 +62,64 @@ pub fn default_typescript_repo() -> PathBuf {
 }
 
 pub fn golden_repo_path() -> PathBuf {
-    std::env::var("RBUILDER_DASHBOARD_GOLDEN_REPO")
+    env_rg("DASHBOARD_GOLDEN_REPO")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from(DEFAULT_GOLDEN_REPO))
 }
 
 pub fn ecommerce_go_repo_path() -> PathBuf {
-    std::env::var("RBUILDER_GO_REPO")
+    env_rg("GO_REPO")
         .map(PathBuf::from)
         .unwrap_or_else(|_| default_go_repo())
 }
 
 pub fn ecommerce_csharp_repo_path() -> PathBuf {
-    std::env::var("RBUILDER_CSHARP_REPO")
+    env_rg("CSHARP_REPO")
         .map(PathBuf::from)
         .unwrap_or_else(|_| default_csharp_repo())
 }
 
 pub fn ecommerce_c_repo_path() -> PathBuf {
-    std::env::var("RBUILDER_C_REPO")
+    env_rg("C_REPO")
         .map(PathBuf::from)
         .unwrap_or_else(|_| default_c_repo())
 }
 
 pub fn ecommerce_cpp_repo_path() -> PathBuf {
-    std::env::var("RBUILDER_CPP_REPO")
+    env_rg("CPP_REPO")
         .map(PathBuf::from)
         .unwrap_or_else(|_| default_cpp_repo())
 }
 
 pub fn ecommerce_python_repo_path() -> PathBuf {
-    std::env::var("RBUILDER_PYTHON_REPO")
+    env_rg("PYTHON_REPO")
         .map(PathBuf::from)
         .unwrap_or_else(|_| default_python_repo())
 }
 
 pub fn ecommerce_rust_repo_path() -> PathBuf {
-    std::env::var("RBUILDER_RUST_REPO")
+    env_rg("RUST_REPO")
         .map(PathBuf::from)
         .unwrap_or_else(|_| default_rust_repo())
 }
 
 pub fn ecommerce_javascript_repo_path() -> PathBuf {
-    std::env::var("RBUILDER_JAVASCRIPT_REPO")
+    env_rg("JAVASCRIPT_REPO")
         .map(PathBuf::from)
         .unwrap_or_else(|_| default_javascript_repo())
 }
 
 pub fn ecommerce_typescript_repo_path() -> PathBuf {
-    std::env::var("RBUILDER_TYPESCRIPT_REPO")
+    env_rg("TYPESCRIPT_REPO")
         .map(PathBuf::from)
         .unwrap_or_else(|_| default_typescript_repo())
 }
 
-pub fn rbuilder_bin() -> PathBuf {
-    if let Ok(p) = std::env::var("CARGO_BIN_EXE_rbuilder") {
+pub fn rgbuilder_bin() -> PathBuf {
+    if let Ok(p) = std::env::var("CARGO_BIN_EXE_rg_build") {
         return PathBuf::from(p);
     }
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/release/rbuilder")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/release/rg-build")
 }
 
 pub fn run_discover(repo: &Path, languages: &str) -> Output {
@@ -134,10 +139,10 @@ pub fn run_discover_all_timed(repo: &Path, languages: Option<&str>) -> (Output, 
 }
 
 fn run_discover_with_flags(repo: &Path, languages: Option<&str>, deep: bool) -> Output {
-    let bin = rbuilder_bin();
+    let bin = rgbuilder_bin();
     assert!(
         bin.is_file(),
-        "rbuilder binary not found at {} — run cargo build --release",
+        "rg-build binary not found at {} — run cargo build --release",
         bin.display()
     );
     let mut cmd = Command::new(&bin);
@@ -156,25 +161,25 @@ fn run_discover_with_flags(repo: &Path, languages: Option<&str>, deep: bool) -> 
     if let Some(langs) = languages {
         cmd.args(["--languages", langs]);
     }
-    cmd.output().expect("spawn rbuilder discover")
+    cmd.output().expect("spawn rg-build discover")
 }
 
 /// Default metasfresh example checkout (override with env).
 pub const DEFAULT_METASFRESH_REPO: &str = "example/metasfresh-4.9.8b";
 
 pub fn metasfresh_repo_path() -> PathBuf {
-    std::env::var("RBUILDER_METASFRESH_REPO")
+    env_rg("METASFRESH_REPO")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(DEFAULT_METASFRESH_REPO))
 }
 
-/// Assert Phase 0–2 bundle contract under `{repo}/.rbuilder/dashboard/`.
+/// Assert Phase 0–2 bundle contract under `{repo}/.rgbuilder/dashboard/`.
 pub fn assert_dashboard_bundle(repo: &Path, min_nodes: u64) {
     assert_dashboard_bundle_with_meta(repo, min_nodes, 1);
 }
 
 pub fn assert_dashboard_bundle_with_meta(repo: &Path, min_nodes: u64, min_metanodes: u64) {
-    let dash = repo.join(".rbuilder/dashboard");
+    let dash = repo.join(".rgbuilder/dashboard");
 
     assert!(dash.join("index.html").is_file(), "missing index.html");
     assert!(
@@ -437,7 +442,7 @@ pub fn assert_dashboard_bundle_with_meta(repo: &Path, min_nodes: u64, min_metano
 
     let html = std::fs::read_to_string(dash.join("index.html")).unwrap();
     assert!(
-        html.contains("rbuilder-manifest"),
+        html.contains("rgbuilder-manifest"),
         "index.html must have injected manifest bootstrap"
     );
     assert!(
@@ -450,7 +455,7 @@ pub fn assert_dashboard_bundle_with_meta(repo: &Path, min_nodes: u64, min_metano
     );
 
     assert!(
-        !repo.join(".rbuilder/dashboard.html").exists(),
+        !repo.join(".rgbuilder/dashboard.html").exists(),
         "legacy monolithic dashboard.html must not be written"
     );
 
@@ -487,7 +492,7 @@ pub fn assert_dashboard_bundle_with_meta(repo: &Path, min_nodes: u64, min_metano
 pub fn assert_dashboard_bundle_all_analysis(repo: &Path, min_nodes: u64, min_metanodes: u64) {
     assert_dashboard_bundle_with_meta(repo, min_nodes, min_metanodes);
 
-    let dash = repo.join(".rbuilder/dashboard");
+    let dash = repo.join(".rgbuilder/dashboard");
     let manifest: Value =
         serde_json::from_slice(&std::fs::read(dash.join("manifest.json")).unwrap()).unwrap();
     let analysis = &manifest["analysis"];

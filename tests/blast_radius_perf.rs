@@ -1,28 +1,28 @@
 //! Phase 16 blast-radius performance gates — snapshot, engine, and query paths.
 
 use rayon::prelude::*;
-use rbuilder::analysis::{
+use rgbuilder::analysis::{
     BlastEngineSnapshot, BlastRadiusEngine, MacroCallLookupDb, MacroCallLookupRow, MacroIndexEntry,
     PetGraphView,
 };
-use rbuilder::graph::backend::GraphBackend;
-use rbuilder::graph::backend::MemoryBackend;
-use rbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rbuilder::graph::{CodeGraph, MmappedGraphSnapshot, PreparedGraphSnapshot, SnapshotNodeStore};
+use rgbuilder::graph::backend::GraphBackend;
+use rgbuilder::graph::backend::MemoryBackend;
+use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
+use rgbuilder::graph::{CodeGraph, MmappedGraphSnapshot, PreparedGraphSnapshot, SnapshotNodeStore};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 fn bench_repo_root() -> Option<PathBuf> {
-    if let Ok(path) = std::env::var("RBUILDER_BENCH_REPO") {
+    if let Ok(path) = std::env::var("RGBUILDER_BENCH_REPO") {
         let path = PathBuf::from(path);
-        if path.join(".rbuilder/blast_engine.snapshot.bin").exists() {
+        if path.join(".rgbuilder/blast_engine.snapshot.bin").exists() {
             return Some(path);
         }
         return None;
     }
     let default = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("example/metasfresh-4.9.8b");
-    if default.join(".rbuilder/blast_engine.snapshot.bin").exists() {
+    if default.join(".rgbuilder/blast_engine.snapshot.bin").exists() {
         Some(default)
     } else {
         None
@@ -62,7 +62,7 @@ fn min_elapsed(iterations: u32, mut f: impl FnMut()) -> Duration {
 }
 
 fn write_v1_snapshot(prepared: &PreparedGraphSnapshot, path: &std::path::Path) {
-    use rbuilder::graph::snapshot::{SNAPSHOT_MAGIC, SNAPSHOT_VERSION_V1};
+    use rgbuilder::graph::snapshot::{SNAPSHOT_MAGIC, SNAPSHOT_VERSION_V1};
     use std::io::Write;
     let payload = bincode::serialize(prepared).unwrap();
     let mut file = std::fs::File::create(path).unwrap();
@@ -152,7 +152,7 @@ fn sqlite_fqn_resolved_lookup_under_50ms() {
     )
     .unwrap();
 
-    let parsed = rbuilder::analysis::parse_fqn_symbol("MRequest::saveError", None, None);
+    let parsed = rgbuilder::analysis::parse_fqn_symbol("MRequest::saveError", None, None);
     let start = Instant::now();
     let entry = MacroCallLookupDb::lookup_resolved(&db_path, &parsed)
         .unwrap()
@@ -235,10 +235,10 @@ fn engine_snapshot_load_150k_under_60s() {
 #[test]
 fn bench_repo_engine_snapshot_lazy_load_under_5s() {
     let Some(repo) = bench_repo_root() else {
-        eprintln!("skip bench_repo_engine_snapshot_lazy_load_under_5s: no RBUILDER_BENCH_REPO or metasfresh cache");
+        eprintln!("skip bench_repo_engine_snapshot_lazy_load_under_5s: no RGBUILDER_BENCH_REPO or metasfresh cache");
         return;
     };
-    let path = repo.join(".rbuilder/blast_engine.snapshot.bin");
+    let path = repo.join(".rgbuilder/blast_engine.snapshot.bin");
 
     let start = Instant::now();
     let loaded = BlastEngineSnapshot::load_from_path(&path).expect("load blast snapshot");
@@ -260,12 +260,12 @@ fn bench_repo_engine_snapshot_lazy_load_under_5s() {
 fn bench_repo_lite_analyze_under_3s() {
     let Some(repo) = bench_repo_root() else {
         eprintln!(
-            "skip bench_repo_lite_analyze_under_3s: no RBUILDER_BENCH_REPO or metasfresh cache"
+            "skip bench_repo_lite_analyze_under_3s: no RGBUILDER_BENCH_REPO or metasfresh cache"
         );
         return;
     };
-    let graph_path = repo.join(".rbuilder/graph.snapshot.bin");
-    let engine_path = repo.join(".rbuilder/blast_engine.snapshot.bin");
+    let graph_path = repo.join(".rgbuilder/graph.snapshot.bin");
+    let engine_path = repo.join(".rgbuilder/blast_engine.snapshot.bin");
     if !graph_path.exists() || !engine_path.exists() {
         eprintln!("skip bench_repo_lite_analyze_under_3s: missing graph or engine snapshot");
         return;
@@ -280,7 +280,7 @@ fn bench_repo_lite_analyze_under_3s() {
         "bench repo engine should use lazy ReachabilityStore"
     );
 
-    let target_name = std::env::var("RBUILDER_BENCH_SYMBOL").unwrap_or_else(|_| "saveError".into());
+    let target_name = std::env::var("RGBUILDER_BENCH_SYMBOL").unwrap_or_else(|_| "saveError".into());
     let nodes = store.find_nodes_by_name(&target_name).expect("name lookup");
     assert!(
         !nodes.is_empty(),
@@ -399,7 +399,7 @@ fn parallel_blast_analyze_all_5k_under_2s() {
 /// RSS delta after engine snapshot load stays bounded on mock scale.
 #[test]
 fn engine_snapshot_load_rss_delta_under_512mb_5k() {
-    use rbuilder_core::memory::MemoryMonitor;
+    use rgbuilder_core::memory::MemoryMonitor;
 
     let graph = build_monorepo_mock(5_000, 25_000);
     let backend = graph.backend();

@@ -1,15 +1,15 @@
 //! Ephemeral query daemon — keeps mmap graph + blast engine warm across CLI invocations.
 //!
 //! Protocol: newline-delimited JSON-RPC-like messages over a local transport:
-//! - Unix: domain socket at `<repo>/.rbuilder/query.sock`
-//! - Windows: loopback TCP; port stored in `<repo>/.rbuilder/query.port`
+//! - Unix: domain socket at `<repo>/.rgbuilder/query.sock`
+//! - Windows: loopback TCP; port stored in `<repo>/.rgbuilder/query.port`
 
 use super::blast_radius::{build_lite_response, BlastRadiusArgs};
 use super::blast_radius_output::BlastRadiusResponse;
 use super::context::CliContext;
 use crate::analysis::{parse_fqn_symbol, try_load_engine, BlastRadiusEngine};
 use anyhow::{Context, Result};
-use rbuilder_graph::SnapshotNodeStore;
+use rgbuilder_graph::SnapshotNodeStore;
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
@@ -22,17 +22,17 @@ const CONNECT_TIMEOUT: Duration = Duration::from_millis(200);
 /// Default local endpoint path under a repository root.
 #[cfg(unix)]
 pub fn default_socket_path(repo: &Path) -> PathBuf {
-    repo.join(".rbuilder").join("query.sock")
+    rgbuilder_graph::paths::artifact_path(repo, "query.sock")
 }
 
 /// Default port-file path under a repository root (Windows loopback daemon).
 #[cfg(windows)]
 pub fn default_socket_path(repo: &Path) -> PathBuf {
-    repo.join(".rbuilder").join("query.port")
+    rgbuilder_graph::paths::artifact_path(repo, "query.port")
 }
 
 fn daemon_disabled() -> bool {
-    std::env::var_os("RBUILDER_NO_QUERY_DAEMON").is_some()
+    rgbuilder_graph::paths::env_flag_set("NO_QUERY_DAEMON")
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -172,9 +172,9 @@ fn handle_connection<S: Read + Write>(state: &Arc<DaemonState>, mut stream: S) -
 fn load_daemon_state(ctx: &CliContext) -> Result<Arc<DaemonState>> {
     let session = ctx
         .snapshot_session()?
-        .context("graph snapshot not found (run `rbuilder discover` first)")?;
+        .context("graph snapshot not found (run `rg-build discover` first)")?;
     let engine = try_load_engine(&ctx.repo, session.digest.as_ref())?.context(
-        "blast engine snapshot not found or digest mismatch (run `rbuilder discover` first)",
+        "blast engine snapshot not found or digest mismatch (run `rg-build discover` first)",
     )?;
     Ok(Arc::new(DaemonState {
         repo: ctx.repo.clone(),
@@ -217,7 +217,7 @@ mod transport {
         let listener = UnixListener::bind(&socket_path)
             .with_context(|| format!("bind query socket {}", socket_path.display()))?;
         eprintln!(
-            "rbuilder query daemon listening on {} (idle exit {}s)",
+            "rg-build query daemon listening on {} (idle exit {}s)",
             socket_path.display(),
             idle_secs
         );
@@ -264,7 +264,7 @@ mod transport {
 
         loop {
             if last_activity.elapsed() >= idle_limit {
-                eprintln!("rbuilder query daemon exiting after idle timeout");
+                eprintln!("rg-build query daemon exiting after idle timeout");
                 break;
             }
             match listener.accept() {
@@ -307,7 +307,7 @@ mod transport {
             .with_context(|| format!("write query port file {}", port_file.display()))?;
 
         eprintln!(
-            "rbuilder query daemon listening on 127.0.0.1:{port} (port file {}, idle exit {}s)",
+            "rg-build query daemon listening on 127.0.0.1:{port} (port file {}, idle exit {}s)",
             port_file.display(),
             idle_secs
         );
@@ -362,7 +362,7 @@ mod transport {
 
         loop {
             if last_activity.elapsed() >= idle_limit {
-                eprintln!("rbuilder query daemon exiting after idle timeout");
+                eprintln!("rg-build query daemon exiting after idle timeout");
                 break;
             }
             match listener.accept() {
@@ -462,7 +462,7 @@ mod tests {
         }
         let prepared = PreparedGraphSnapshot::from_backend(backend).unwrap();
         let digest = prepared.content_digest.clone();
-        let rb = dir.join(".rbuilder");
+        let rb = dir.join(".rgbuilder");
         std::fs::create_dir_all(&rb).unwrap();
         prepared
             .write_to_path(&rb.join("graph.snapshot.bin"))

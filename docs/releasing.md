@@ -1,4 +1,4 @@
-# Releasing rBuilder
+# Releasing rgBuilder
 
 How maintainers publish versioned binaries and GitHub Releases.
 
@@ -18,12 +18,12 @@ Bump all workspace versions together before tagging.
 
 Pushing a tag matching `v*` triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml):
 
-1. **Build** `rbuilder` release binaries for:
+1. **Build** `rg-build` release binaries for:
    - `x86_64-unknown-linux-gnu`
    - `aarch64-apple-darwin`
    - `x86_64-apple-darwin`
    - `x86_64-pc-windows-msvc`
-2. **Package** as `rbuilder-<version>-<target>.tar.gz` (or `.zip` on Windows).
+2. **Package** as `rgbuilder-<version>-<target>.tar.gz` (or `.zip` on Windows).
 3. **Publish** a GitHub Release with auto-generated notes and `SHA256SUMS.txt`.
 
 ### Tag and push
@@ -63,16 +63,16 @@ cd dashboard && npm ci && npm run build && cd ..
 
 ## Assets users download
 
-From [GitHub Releases](https://github.com/sshaaf/rBuilder/releases):
+From [GitHub Releases](https://github.com/sshaaf/rgBuilder/releases):
 
 | Platform | Asset pattern |
 |----------|----------------|
-| macOS Apple Silicon | `rbuilder-*-aarch64-apple-darwin.tar.gz` |
-| macOS Intel | `rbuilder-*-x86_64-apple-darwin.tar.gz` |
-| Linux x86_64 | `rbuilder-*-x86_64-unknown-linux-gnu.tar.gz` |
-| Windows | `rbuilder-*-x86_64-pc-windows-msvc.zip` |
+| macOS Apple Silicon | `rgbuilder-*-aarch64-apple-darwin.tar.gz` |
+| macOS Intel | `rgbuilder-*-x86_64-apple-darwin.tar.gz` |
+| Linux x86_64 | `rgbuilder-*-x86_64-unknown-linux-gnu.tar.gz` |
+| Windows | `rgbuilder-*-x86_64-pc-windows-msvc.zip` |
 
-Extract and run `rbuilder --version`. See [User Guide §1](user-guide.md#1-installation).
+Extract and run `rg-build --version`. See [User Guide §1](user-guide.md#1-installation).
 
 ---
 
@@ -80,7 +80,19 @@ Extract and run `rbuilder --version`. See [User Guide §1](user-guide.md#1-insta
 
 - Verify the Release page lists all four platform archives and checksums.
 - Smoke-test `discover` + `gql` on a small repo with the downloaded binary.
-- If `RBUILDER_TESTS_DISPATCH_TOKEN` is configured, CI dispatches `rbuilder-released` to the external test repo (see workflow comments).
+- If `RGBUILDER_TESTS_DISPATCH_TOKEN` is configured, CI dispatches `rgbuilder-released` to the external test repo (see workflow comments).
+
+---
+
+## Naming
+
+| Thing | Name |
+|-------|------|
+| Project / crates / GitHub repo | **rgbuilder** / **rgBuilder** (`sshaaf/rgBuilder`) |
+| CLI binary users run | **`rg-build`** |
+| On-disk index directory | **`.rgbuilder/`** |
+
+Release archives stay `rgbuilder-${VERSION}-${target}.tar.gz` (project name) and contain the `rg-build` binary.
 
 ---
 

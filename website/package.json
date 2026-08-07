@@ -3,14 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/copy-demos.mjs",
-    "prebuild": "node scripts/copy-demos.mjs",
+    "predev": "node scripts/copy-demos.mjs && node scripts/copy-docs.mjs",
+    "prebuild": "node scripts/copy-demos.mjs && node scripts/copy-docs.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "export": "next build",
-    "copy-demos": "node scripts/copy-demos.mjs"
+    "copy-demos": "node scripts/copy-demos.mjs",
+    "copy-docs": "node scripts/copy-docs.mjs"
   },
   "dependencies": {
     "@next/third-parties": "^16.2.11",
@@ -23,6 +24,8 @@
     "next": "16.2.11",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {

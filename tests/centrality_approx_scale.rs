@@ -1,12 +1,12 @@
 //! Phase 17 — sampled betweenness + HyperBall harmonic scale gates.
 
-use rbuilder::analysis::{
+use rgbuilder::analysis::{
     BetweennessMode, CentralityAnalyzer, FlatGraphIndex, HarmonicMode, HyperBallHarmonic,
     PetGraphView, SampledBetweenness, DEFAULT_SAMPLE_PIVOTS,
 };
-use rbuilder::graph::backend::GraphBackend;
-use rbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rbuilder::graph::{CodeGraph, MmappedGraphSnapshot, SnapshotNodeStore};
+use rgbuilder::graph::backend::GraphBackend;
+use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
+use rgbuilder::graph::{CodeGraph, MmappedGraphSnapshot, SnapshotNodeStore};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -49,15 +49,15 @@ fn bench_repo(path: &Path) -> Option<(usize, usize, Duration, Duration, Duration
 }
 
 fn repo_or_env(name: &str, default: PathBuf) -> Option<PathBuf> {
-    if let Ok(p) = std::env::var("RBUILDER_BENCH_REPO") {
+    if let Ok(p) = std::env::var("RGBUILDER_BENCH_REPO") {
         let p = PathBuf::from(p);
-        if p.join(".rbuilder/graph.snapshot.bin").is_file()
+        if p.join(".rgbuilder/graph.snapshot.bin").is_file()
             || MmappedGraphSnapshot::default_path(&p).is_file()
         {
             return Some(p);
         }
     }
-    if default.join(".rbuilder/graph.snapshot.bin").is_file()
+    if default.join(".rgbuilder/graph.snapshot.bin").is_file()
         || MmappedGraphSnapshot::default_path(&default).is_file()
     {
         Some(default)
@@ -187,7 +187,7 @@ fn approx_centrality_metasfresh_timing() {
 
 /// Gbuilder golden repo when available.
 #[test]
-#[ignore = "scale gate: run with --ignored when RBUILDER_BENCH_REPO or gbuilder snapshot present"]
+#[ignore = "scale gate: run with --ignored when RGBUILDER_BENCH_REPO or gbuilder snapshot present"]
 fn approx_centrality_gbuilder_timing() {
     let root = repo_or_env("gbuilder", PathBuf::from("/Users/sshaaf/git/java/gbuilder"))
         .expect("gbuilder snapshot required");

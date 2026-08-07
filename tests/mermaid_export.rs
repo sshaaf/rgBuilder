@@ -1,11 +1,11 @@
 //! Phase 14: Mermaid diagram export tests.
 
-use rbuilder::export::{generate_mermaid, DiagramType, MermaidOptions};
-use rbuilder::graph::backend::GraphBackend;
-use rbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
+use rgbuilder::export::{generate_mermaid, DiagramType, MermaidOptions};
+use rgbuilder::graph::backend::GraphBackend;
+use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
 
-fn sample_backend() -> rbuilder::graph::backend::MemoryBackend {
-    let mut backend = rbuilder::graph::backend::MemoryBackend::new();
+fn sample_backend() -> rgbuilder::graph::backend::MemoryBackend {
+    let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
     let func = Node::new(NodeType::Function, "authenticate".into());
     let cls = Node::new(NodeType::Class, "AuthService".into());
     let id_f = func.id;
@@ -53,7 +53,7 @@ fn test_mermaid_class_diagram() {
 
 #[test]
 fn test_mermaid_call_graph_filters_calls() {
-    let mut backend = rbuilder::graph::backend::MemoryBackend::new();
+    let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
     let a = Node::new(NodeType::Function, "a".into());
     let b = Node::new(NodeType::Function, "b".into());
     let id_a = a.id;
@@ -95,14 +95,14 @@ fn test_mermaid_horizontal_layout() {
 
 #[test]
 fn test_mermaid_empty_query_errors() {
-    let backend = rbuilder::graph::backend::MemoryBackend::new();
+    let backend = rgbuilder::graph::backend::MemoryBackend::new();
     let err = generate_mermaid(&backend, "name:missing", MermaidOptions::default()).unwrap_err();
     assert!(err.to_string().contains("No nodes matched"));
 }
 
 #[test]
 fn test_mermaid_escapes_quotes() {
-    let mut backend = rbuilder::graph::backend::MemoryBackend::new();
+    let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
     backend
         .insert_node(Node::new(NodeType::Function, r#"say "hi""#.into()))
         .unwrap();
@@ -112,7 +112,7 @@ fn test_mermaid_escapes_quotes() {
 
 #[test]
 fn test_mermaid_max_depth_expansion() {
-    let mut backend = rbuilder::graph::backend::MemoryBackend::new();
+    let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
     let a = Node::new(NodeType::Function, "a".into());
     let b = Node::new(NodeType::Function, "b".into());
     let c = Node::new(NodeType::Function, "c".into());

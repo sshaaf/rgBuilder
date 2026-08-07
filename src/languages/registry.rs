@@ -1,21 +1,21 @@
 //! Monolith registry wrapper — wires built-in language plugins.
 
-pub use rbuilder_registry::{plugin_abi, plugin_loader, RegistryStats};
+pub use rgbuilder_registry::{plugin_abi, plugin_loader, RegistryStats};
 
-use rbuilder_registry::LanguageRegistry as InnerRegistry;
+use rgbuilder_registry::LanguageRegistry as InnerRegistry;
 use std::sync::Once;
 
 static INIT: Once = Once::new();
 
-/// Wire the built-in language registry for `rbuilder_registry::full_registry()`.
+/// Wire the built-in language registry for `rgbuilder_registry::full_registry()`.
 pub fn ensure_initialized() {
     INIT.call_once(|| {
-        rbuilder_registry::set_full_registry_builder(build_registry_inner);
+        rgbuilder_registry::set_full_registry_builder(build_registry_inner);
     });
 }
 
 fn build_registry_inner() -> InnerRegistry {
-    rbuilder_languages::default_registry()
+    rgbuilder_languages::default_registry()
 }
 
 /// Build a registry with all built-in language plugins.

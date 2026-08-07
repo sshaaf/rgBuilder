@@ -1,7 +1,7 @@
 //! Structured GQL CLI JSON response.
 
-use rbuilder_analysis::is_virtual_community;
-use rbuilder_gql::QueryResult;
+use rgbuilder_analysis::is_virtual_community;
+use rgbuilder_gql::QueryResult;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
@@ -49,7 +49,7 @@ const GQL_PROPERTY_ALLOWLIST: &[&str] = &[
 ];
 
 fn projected_properties(
-    node: &rbuilder_graph::schema::Node,
+    node: &rgbuilder_graph::schema::Node,
 ) -> Option<std::collections::BTreeMap<String, String>> {
     let mut out = std::collections::BTreeMap::new();
     for key in GQL_PROPERTY_ALLOWLIST {
@@ -155,8 +155,8 @@ pub fn fixture_gql_json() -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rbuilder_graph::schema::{Node, NodeType};
-    use rbuilder_gql::QueryResult;
+    use rgbuilder_graph::schema::{Node, NodeType};
+    use rgbuilder_gql::QueryResult;
     use std::collections::HashMap;
 
     #[test]

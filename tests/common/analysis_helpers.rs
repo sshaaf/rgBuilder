@@ -2,14 +2,14 @@
 
 #![allow(dead_code)]
 
-use rbuilder::analysis::{
+use rgbuilder::analysis::{
     build_cfg_for_function, CallGraph, ControlFlowGraph, DominatorTree, InferredType,
     ProgramDependenceGraph, TaintAnalyzer, TaintFlow, TaintSink, TaintSource, TypeInferenceEngine,
     VariableType,
 };
-use rbuilder::graph::backend::{GraphBackend, MemoryBackend};
-use rbuilder::graph::schema::{Edge, EdgeType, GraphParameter, Node, NodeType};
-use rbuilder::security::{SecurityAnalyzer, SecurityVulnerability};
+use rgbuilder::graph::backend::{GraphBackend, MemoryBackend};
+use rgbuilder::graph::schema::{Edge, EdgeType, GraphParameter, Node, NodeType};
+use rgbuilder::security::{SecurityAnalyzer, SecurityVulnerability};
 use std::collections::HashMap;
 
 /// Run taint analysis on a single function and return all flows (including sanitized).

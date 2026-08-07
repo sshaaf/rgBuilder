@@ -1,3 +1,3 @@
 //! Security analysis (monolith re-exports)
 
-pub use rbuilder_security::*;
+pub use rgbuilder_security::*;

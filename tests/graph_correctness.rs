@@ -1,13 +1,13 @@
 //! Graph data correctness — expected-facts + cross-feature invariants.
 //!
-//! Fixtures live under `rbuilder-tests/ecommerce-*/correctness/expected-facts.json`.
+//! Fixtures live under `rgbuilder-tests/ecommerce-*/correctness/expected-facts.json`.
 //!
 //! ```bash
 //! cargo test --test graph_correctness
 //! cargo test --test graph_correctness java   # filter by project id in test name
 //! ```
 //!
-//! See `rbuilder-tests/correctness/SCHEMA.md` and https://github.com/sshaaf/rBuilder/issues/26
+//! See `rgbuilder-tests/correctness/SCHEMA.md` and https://github.com/sshaaf/rgBuilder/issues/26
 
 #![allow(clippy::too_many_arguments)]
 
@@ -16,15 +16,15 @@ mod graph_correctness_lib;
 use graph_correctness_lib::{run_project, ProjectSpec};
 use std::path::PathBuf;
 
-fn rbuilder_tests_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("rbuilder-tests")
+fn rgbuilder_tests_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("rgbuilder-tests")
 }
 
-fn rbuilder_bin() -> PathBuf {
-    if let Ok(p) = std::env::var("CARGO_BIN_EXE_rbuilder") {
+fn rgbuilder_bin() -> PathBuf {
+    if let Ok(p) = std::env::var("CARGO_BIN_EXE_rg_build") {
         return PathBuf::from(p);
     }
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug/rbuilder")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug/rg-build")
 }
 
 const PROJECTS: &[ProjectSpec] = &[
@@ -76,7 +76,7 @@ const PROJECTS: &[ProjectSpec] = &[
 ];
 
 fn assert_project(spec: &ProjectSpec) {
-    let root = rbuilder_tests_root();
+    let root = rgbuilder_tests_root();
     let project_dir = root.join(spec.dir_name);
     let facts = project_dir.join("correctness").join("expected-facts.json");
     if !facts.is_file() {
@@ -92,10 +92,10 @@ fn assert_project(spec: &ProjectSpec) {
         "missing project dir {}",
         project_dir.display()
     );
-    let bin = rbuilder_bin();
+    let bin = rgbuilder_bin();
     assert!(
         bin.is_file(),
-        "rbuilder binary not found at {} (build the test binary first)",
+        "rg-build binary not found at {} (build the test binary first)",
         bin.display()
     );
 

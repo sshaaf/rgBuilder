@@ -1,6 +1,6 @@
 //! Structured semantic search CLI JSON response.
 
-use rbuilder_analysis::{
+use rgbuilder_analysis::{
     SemanticBuildStats, SemanticEntry, SemanticExpansion, SemanticHit,
     SEMANTIC_INDEX_SCHEMA_VERSION,
 };
@@ -39,7 +39,7 @@ pub struct SemanticBuildStatsJson {
     pub removed: usize,
 }
 
-/// Payload for `rbuilder semantic query`.
+/// Payload for `rg-build semantic query`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SemanticQueryJsonResponse {
     pub schema_version: u32,
@@ -51,7 +51,7 @@ pub struct SemanticQueryJsonResponse {
     pub expansion: Option<SemanticExpansion>,
 }
 
-/// Payload for `rbuilder semantic index`.
+/// Payload for `rg-build semantic index`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SemanticIndexJsonResponse {
     pub schema_version: u32,

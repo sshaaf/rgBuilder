@@ -1,9 +1,9 @@
-//! rBuilder - AI-Powered Code Knowledge Graph
+//! rgBuilder - AI-Powered Code Knowledge Graph
 
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 
-pub use rbuilder_core::*;
+pub use rgbuilder_core::*;
 
 pub mod analysis;
 #[allow(missing_docs)]
@@ -12,12 +12,12 @@ pub mod graph;
 pub mod languages;
 pub mod security;
 
-pub use rbuilder_error::{Error, Result};
-pub use rbuilder_graph::CodeGraph;
+pub use rgbuilder_error::{Error, Result};
+pub use rgbuilder_graph::CodeGraph;
 
 /// Build information
 pub const BUILD_INFO: &str = concat!(
-    "rBuilder v",
+    "rgBuilder v",
     env!("CARGO_PKG_VERSION"),
     " (",
     env!("CARGO_PKG_REPOSITORY"),
@@ -31,7 +31,7 @@ pub fn init() {
 
 /// Build a code graph from a repository using all built-in language plugins.
 pub fn code_graph_from_repository(root: &std::path::Path) -> Result<CodeGraph> {
-    use rbuilder_pipeline::ProcessingPipeline;
+    use rgbuilder_pipeline::ProcessingPipeline;
     use std::sync::Arc;
 
     languages::ensure_registry_initialized();
@@ -52,6 +52,6 @@ mod tests {
 
     #[test]
     fn test_build_info() {
-        assert!(BUILD_INFO.contains("rBuilder"));
+        assert!(BUILD_INFO.contains("rgBuilder"));
     }
 }

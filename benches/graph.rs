@@ -3,9 +3,9 @@
 //! Run with: cargo bench --bench graph
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use rbuilder::graph::backend::GraphBackend;
-use rbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rbuilder::graph::CodeGraph;
+use rgbuilder::graph::backend::GraphBackend;
+use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
+use rgbuilder::graph::CodeGraph;
 
 fn build_labeled_graph(count: usize) -> CodeGraph {
     let mut graph = CodeGraph::new();
@@ -167,7 +167,7 @@ fn bench_compound_query_clause_order(c: &mut Criterion) {
         "name:needle|repo:backend|type:Function",
     ] {
         group.bench_with_input(BenchmarkId::from_parameter(query), &query, |b, query| {
-            b.iter(|| black_box(rbuilder::graph::query::execute(backend, query).unwrap()));
+            b.iter(|| black_box(rgbuilder::graph::query::execute(backend, query).unwrap()));
         });
     }
     group.finish();

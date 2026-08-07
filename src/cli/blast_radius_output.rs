@@ -6,9 +6,9 @@ use crate::analysis::{
     PolicyViolation, SliceHandoffSeed,
 };
 use anyhow::Result;
-use rbuilder_graph::backend::{GraphBackend, MemoryBackend};
-use rbuilder_graph::schema::Node;
-use rbuilder_graph::SnapshotNodeStore;
+use rgbuilder_graph::backend::{GraphBackend, MemoryBackend};
+use rgbuilder_graph::schema::Node;
+use rgbuilder_graph::SnapshotNodeStore;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

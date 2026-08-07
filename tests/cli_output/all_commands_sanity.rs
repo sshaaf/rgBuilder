@@ -1,13 +1,13 @@
 //! Full-platform CLI subprocess I/O sanity audit (Layer 3).
 //!
 //! Single test [`test_all_cli_commands_json_schema_sanity`] spawns the real
-//! `rbuilder` binary once per command and validates JSON contracts + exit codes.
+//! `rg-build` binary once per command and validates JSON contracts + exit codes.
 //!
 //! # Harness
 //!
 //! - **`Sandbox`** — copies [`tests/fixtures/tiny_polyglot_repo`] into a temp dir;
 //!   passes `-r {repo}` and `-d {repo}/sandbox_graph.db` on every invocation.
-//! - **Binary** — `CARGO_BIN_EXE_rbuilder` (built by `cargo test` for the active profile).
+//! - **Binary** — `CARGO_BIN_EXE_rg_build` (built by `cargo test` for the active profile).
 //! - **Helpers** — schema version, key presence/absence, nil-UUID scan, exit-code checks.
 //!
 //! # Coverage (see `docs/cli-io-sanity-qe.md` for the full matrix)
@@ -33,8 +33,8 @@ use std::str;
 
 const NIL_UUID: &str = "00000000-0000-0000-0000-000000000000";
 
-fn rbuilder_bin() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_rbuilder"))
+fn rgbuilder_bin() -> PathBuf {
+    PathBuf::from(env!("CARGO_BIN_EXE_rg_build"))
 }
 
 fn fixture_root() -> PathBuf {
@@ -74,10 +74,10 @@ impl Sandbox {
     }
 
     fn run(&self, args: &[&str]) -> Output {
-        let mut cmd = Command::new(rbuilder_bin());
+        let mut cmd = Command::new(rgbuilder_bin());
         cmd.arg("-r").arg(&self.repo).arg("-d").arg(&self.db);
         cmd.args(args);
-        cmd.output().expect("spawn rbuilder")
+        cmd.output().expect("spawn rg-build")
     }
 
     fn parse_stdout_json(&self, output: &Output) -> Value {

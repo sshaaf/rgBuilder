@@ -1,25 +1,29 @@
-# rBuilder for AI agents
+# rgBuilder for AI agents
 
-rBuilder is designed so agents answer **structural questions** from a pre-built graph instead of reading whole files into context.
+rgBuilder is designed so agents answer **structural questions** from a pre-built graph instead of reading whole files into context.
 
-**Full JSON reference:** [docs/json-api.md](docs/json-api.md)  
-**Copy-paste recipes:** [docs/agent-recipes.md](docs/agent-recipes.md)
+**Full JSON reference:** [docs/json-api.md](docs/json-api.md) (also on the site: [sshaaf.github.io/rgBuilder/docs/json-api/](https://sshaaf.github.io/rgBuilder/docs/json-api/))  
+**Copy-paste recipes:** [docs/agent-recipes.md](docs/agent-recipes.md)  
+**Human walkthrough:** [docs/user-guide.md](docs/user-guide.md)  
+**Docs hub:** [docs/README.md](docs/README.md) · [site docs](https://sshaaf.github.io/rgBuilder/docs/)
+
+Do **not** open the browser dashboard unless the user asks for a visual UI — default to CLI `-f json`.
 
 ---
 
 ## Agent workflow
 
 ```text
-1. rbuilder discover .              # once per repo (or after large changes)
-2. rbuilder -f json <command>      # compact facts on stdout
+1. rg-build discover .              # once per repo (or after large changes)
+2. rg-build -f json <command>      # compact facts on stdout
 3. Parse schema_version + payload   # never scrape stderr for JSON
 ```
 
-Set `REPO` to the repository root (where `.rbuilder/` lives):
+Set `REPO` to the repository root (where `.rgbuilder/` lives):
 
 ```bash
 export REPO=/path/to/repo
-rbuilder -r "$REPO" -f json gql 'MATCH (n:Function) RETURN n LIMIT 20'
+rg-build -r "$REPO" -f json gql 'MATCH (n:Function) RETURN n LIMIT 20'
 ```
 
 ---
@@ -28,24 +32,24 @@ rbuilder -r "$REPO" -f json gql 'MATCH (n:Function) RETURN n LIMIT 20'
 
 | Intent | Command |
 |--------|---------|
-| Inventory functions | `rbuilder -f json gql --macro-name all_functions unused` |
-| List communities | `rbuilder -f json gql --macro-name all_communities unused` |
-| Find symbol by pattern | `rbuilder -f json gql "MATCH (n:Function) WHERE n.name LIKE '*Service*' RETURN n LIMIT 20"` |
-| Find by FQN (not `n.name`) | `rbuilder -f json gql "MATCH (n:Class) WHERE n.qualified_name = 'com.example.Foo' RETURN n"` |
-| Community members | `rbuilder -f json gql "MATCH (f:Function) WHERE f.community_id = '12' RETURN f LIMIT 20"` |
-| Natural-language function search | `rbuilder semantic index` (or `--embedder vocab`) then `rbuilder -f json semantic query "checkout flow" --limit 10` |
-| Community semantic search | `rbuilder -f json semantic query "checkout" --scope community --limit 10` |
-| Impact before editing | `rbuilder -f json blast-radius <Symbol> [--depth N]` |
-| Architectural hotspots | `rbuilder -f json metrics --pagerank` |
-| Call neighborhood | `rbuilder -f json gql "MATCH (a:Function)-[:CALLS*1..3]->(b:Function) RETURN a,b LIMIT 50"` |
-| Hybrid CPG status / CALL / PDG / slice | `rbuilder -f json cpg status` then `cpg function\|calls\|pdg\|slice` (needs `discover --with-cfg` for PDG/slice) |
-| Field mutations (cart / DTO safety) | `rbuilder -f json cpg mutations --type ShoppingCart --exclude-ctors` (ecommerce CoolStore; or any type name; needs `--with-cfg`) |
-| Data flows / slice (CPG) | `rbuilder -f json cpg flows FILE --line N --variable V --function F [--direction forward\|backward] [--with-alias]` |
-| Loop-carried DFG tags | `rbuilder discover . --with-cfg --with-dfg-loops` (tags `DataDependency.loop_carried` in PDG) |
-| AST skeleton | `rbuilder discover --with-ast-skeleton` then `rbuilder -f json cpg ast <Symbol>` |
-| CPG export | `rbuilder cpg export --format graphson --output cpg.json [--path-contains src/]` |
-| Migration plan | `rbuilder discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints` then read `.rbuilder/migration_plan.json` (or dashboard copy) |
-| CI gate on changes | `rbuilder -f json check --policy-file policy.json` (exit 1 = violations) |
+| Inventory functions | `rg-build -f json gql --macro-name all_functions unused` |
+| List communities | `rg-build -f json gql --macro-name all_communities unused` |
+| Find symbol by pattern | `rg-build -f json gql "MATCH (n:Function) WHERE n.name LIKE '*Service*' RETURN n LIMIT 20"` |
+| Find by FQN (not `n.name`) | `rg-build -f json gql "MATCH (n:Class) WHERE n.qualified_name = 'com.example.Foo' RETURN n"` |
+| Community members | `rg-build -f json gql "MATCH (f:Function) WHERE f.community_id = '12' RETURN f LIMIT 20"` |
+| Natural-language function search | `rg-build semantic index` (or `--embedder vocab`) then `rg-build -f json semantic query "checkout flow" --limit 10` |
+| Community semantic search | `rg-build -f json semantic query "checkout" --scope community --limit 10` |
+| Impact before editing | `rg-build -f json blast-radius <Symbol> [--depth N]` |
+| Architectural hotspots | `rg-build -f json metrics --pagerank` |
+| Call neighborhood | `rg-build -f json gql "MATCH (a:Function)-[:CALLS*1..3]->(b:Function) RETURN a,b LIMIT 50"` |
+| Hybrid CPG status / CALL / PDG / slice | `rg-build -f json cpg status` then `cpg function\|calls\|pdg\|slice` (needs `discover --with-cfg` for PDG/slice) |
+| Field mutations (cart / DTO safety) | `rg-build -f json cpg mutations --type ShoppingCart --exclude-ctors` (ecommerce CoolStore; or any type name; needs `--with-cfg`) |
+| Data flows / slice (CPG) | `rg-build -f json cpg flows FILE --line N --variable V --function F [--direction forward\|backward] [--with-alias]` |
+| Loop-carried DFG tags | `rg-build discover . --with-cfg --with-dfg-loops` (tags `DataDependency.loop_carried` in PDG) |
+| AST skeleton | `rg-build discover --with-ast-skeleton` then `rg-build -f json cpg ast <Symbol>` |
+| CPG export | `rg-build cpg export --format graphson --output cpg.json [--path-contains src/]` |
+| Migration plan | `rg-build discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints` then read `.rgbuilder/migration_plan.json` (or dashboard copy) |
+| CI gate on changes | `rg-build -f json check --policy-file policy.json` (exit 1 = violations) |
 
 ---
 
@@ -54,7 +58,7 @@ rbuilder -r "$REPO" -f json gql 'MATCH (n:Function) RETURN n LIMIT 20'
 **Option A — HTTP (recommended):**
 
 ```bash
-rbuilder -r "$REPO" serve --open
+rg-build -r "$REPO" serve --open
 # POST http://127.0.0.1:8080/api/query  {"query":"MATCH (n:Function) RETURN n LIMIT 5"}
 ```
 
@@ -63,8 +67,8 @@ See [docs/http-api.md](docs/http-api.md).
 **Option B — Legacy socket daemon:**
 
 ```bash
-rbuilder -r "$REPO" serve --daemon
-# blast-radius auto-connects to .rbuilder/query.sock unless RBUILDER_NO_QUERY_DAEMON=1
+rg-build -r "$REPO" serve --daemon
+# blast-radius auto-connects to .rgbuilder/query.sock unless RGBUILDER_NO_QUERY_DAEMON=1
 ```
 
 ---
@@ -72,14 +76,14 @@ rbuilder -r "$REPO" serve --daemon
 ## Rules of thumb
 
 1. **Index first** — `gql`, `blast-radius`, `metrics` fail without `discover`.
-2. **Use `-f json`** — stable `schema_version` fields; see [cli-output-schemas.md](docs/cli-output-schemas.md).
+2. **Use `-f json`** — stable `schema_version` fields; see [json-api.md](docs/json-api.md).
 3. **`inspect` takes a symbol only** — no `--class` (use `blast-radius` for disambiguation).
 4. **`slice --function`** is the **method/function name**, not the class name.
 5. **`export --query`** uses filter syntax (`name:Foo`, `type:Function`, `all`) — not full GQL `MATCH`.
 6. **Deep analysis** needs `discover --with-cfg` (and `--with-taint` for discover-time taint) (slice, inspect, taint).
-7. **Semantic search** needs `semantic index` (separate from discover). Default **code-daemon** needs LFS ONNX weights from source; offline use `--embedder vocab` or `--embedder hash`. Fusion is on by default (`--no-fusion` to disable). Restart `serve` after rebuilding the index for the dashboard.
+7. **Semantic search** needs `semantic index` (separate from discover). Default **code-daemon** needs LFS ONNX weights from source; offline use `--embedder vocab` or `--embedder hash`. Fusion is on by default (`--no-fusion` to disable).
 8. **Profile discover** — `discover -v` with `RUST_LOG=profile=info` for `[profile] stage` and centrality sub-phase timings (see [analysis-architecture.md](docs/analysis-architecture.md)).
-
+9. **Dashboard is optional** — only with `--with-dashboard` / `serve` when a human wants a UI; never required for structural answers.
 ---
 
 ## On-disk artifacts for agents
@@ -88,11 +92,11 @@ After `discover`:
 
 | Path | Content |
 |------|---------|
-| `.rbuilder/graph.snapshot.bin` | Graph snapshot |
-| `.rbuilder/dashboard/manifest.json` | Counts, feature flags |
-| `.rbuilder/dashboard/migration_plan.json` | Migration export (with `--with-dashboard` and/or `--export-migration-hints`) |
-| `.rbuilder/dashboard/graph_payload.bin` | Columnar graph for dashboard WASM |
-| `.rbuilder/semantic_index.bin` | Opt-in semantic search index (`semantic index`) |
+| `.rgbuilder/graph.snapshot.bin` | Graph snapshot |
+| `.rgbuilder/dashboard/manifest.json` | Counts, feature flags |
+| `.rgbuilder/dashboard/migration_plan.json` | Migration export (with `--with-dashboard` and/or `--export-migration-hints`) |
+| `.rgbuilder/dashboard/graph_payload.bin` | Columnar graph for dashboard WASM |
+| `.rgbuilder/semantic_index.bin` | Opt-in semantic search index (`semantic index`) |
 
 ---
 

@@ -29,7 +29,7 @@ export function SiteHeader() {
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2 text-[var(--ink)]">
             <Terminal className="h-4 w-4 text-[var(--body)]" aria-hidden />
-            <span className="text-sm font-medium tracking-tight">rBuilder</span>
+            <span className="text-sm font-medium tracking-tight">rgBuilder</span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
             {primaryNav.map((item) => {
