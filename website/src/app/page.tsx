@@ -2,9 +2,8 @@ import Link from "next/link";
 import { ArrowRight, GitFork, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CommandBar } from "@/components/command-bar";
 import { DemoMedia } from "@/components/demo-media";
-import { HeroGraph } from "@/components/hero-graph";
+import { HeroDemoPanel } from "@/components/hero-demo-panel";
 import { TerminalBlock } from "@/components/terminal";
 import { GITHUB_REPO } from "@/lib/utils";
 
@@ -70,42 +69,40 @@ export default function HomePage() {
   return (
     <>
       <section className="border-b border-[var(--hairline)]">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 pb-14 pt-14 sm:px-6 sm:pb-16 sm:pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-12">
-          <div>
-            <Badge className="mb-5">Open source · MIT · Rust</Badge>
-            <h1 className="max-w-[21ch] font-[family-name:var(--font-serif)] text-[clamp(1.875rem,4.2vw,2.625rem)] font-semibold leading-[1.18] tracking-[-0.015em] text-[var(--ink)]">
-              A code knowledge graph built for agents
-            </h1>
-            <p className="mt-5 max-w-[58ch] text-[17.5px] leading-relaxed text-[var(--body)]">
-              rgBuilder indexes your repository once, then answers reachability
-              and structure questions in compact JSON — so coding agents use{" "}
-              <b className="font-semibold text-[var(--ink)]">fewer tokens</b> and
-              make{" "}
-              <b className="font-semibold text-[var(--ink)]">
-                fewer confident mistakes
-              </b>
-              .
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button size="lg" asChild>
-                <Link href="/install/">
-                  Install <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button variant="ghost" size="lg" asChild>
-                <a href={GITHUB_REPO} target="_blank" rel="noreferrer">
-                  <Star className="h-4 w-4" /> Star on GitHub
-                </a>
-              </Button>
-              <Button variant="link" asChild>
-                <Link href="/demo/">Watch demos →</Link>
-              </Button>
-            </div>
-            <div className="mt-10 max-w-xl">
-              <CommandBar />
-            </div>
+        <div className="mx-auto max-w-6xl px-4 pb-10 pt-14 sm:px-6 sm:pb-12 sm:pt-20">
+          <Badge className="mb-5">Open source · MIT · Rust</Badge>
+          <h1 className="max-w-[21ch] font-[family-name:var(--font-serif)] text-[clamp(1.875rem,4.2vw,2.625rem)] font-semibold leading-[1.18] tracking-[-0.015em] text-[var(--ink)]">
+            A code knowledge graph built for agents
+          </h1>
+          <p className="mt-5 max-w-[58ch] text-[17.5px] leading-relaxed text-[var(--body)]">
+            rgBuilder indexes your repository once, then answers reachability
+            and structure questions in compact JSON — so coding agents use{" "}
+            <b className="font-semibold text-[var(--ink)]">fewer tokens</b> and
+            make{" "}
+            <b className="font-semibold text-[var(--ink)]">
+              fewer confident mistakes
+            </b>
+            .
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Button size="lg" asChild>
+              <Link href="/install/">
+                Install <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Button variant="ghost" size="lg" asChild>
+              <a href={GITHUB_REPO} target="_blank" rel="noreferrer">
+                <Star className="h-4 w-4" /> Star on GitHub
+              </a>
+            </Button>
+            <Button variant="link" asChild>
+              <Link href="/demo/">Watch demos →</Link>
+            </Button>
           </div>
-          <HeroGraph className="mx-auto w-full max-w-lg lg:max-w-none" />
+
+          <div className="mt-12">
+            <HeroDemoPanel />
+          </div>
         </div>
       </section>
 

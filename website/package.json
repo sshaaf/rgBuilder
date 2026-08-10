@@ -11,7 +11,8 @@
     "lint": "eslint",
     "export": "next build",
     "copy-demos": "node scripts/copy-demos.mjs",
-    "copy-docs": "node scripts/copy-docs.mjs"
+    "copy-docs": "node scripts/copy-docs.mjs",
+    "test:firefox-hero": "node scripts/firefox-hero-graph.mjs"
   },
   "dependencies": {
     "@next/third-parties": "^16.2.11",
@@ -35,6 +36,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
+    "playwright": "1.55.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

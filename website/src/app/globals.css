@@ -25,6 +25,7 @@
   --graph-node-accent-fill: #e8f3f1;
   --graph-amber: #7a5c22;
   --graph-amber-fill: #f7f1e6;
+  --graph-focus: #e9ff57;
   --graph-label: #8b94a0;
   --graph-label-strong: #1a1d21;
   --graph-glow: rgba(34, 99, 90, 0.08);
@@ -53,6 +54,7 @@
   --graph-node-accent-fill: #0e2723;
   --graph-amber: #f2a65a;
   --graph-amber-fill: #2b1e0f;
+  --graph-focus: #e9ff57;
   --graph-label: #8d96ac;
   --graph-label-strong: #e8ebf1;
   --graph-glow: rgba(86, 225, 201, 0.05);
@@ -128,11 +130,13 @@ a {
 .hero-graph-edge {
   fill: none;
   stroke: var(--graph-edge);
-  stroke-width: 1.4;
+  stroke-width: 1.6;
+  opacity: 0.85;
 }
 
 .hero-graph-edge.on {
   stroke: var(--graph-edge-on);
+  opacity: 1;
 }
 
 .hero-graph-label {

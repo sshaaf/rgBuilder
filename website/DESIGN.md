@@ -1,18 +1,18 @@
 ---
 version: alpha
-name: Warp-design-analysis
-description: An inspired interpretation of Warp's design language — an agentic terminal-and-development-environment brand whose surface is a warm near-charcoal canvas (a tint warmer than pure black), broken only by clean Inter typography, the occasional Instrument Serif italic moment, and dense terminal-mockup imagery; CTAs are unusually understated, with shape geometry running tighter than most marketing sites.
+name: quiet-theme
+description: Marketing site theme aligned to docs/designs-examples/rbuilder-quiet.html (light paper, teal accent), with hero graph animation from rbuilder-redesign.html. Older Warp dark-canvas notes below are historical reference only.
 
 colors:
-  primary: "#f7f5f0"
-  on-primary: "#2b2622"
-  ink: "#f7f5f0"
-  body: "#c9c0ad"
-  body-strong: "#dad2c1"
-  mute: "#aea69c"
-  canvas: "#2b2622"
-  canvas-soft: "#383330"
-  hairline: "#3f3a36"
+  primary: "#22635A"
+  on-primary: "#FFFFFF"
+  ink: "#1A1D21"
+  body: "#5B6470"
+  body-strong: "#1A1D21"
+  mute: "#8B94A0"
+  canvas: "#FCFCFA"
+  canvas-soft: "#F4F4F0"
+  hairline: "#E4E4DE"
 
 typography:
   display-xl:
