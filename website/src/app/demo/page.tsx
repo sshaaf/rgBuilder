@@ -45,7 +45,7 @@ export default function DemoPage() {
         >
           user-guide-cli.tape
         </a>
-        , plus a dashboard montage.
+        , plus dashboard.
       </p>
 
       <div className="mt-8 space-y-14">
@@ -58,24 +58,12 @@ export default function DemoPage() {
         <DemoMedia
           kind="dashboard"
           className="mx-auto max-w-4xl"
-          caption="Dashboard montage — Graph, Search, CFG, Blast, Migration, and more."
+          caption="Dashboard — Graph, Search, CFG, Blast, Migration, and more."
         />
       </div>
 
       <p className="mt-4 text-sm text-[var(--mute)]">
-        Prefer MP4 with captions?{" "}
-        <Link href="/demos/user-guide-cli.mp4" className="underline">
-          CLI mp4
-        </Link>{" "}
-        ·{" "}
-        <Link href="/demos/feature-demo.mp4" className="underline">
-          Dashboard mp4
-        </Link>
-        . Regenerate via{" "}
-        <code className="font-mono text-[var(--body)]">
-          docs/videos/record-*.sh
-        </code>
-        .
+        RgBuilder is focused on CLI usecases, however a tech preview dashboard is also available when the discover command runs with --with-dashboard{" "}.
       </p>
     </div>
   );

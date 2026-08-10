@@ -13,7 +13,7 @@ export default function InstallPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
       <Badge className="mb-4">Get started</Badge>
-      <h1 className="text-3xl tracking-tight text-[var(--ink)] sm:text-4xl">
+      <h1 className="font-[family-name:var(--font-serif)] text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl">
         Install rgBuilder
       </h1>
       <p className="mt-3 text-[var(--body)]">
@@ -28,7 +28,7 @@ export default function InstallPage() {
           Download the latest asset for your platform from{" "}
           <a
             href={GITHUB_RELEASES}
-            className="text-[var(--ink)] underline"
+            className="text-[var(--primary)] underline"
             target="_blank"
             rel="noreferrer"
           >

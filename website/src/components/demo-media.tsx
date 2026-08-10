@@ -39,12 +39,12 @@ export function DemoMedia({
 
   return (
     <figure className={cn("space-y-3", className)}>
-      <div className="overflow-hidden rounded-[4px] border border-[var(--hairline)] bg-[#1f1c19] shadow-[0_16px_48px_rgba(0,0,0,0.4)]">
-        <div className="flex items-center gap-1.5 border-b border-[var(--hairline)] px-3 py-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#5c534c]" aria-hidden />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#5c534c]" aria-hidden />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#5c534c]" aria-hidden />
-          <span className="ml-2 font-mono text-[11px] text-[var(--mute)]">
+      <div className="overflow-hidden rounded-lg border border-[var(--hairline)] bg-[var(--surface)]">
+        <div className="flex items-center gap-1.5 border-b border-[var(--hairline)] bg-[var(--canvas-soft)] px-3 py-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--mute)]/40" aria-hidden />
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--mute)]/40" aria-hidden />
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--mute)]/40" aria-hidden />
+          <span className="ml-2 font-[family-name:var(--font-mono)] text-[11px] text-[var(--mute)]">
             {asset.label}
           </span>
         </div>

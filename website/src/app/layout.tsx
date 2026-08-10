@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
-import { DM_Mono, Instrument_Serif, Inter } from "next/font/google";
+import Script from "next/script";
+import { IBM_Plex_Mono, Inter, Source_Serif_4 } from "next/font/google";
 import { Analytics } from "@/components/analytics";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import {
+  ThemeProvider,
+  themeInitScript,
+} from "@/components/theme-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -11,14 +16,13 @@ const inter = Inter({
   display: "swap",
 });
 
-const instrument = Instrument_Serif({
-  weight: "400",
+const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
   variable: "--font-serif",
   display: "swap",
 });
 
-const dmMono = DM_Mono({
+const ibmPlexMono = IBM_Plex_Mono({
   weight: ["400", "500"],
   subsets: ["latin"],
   variable: "--font-mono",
@@ -49,13 +53,19 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${instrument.variable} ${dmMono.variable} h-full`}
+      className={`${inter.variable} ${sourceSerif.variable} ${ibmPlexMono.variable} h-full`}
+      suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col antialiased">
-        <SiteHeader />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
-        <Analytics />
+        <Script id="theme-init" strategy="beforeInteractive">
+          {themeInitScript}
+        </Script>
+        <ThemeProvider>
+          <SiteHeader />
+          <main className="flex-1">{children}</main>
+          <SiteFooter />
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   );

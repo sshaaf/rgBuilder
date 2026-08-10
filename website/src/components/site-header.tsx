@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Terminal } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { primaryNav } from "@/lib/nav";
 import { cn, GITHUB_REPO } from "@/lib/utils";
@@ -24,12 +25,14 @@ export function SiteHeader() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--hairline)] bg-[var(--canvas)]/95 backdrop-blur">
-      <div className="mx-auto flex h-12 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+    <header className="sticky top-0 z-40 border-b border-[var(--hairline)] bg-[var(--canvas)]/92 backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2 text-[var(--ink)]">
-            <Terminal className="h-4 w-4 text-[var(--body)]" aria-hidden />
-            <span className="text-sm font-medium tracking-tight">rgBuilder</span>
+            <Terminal className="h-4 w-4 text-[var(--primary)]" aria-hidden />
+            <span className="font-[family-name:var(--font-serif)] text-[19px] font-semibold tracking-tight">
+              rgBuilder
+            </span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
             {primaryNav.map((item) => {
@@ -53,6 +56,7 @@ export function SiteHeader() {
           </nav>
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Button variant="ghost" size="sm" asChild>
             <a href={GITHUB_REPO} target="_blank" rel="noreferrer">
               <GitHubIcon className="h-3.5 w-3.5" />

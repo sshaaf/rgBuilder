@@ -4,100 +4,181 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CommandBar } from "@/components/command-bar";
 import { DemoMedia } from "@/components/demo-media";
+import { HeroGraph } from "@/components/hero-graph";
 import { TerminalBlock } from "@/components/terminal";
 import { GITHUB_REPO } from "@/lib/utils";
 
-const pillars = [
+/** 3×3 capability matrix — rows = depth, cells = differentiators vs graph-only MCP tools. */
+const capabilityRows = [
   {
-    title: "Index once",
-    body: "discover builds a rich graph with reachability caches. Agents stop dumping whole trees into context.",
+    label: "Index & ask",
+    blurb: "Agent-ready facts without dumping trees into context.",
+    cells: [
+      {
+        title: "discover",
+        body: "One Rust indexing pass builds the graph plus reachability caches. Later questions are lookups — not greps.",
+      },
+      {
+        title: "gql",
+        body: "Exact inventory and typed edges with macros (all_functions, communities). Stable -f json with schema_version.",
+      },
+      {
+        title: "semantic",
+        body: 'Opt-in intent search ("checkout flow") over functions or communities — offline hash/vocab or ONNX, not a substitute for structure.',
+      },
+    ],
   },
   {
-    title: "Query facts",
-    body: "blast-radius, GQL, metrics, semantic, and CPG return compact -f json — deterministic structure, not guesses.",
+    label: "Program analysis",
+    blurb: "Beyond call lists — CFG, PDG, flows, and security paths.",
+    cells: [
+      {
+        title: "blast-radius",
+        body: "Deterministic upstream impact for a symbol at any depth — compact JSON agents can gate edits on.",
+      },
+      {
+        title: "cpg · slice · inspect",
+        body: "Hybrid CALL + CFG/PDG façade: statement slices, field mutations, dominance — Joern-class depth without leaving the CLI.",
+      },
+      {
+        title: "taint · security",
+        body: "Source→sink and CVE-oriented paths when you discover with --with-taint / --with-security — not just “who calls whom.”",
+      },
+    ],
   },
   {
-    title: "Ship safer changes",
-    body: "Migration hints, policy check, and agent recipes for impact-aware refactors in open source and monorepos.",
+    label: "Architecture & change",
+    blurb: "Where complexity concentrates — and what to migrate first.",
+    cells: [
+      {
+        title: "communities",
+        body: "Label-propagation clusters so agents reason about subsystems, not a flat bag of functions.",
+      },
+      {
+        title: "metrics",
+        body: "PageRank, betweenness, harmonic centrality, and hotspots — ranked facts, not LLM guesses about importance.",
+      },
+      {
+        title: "migration · check",
+        body: "Export a prioritized migration_plan.json; enforce blast-radius policy in CI with check --policy-file.",
+      },
+    ],
   },
-];
+] as const;
 
 export default function HomePage() {
   return (
     <>
-      <section className="relative overflow-hidden border-b border-[var(--hairline)]">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.35]"
-          style={{
-            backgroundImage:
-              "radial-gradient(ellipse 80% 50% at 50% -20%, #4a433c 0%, transparent 55%)",
-          }}
-        />
-        <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-16 sm:px-6 sm:pt-24">
-          <Badge className="mb-6">Open source · MIT · Rust</Badge>
-          <h1 className="max-w-3xl text-4xl font-normal tracking-tight text-[var(--ink)] sm:text-5xl sm:leading-[1.1]">
-            A code knowledge graph{" "}
-            <em className="font-[family-name:var(--font-serif)] not-italic text-[var(--body-strong)]">
-              built for agents
-            </em>
-          </h1>
-          <p className="mt-5 max-w-xl text-lg text-[var(--body)]">
-            rgBuilder indexes your repository once, then answers reachability and
-            structure questions in compact JSON — so coding agents use fewer
-            tokens and make fewer confident mistakes.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Button size="lg" asChild>
-              <Link href="/install/">
-                Install <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button variant="ghost" size="lg" asChild>
-              <a href={GITHUB_REPO} target="_blank" rel="noreferrer">
-                <Star className="h-4 w-4" /> Star on GitHub
-              </a>
-            </Button>
-            <Button variant="link" asChild>
-              <Link href="/demo/">Watch demos</Link>
-            </Button>
+      <section className="border-b border-[var(--hairline)]">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 pb-14 pt-14 sm:px-6 sm:pb-16 sm:pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-12">
+          <div>
+            <Badge className="mb-5">Open source · MIT · Rust</Badge>
+            <h1 className="max-w-[21ch] font-[family-name:var(--font-serif)] text-[clamp(1.875rem,4.2vw,2.625rem)] font-semibold leading-[1.18] tracking-[-0.015em] text-[var(--ink)]">
+              A code knowledge graph built for agents
+            </h1>
+            <p className="mt-5 max-w-[58ch] text-[17.5px] leading-relaxed text-[var(--body)]">
+              rgBuilder indexes your repository once, then answers reachability
+              and structure questions in compact JSON — so coding agents use{" "}
+              <b className="font-semibold text-[var(--ink)]">fewer tokens</b> and
+              make{" "}
+              <b className="font-semibold text-[var(--ink)]">
+                fewer confident mistakes
+              </b>
+              .
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Button size="lg" asChild>
+                <Link href="/install/">
+                  Install <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button variant="ghost" size="lg" asChild>
+                <a href={GITHUB_REPO} target="_blank" rel="noreferrer">
+                  <Star className="h-4 w-4" /> Star on GitHub
+                </a>
+              </Button>
+              <Button variant="link" asChild>
+                <Link href="/demo/">Watch demos →</Link>
+              </Button>
+            </div>
+            <div className="mt-10 max-w-xl">
+              <CommandBar />
+            </div>
           </div>
-          <div className="mt-12 max-w-3xl">
-            <CommandBar />
-          </div>
-          <div className="mt-10 max-w-4xl">
-            <DemoMedia
-              kind="cli"
-              preferGif
-              caption="VHS terminal demo — same path as the User Guide first hour (ecommerce-java)."
-            />
-          </div>
+          <HeroGraph className="mx-auto w-full max-w-lg lg:max-w-none" />
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="grid gap-8 md:grid-cols-3">
-          {pillars.map((p) => (
-            <div key={p.title} className="space-y-2">
-              <h2 className="text-base font-medium text-[var(--ink)]">
-                {p.title}
-              </h2>
-              <p className="text-sm leading-relaxed text-[var(--body)]">
-                {p.body}
-              </p>
+      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-16">
+        <h2 className="mb-3 font-[family-name:var(--font-serif)] text-2xl font-semibold tracking-tight text-[var(--ink)]">
+          What sets it apart
+        </h2>
+        <p className="mb-10 max-w-[62ch] text-[var(--body)]">
+          Most code graphs stop at symbols, callers, and impact. rgBuilder adds
+          precomputed reachability, hybrid CPG depth, centrality, communities,
+          and migration/CI outputs — always as deterministic{" "}
+          <code className="font-[family-name:var(--font-mono)] text-[0.9em] text-[var(--ink)]">
+            -f json
+          </code>{" "}
+          for agents.
+        </p>
+        <div className="space-y-10">
+          {capabilityRows.map((row) => (
+            <div key={row.label}>
+              <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h3 className="font-[family-name:var(--font-serif)] text-lg font-semibold text-[var(--ink)]">
+                  {row.label}
+                </h3>
+                <p className="text-sm text-[var(--mute)]">{row.blurb}</p>
+              </div>
+              <div className="grid gap-6 border-t border-[var(--hairline)] pt-5 md:grid-cols-3">
+                {row.cells.map((cell) => (
+                  <div key={cell.title} className="space-y-2">
+                    <h4 className="font-[family-name:var(--font-mono)] text-sm text-[var(--primary)]">
+                      {cell.title}
+                    </h4>
+                    <p className="text-[15px] leading-relaxed text-[var(--body)]">
+                      {cell.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="border-y border-[var(--hairline)] bg-[var(--canvas-soft)]/40">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:items-center">
+      <section className="border-y border-[var(--hairline)] bg-[var(--canvas-soft)]/60">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-16">
+          <h2 className="mb-3 font-[family-name:var(--font-serif)] text-2xl font-semibold tracking-tight text-[var(--ink)]">
+            See it run
+          </h2>
+          <p className="mb-8 max-w-[62ch] text-[var(--body)]">
+            The same path as the first hour of the user guide, on the
+            ecommerce-java fixture.
+          </p>
+          <div className="max-w-4xl">
+            <DemoMedia
+              kind="cli"
+              preferGif
+              caption="CLI walkthrough — discover, query, blast-radius, semantic search."
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-[var(--hairline)]">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 sm:py-16 lg:grid-cols-2 lg:items-center">
           <div className="space-y-4">
-            <h2 className="text-2xl tracking-tight text-[var(--ink)] sm:text-3xl">
+            <h2 className="font-[family-name:var(--font-serif)] text-2xl font-semibold tracking-tight text-[var(--ink)] sm:text-3xl">
               From prompt → graph facts → edit
             </h2>
             <p className="text-[var(--body)]">
               Drop{" "}
-              <Link href="/agents/" className="text-[var(--ink)] underline">
+              <Link
+                href="/agents/"
+                className="font-medium text-[var(--primary)] underline"
+              >
                 AGENTS.md
               </Link>{" "}
               into your agent workflow. The model calls rgBuilder instead of
@@ -119,10 +200,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="flex flex-col gap-6 rounded-[4px] border border-[var(--hairline)] bg-[var(--canvas-soft)] p-8 sm:flex-row sm:items-center sm:justify-between">
+      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-16">
+        <div className="flex flex-col gap-6 rounded-lg border border-[var(--hairline)] bg-[var(--surface)] p-8 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
-            <h2 className="text-xl text-[var(--ink)]">Help grow the project</h2>
+            <h2 className="font-[family-name:var(--font-serif)] text-xl font-semibold text-[var(--ink)]">
+              Help grow the project
+            </h2>
             <p className="max-w-lg text-sm text-[var(--body)]">
               Star the repo, try the ecommerce-java fixture, open issues, and
               share agent recipes. Adoption is the product.

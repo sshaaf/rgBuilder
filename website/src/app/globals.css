@@ -1,17 +1,61 @@
 @import "tailwindcss";
 
-:root {
-  --primary: #f7f5f0;
-  --on-primary: #2b2622;
-  --ink: #f7f5f0;
-  --body: #c9c0ad;
-  --body-strong: #dad2c1;
-  --mute: #aea69c;
-  --canvas: #2b2622;
-  --canvas-soft: #383330;
-  --hairline: #3f3a36;
+/* Light — quiet palette */
+:root,
+[data-theme="light"] {
+  --primary: #22635a;
+  --on-primary: #ffffff;
+  --ink: #1a1d21;
+  --body: #5b6470;
+  --body-strong: #1a1d21;
+  --mute: #8b94a0;
+  --canvas: #fcfcfa;
+  --canvas-soft: #f4f4f0;
+  --surface: #ffffff;
+  --hairline: #e4e4de;
+  --accent-hover: #1b5148;
+  --selection: #d8ebe7;
   --background: var(--canvas);
   --foreground: var(--ink);
+
+  /* Hero graph (quiet-adapted redesign) */
+  --graph-edge: #c5cbc3;
+  --graph-edge-on: #22635a;
+  --graph-node-fill: #f4f4f0;
+  --graph-node-accent-fill: #e8f3f1;
+  --graph-amber: #7a5c22;
+  --graph-amber-fill: #f7f1e6;
+  --graph-label: #8b94a0;
+  --graph-label-strong: #1a1d21;
+  --graph-glow: rgba(34, 99, 90, 0.08);
+}
+
+/* Dark — redesign palette */
+[data-theme="dark"] {
+  --primary: #56e1c9;
+  --on-primary: #06231c;
+  --ink: #e8ebf1;
+  --body: #8d96ac;
+  --body-strong: #e8ebf1;
+  --mute: #8d96ac;
+  --canvas: #0a0d13;
+  --canvas-soft: #161b29;
+  --surface: #111520;
+  --hairline: #232a3d;
+  --accent-hover: #6febd6;
+  --selection: rgba(86, 225, 201, 0.22);
+  --background: var(--canvas);
+  --foreground: var(--ink);
+
+  --graph-edge: #33405a;
+  --graph-edge-on: #56e1c9;
+  --graph-node-fill: #161b29;
+  --graph-node-accent-fill: #0e2723;
+  --graph-amber: #f2a65a;
+  --graph-amber-fill: #2b1e0f;
+  --graph-label: #8d96ac;
+  --graph-label-strong: #e8ebf1;
+  --graph-glow: rgba(86, 225, 201, 0.05);
 }
 
 @theme inline {
@@ -21,6 +65,11 @@
 
 html {
   scroll-behavior: smooth;
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 body {
@@ -28,13 +77,86 @@ body {
   color: var(--ink);
   font-family: var(--font-sans), system-ui, sans-serif;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+html[data-theme="dark"] body {
+  background-image:
+    radial-gradient(
+      ellipse 900px 500px at 15% -10%,
+      rgba(86, 225, 201, 0.06),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 700px 500px at 90% 10%,
+      rgba(242, 166, 90, 0.05),
+      transparent 60%
+    );
+  background-attachment: fixed;
 }
 
 ::selection {
-  background: #4a433c;
+  background: var(--selection);
   color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 a {
   text-underline-offset: 3px;
+}
+
+/* Match rbuilder-redesign.html pulseGlow */
+@keyframes pulseGlow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.hero-graph-pulse {
+  animation: pulseGlow 2.6s ease-in-out infinite;
+}
+
+.hero-graph-edge {
+  fill: none;
+  stroke: var(--graph-edge);
+  stroke-width: 1.4;
+}
+
+.hero-graph-edge.on {
+  stroke: var(--graph-edge-on);
+}
+
+.hero-graph-label {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  fill: var(--graph-label);
+}
+
+.hero-graph-label.strong {
+  fill: var(--graph-label-strong);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-graph-pulse {
+    animation: none !important;
+  }
+
+  .hero-graph-edge.on {
+    stroke-dashoffset: 0 !important;
+    transition: none !important;
+  }
+
+  body {
+    transition: none;
+  }
 }

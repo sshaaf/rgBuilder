@@ -4,15 +4,15 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[3px] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--hairline)] disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--canvas)] disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
         default:
-          "bg-[var(--primary)] text-[var(--on-primary)] hover:bg-[var(--ink)]",
+          "bg-[var(--primary)] text-[var(--on-primary)] hover:bg-[var(--accent-hover)]",
         ghost:
-          "bg-transparent text-[var(--ink)] border border-[var(--hairline)] hover:bg-[var(--canvas-soft)]",
-        link: "bg-transparent text-[var(--body-strong)] underline-offset-4 hover:underline hover:text-[var(--ink)]",
+          "bg-[var(--surface)] text-[var(--ink)] border border-[var(--hairline)] hover:border-[var(--mute)]",
+        link: "bg-transparent text-[var(--primary)] underline-offset-4 hover:underline",
       },
       size: {
         default: "h-9 px-4 py-2",

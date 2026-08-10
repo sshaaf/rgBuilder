@@ -32,7 +32,7 @@ export function CommandBar() {
   const current = examples[idx];
 
   return (
-    <div className="rounded-[4px] border border-[var(--hairline)] bg-[var(--canvas-soft)] p-2">
+    <div className="rounded-lg border border-[var(--hairline)] bg-[var(--canvas-soft)] p-2">
       <div className="flex flex-wrap gap-1 border-b border-[var(--hairline)] pb-2">
         {examples.map((ex, i) => (
           <button
@@ -41,20 +41,22 @@ export function CommandBar() {
             onClick={() => setIdx(i)}
             className={
               i === idx
-                ? "rounded-[3px] bg-[var(--canvas)] px-2 py-1 text-xs text-[var(--ink)]"
-                : "rounded-[3px] px-2 py-1 text-xs text-[var(--mute)] hover:text-[var(--body)]"
+                ? "rounded-md bg-[var(--surface)] px-2 py-1 text-xs text-[var(--ink)] shadow-sm ring-1 ring-[var(--hairline)]"
+                : "rounded-md px-2 py-1 text-xs text-[var(--mute)] hover:text-[var(--ink)]"
             }
           >
             {ex.label}
           </button>
         ))}
       </div>
-      <div className="flex items-center gap-3 px-2 py-3 font-mono text-[13px]">
-        <span className="text-[var(--mute)]">rg-build ›</span>
-        <span className="flex-1 truncate text-[var(--ink)]">{current.cmd}</span>
+      <div className="flex items-center gap-3 px-2 py-3 font-[family-name:var(--font-mono)] text-[13px]">
+        <span className="text-[var(--mute)]">$</span>
+        <span className="flex-1 truncate text-[var(--ink)]">
+          rg-build {current.cmd}
+        </span>
         <Link
           href={current.href}
-          className="inline-flex items-center gap-1 text-xs text-[var(--body-strong)] hover:text-[var(--ink)]"
+          className="inline-flex items-center gap-1 text-xs text-[var(--primary)] hover:underline"
         >
           Try <ArrowRight className="h-3 w-3" />
         </Link>
