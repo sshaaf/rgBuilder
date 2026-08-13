@@ -40,39 +40,39 @@ edition = "2024"
 rust-version = "1.88"
 
 [workspace.dependencies]
-rgbuilder-plugin-api = { path = "crates/rgbuilder-plugin-api", version = "0.4.3" }
-rgbuilder-plugin-helpers = { path = "crates/rgbuilder-plugin-helpers", version = "0.4.3" }
-rgbuilder-config-formats = { path = "crates/rgbuilder-config-formats", version = "0.4.3" }
-rgbuilder-lang-runtime = { path = "crates/rgbuilder-lang-runtime", version = "0.4.3" }
-rgbuilder-registry = { path = "crates/rgbuilder-registry", version = "0.4.3" }
-rgbuilder-error = { path = "crates/rgbuilder-error", version = "0.4.3" }
-rgbuilder-graph = { path = "crates/rgbuilder-graph", version = "0.4.3" }
-rgbuilder-extraction = { path = "crates/rgbuilder-extraction", version = "0.4.3" }
-rgbuilder-pipeline = { path = "crates/rgbuilder-pipeline", version = "0.4.3" }
-rgbuilder-analysis = { path = "crates/rgbuilder-analysis", version = "0.4.3", default-features = false }
-rgbuilder-gql = { path = "crates/rgbuilder-gql", version = "0.4.3" }
-rgbuilder-export = { path = "crates/rgbuilder-export", version = "0.4.3" }
-rgbuilder-dashboard = { path = "crates/rgbuilder-dashboard", version = "0.4.3" }
-rgbuilder-wasm = { path = "crates/rgbuilder-wasm", version = "0.4.3" }
-rgbuilder-security = { path = "crates/rgbuilder-security", version = "0.4.3" }
-rgbuilder-project-config = { path = "crates/rgbuilder-project-config", version = "0.4.3" }
-rgbuilder-incremental = { path = "crates/rgbuilder-incremental", version = "0.4.3" }
-rgbuilder-semantic = { path = "crates/rgbuilder-semantic", version = "0.4.3" }
-rgbuilder-rules = { path = "crates/rgbuilder-rules", version = "0.4.3" }
-rgbuilder-core = { path = "crates/rgbuilder-core", version = "0.4.3" }
+rgbuilder-plugin-api = { path = "crates/rgbuilder-plugin-api", version = "0.4.4" }
+rgbuilder-plugin-helpers = { path = "crates/rgbuilder-plugin-helpers", version = "0.4.4" }
+rgbuilder-config-formats = { path = "crates/rgbuilder-config-formats", version = "0.4.4" }
+rgbuilder-lang-runtime = { path = "crates/rgbuilder-lang-runtime", version = "0.4.4" }
+rgbuilder-registry = { path = "crates/rgbuilder-registry", version = "0.4.4" }
+rgbuilder-error = { path = "crates/rgbuilder-error", version = "0.4.4" }
+rgbuilder-graph = { path = "crates/rgbuilder-graph", version = "0.4.4" }
+rgbuilder-extraction = { path = "crates/rgbuilder-extraction", version = "0.4.4" }
+rgbuilder-pipeline = { path = "crates/rgbuilder-pipeline", version = "0.4.4" }
+rgbuilder-analysis = { path = "crates/rgbuilder-analysis", version = "0.4.4", default-features = false }
+rgbuilder-gql = { path = "crates/rgbuilder-gql", version = "0.4.4" }
+rgbuilder-export = { path = "crates/rgbuilder-export", version = "0.4.4" }
+rgbuilder-dashboard = { path = "crates/rgbuilder-dashboard", version = "0.4.4" }
+rgbuilder-wasm = { path = "crates/rgbuilder-wasm", version = "0.4.4" }
+rgbuilder-security = { path = "crates/rgbuilder-security", version = "0.4.4" }
+rgbuilder-project-config = { path = "crates/rgbuilder-project-config", version = "0.4.4" }
+rgbuilder-incremental = { path = "crates/rgbuilder-incremental", version = "0.4.4" }
+rgbuilder-semantic = { path = "crates/rgbuilder-semantic", version = "0.4.4" }
+rgbuilder-rules = { path = "crates/rgbuilder-rules", version = "0.4.4" }
+rgbuilder-core = { path = "crates/rgbuilder-core", version = "0.4.4" }
 tempfile = "3"
 zstd = "0.13"
 rayon = "1.7"
-rgbuilder-lang-go = { path = "crates/rgbuilder-lang-go", version = "0.4.3" }
-rgbuilder-lang-java = { path = "crates/rgbuilder-lang-java", version = "0.4.3" }
-rgbuilder-lang-javascript = { path = "crates/rgbuilder-lang-javascript", version = "0.4.3" }
-rgbuilder-lang-python = { path = "crates/rgbuilder-lang-python", version = "0.4.3" }
-rgbuilder-lang-rust = { path = "crates/rgbuilder-lang-rust", version = "0.4.3" }
-rgbuilder-lang-typescript = { path = "crates/rgbuilder-lang-typescript", version = "0.4.3" }
-rgbuilder-lang-csharp = { path = "crates/rgbuilder-lang-csharp", version = "0.4.3" }
-rgbuilder-lang-c = { path = "crates/rgbuilder-lang-c", version = "0.4.3" }
-rgbuilder-lang-cpp = { path = "crates/rgbuilder-lang-cpp", version = "0.4.3" }
-rgbuilder-languages = { path = "crates/rgbuilder-languages", version = "0.4.3" }
+rgbuilder-lang-go = { path = "crates/rgbuilder-lang-go", version = "0.4.4" }
+rgbuilder-lang-java = { path = "crates/rgbuilder-lang-java", version = "0.4.4" }
+rgbuilder-lang-javascript = { path = "crates/rgbuilder-lang-javascript", version = "0.4.4" }
+rgbuilder-lang-python = { path = "crates/rgbuilder-lang-python", version = "0.4.4" }
+rgbuilder-lang-rust = { path = "crates/rgbuilder-lang-rust", version = "0.4.4" }
+rgbuilder-lang-typescript = { path = "crates/rgbuilder-lang-typescript", version = "0.4.4" }
+rgbuilder-lang-csharp = { path = "crates/rgbuilder-lang-csharp", version = "0.4.4" }
+rgbuilder-lang-c = { path = "crates/rgbuilder-lang-c", version = "0.4.4" }
+rgbuilder-lang-cpp = { path = "crates/rgbuilder-lang-cpp", version = "0.4.4" }
+rgbuilder-languages = { path = "crates/rgbuilder-languages", version = "0.4.4" }
 tree-sitter = "0.25"
 
 [workspace.lints.rust]
@@ -103,7 +103,7 @@ expect_used = "warn"
 
 [package]
 name = "rgbuilder"
-version = "0.4.3"
+version = "0.4.4"
 edition.workspace = true
 rust-version.workspace = true
 authors = ["rgBuilder Contributors"]

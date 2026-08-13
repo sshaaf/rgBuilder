@@ -1,6 +1,6 @@
 [package]
 name = "rgbuilder-lang-runtime"
-version = "0.4.3"
+version = "0.4.4"
 edition.workspace = true
 rust-version.workspace = true
 description = "Generic tree-sitter and regex language plugins for rgBuilder"

@@ -2,7 +2,7 @@
   "name": "rgbuilder-wasm",
   "type": "module",
   "description": "WASM graph engine for rgBuilder dashboard",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "license": "MIT OR Apache-2.0",
   "files": [
     "rgbuilder_wasm_bg.wasm",
