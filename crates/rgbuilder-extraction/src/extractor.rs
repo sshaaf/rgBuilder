@@ -69,23 +69,30 @@ impl Extractor {
     /// Extract symbols, relations, and config references from one file.
     pub fn extract_file(&self, path: &Path) -> Result<FileExtraction> {
         let source = std::fs::read(path)?;
-        let mut extraction = FileExtraction {
-            path: path.to_path_buf(),
-            source: source.clone(), // Cache source bytes
-            ..Default::default()
-        };
 
         if let Ok(plugin) = self.registry.get_plugin_for_file(path) {
-            extraction.symbols = plugin.extract_symbols(path, &source)?;
-            extraction.relations = plugin.extract_relations(path, &source, &extraction.symbols)?;
-            extraction.config_usages =
-                ConfigUsageDetector::detect(plugin.language_id(), &source, path);
-            return Ok(extraction);
+            let (symbols, relations) = plugin.extract_all(path, &source)?;
+            let config_usages = ConfigUsageDetector::detect(plugin.language_id(), &source, path);
+            return Ok(FileExtraction {
+                path: path.to_path_buf(),
+                symbols,
+                relations,
+                config_keys: Vec::new(),
+                config_usages,
+                source,
+            });
         }
 
         if let Ok(plugin) = self.registry.get_config_plugin_for_file(path) {
-            extraction.config_keys = plugin.extract_config_keys(path, &source)?;
-            return Ok(extraction);
+            let config_keys = plugin.extract_config_keys(path, &source)?;
+            return Ok(FileExtraction {
+                path: path.to_path_buf(),
+                symbols: Vec::new(),
+                relations: Vec::new(),
+                config_keys,
+                config_usages: Vec::new(),
+                source,
+            });
         }
 
         Err(Error::UnsupportedLanguage(
@@ -102,9 +109,13 @@ impl Extractor {
         let file_id = builder.ensure_file_node(&extraction.path);
 
         let source = (!extraction.source.is_empty()).then_some(extraction.source.as_slice());
+        let line_offsets = source.map(line_start_offsets);
 
         for symbol in &extraction.symbols {
-            let body = source.and_then(|bytes| symbol_body_from_source(bytes, symbol));
+            let body = source.and_then(|bytes| {
+                let offsets = line_offsets.as_ref()?;
+                symbol_body_from_source(bytes, offsets, symbol)
+            });
             if let Some(body) = body.as_deref() {
                 builder.add_symbol_with_body(symbol, file_id, Some(body));
             } else {
@@ -208,25 +219,39 @@ impl Extractor {
     }
 }
 
-fn symbol_body_from_source(source: &[u8], symbol: &Symbol) -> Option<String> {
-    let text = std::str::from_utf8(source).ok()?;
+fn line_start_offsets(source: &[u8]) -> Vec<usize> {
+    let mut offsets = Vec::with_capacity(source.len() / 32 + 1);
+    offsets.push(0);
+    for (i, &b) in source.iter().enumerate() {
+        if b == b'\n' {
+            offsets.push(i + 1);
+        }
+    }
+    offsets
+}
+
+fn symbol_body_from_source(
+    source: &[u8],
+    line_offsets: &[usize],
+    symbol: &Symbol,
+) -> Option<String> {
     let start = symbol.location.start_line.saturating_sub(1);
-    let line_count = symbol
-        .location
-        .end_line
-        .saturating_sub(symbol.location.start_line)
-        .saturating_add(1)
-        .max(1);
-    let body: String = text
-        .lines()
-        .skip(start)
-        .take(line_count)
-        .collect::<Vec<_>>()
-        .join("\n");
-    if body.is_empty() {
+    let end_line = symbol.location.end_line.max(symbol.location.start_line);
+    if start >= line_offsets.len() {
+        return None;
+    }
+    let start_byte = line_offsets[start];
+    let end_byte = if end_line < line_offsets.len() {
+        line_offsets[end_line]
+    } else {
+        source.len()
+    };
+    let slice = source.get(start_byte..end_byte)?;
+    let text = std::str::from_utf8(slice).ok()?.trim_end_matches('\n');
+    if text.is_empty() {
         None
     } else {
-        Some(body)
+        Some(text.to_string())
     }
 }
 

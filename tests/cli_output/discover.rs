@@ -41,6 +41,8 @@ fn test_discover_build_maps_pipeline_stats() {
         nodes_created: 200,
         edges_created: 400,
         duration: std::time::Duration::from_millis(500),
+        extract_duration: std::time::Duration::from_millis(300),
+        graph_build_duration: std::time::Duration::from_millis(200),
     };
     let response = build_discover_response(&stats, 750);
     assert_eq!(response.metrics.files_discovered, 100);

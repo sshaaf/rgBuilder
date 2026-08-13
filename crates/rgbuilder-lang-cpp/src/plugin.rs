@@ -113,6 +113,44 @@ impl CppPlugin {
         })
     }
 
+    fn symbols_from_tree(
+        &self,
+        root: Node,
+        source: &[u8],
+        file_path: &Path,
+    ) -> Result<Vec<Symbol>> {
+        let mut symbols = Vec::new();
+        self.traverse(
+            root,
+            source,
+            &file_path.to_string_lossy(),
+            &mut symbols,
+            None,
+        )?;
+        Ok(symbols)
+    }
+
+    fn relations_from_tree(
+        &self,
+        root: Node,
+        source: &[u8],
+        file_path: &Path,
+        symbols: &[Symbol],
+    ) -> Result<Vec<Relation>> {
+        let mut relations = Vec::new();
+        walk_calls(
+            root,
+            source,
+            file_path,
+            symbols,
+            CPP_CALL_KINDS,
+            "cpp",
+            &mut relations,
+        );
+        self.extract_inheritance(root, source, file_path, &mut relations)?;
+        Ok(relations)
+    }
+
     /// Iterative tree traversal using an explicit stack to prevent stack overflows on deep ASTs.
     fn traverse(
         &self,
@@ -296,15 +334,7 @@ impl LanguagePlugin for CppPlugin {
 
     fn extract_symbols(&self, file_path: &Path, source: &[u8]) -> Result<Vec<Symbol>> {
         let tree = self.parse(file_path, source)?;
-        let mut symbols = Vec::new();
-        self.traverse(
-            tree.root_node(),
-            source,
-            &file_path.to_string_lossy(),
-            &mut symbols,
-            None,
-        )?;
-        Ok(symbols)
+        self.symbols_from_tree(tree.root_node(), source, file_path)
     }
 
     fn extract_relations(
@@ -314,18 +344,19 @@ impl LanguagePlugin for CppPlugin {
         symbols: &[Symbol],
     ) -> Result<Vec<Relation>> {
         let tree = self.parse(file_path, source)?;
-        let mut relations = Vec::new();
-        walk_calls(
-            tree.root_node(),
-            source,
-            file_path,
-            symbols,
-            CPP_CALL_KINDS,
-            "cpp",
-            &mut relations,
-        );
-        self.extract_inheritance(tree.root_node(), source, file_path, &mut relations)?;
-        Ok(relations)
+        self.relations_from_tree(tree.root_node(), source, file_path, symbols)
+    }
+
+    fn extract_all(
+        &self,
+        file_path: &Path,
+        source: &[u8],
+    ) -> Result<(Vec<Symbol>, Vec<Relation>)> {
+        let tree = self.parse(file_path, source)?;
+        let root = tree.root_node();
+        let symbols = self.symbols_from_tree(root, source, file_path)?;
+        let relations = self.relations_from_tree(root, source, file_path, &symbols)?;
+        Ok((symbols, relations))
     }
 
     fn calculate_complexity(

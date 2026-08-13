@@ -149,6 +149,8 @@ impl CfgPdgArchive {
     }
 
     /// Build interprocedural CFG using archived CFGs and live call graph from backend.
+    ///
+    /// Prefer [`Self::interprocedural_cfg_view`] when a zero-copy borrow is sufficient.
     pub fn to_interprocedural_cfg(
         &self,
         backend: &MemoryBackend,

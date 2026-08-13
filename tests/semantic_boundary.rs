@@ -17,16 +17,16 @@ use std::collections::{HashMap, HashSet};
 #[test]
 fn alias_handoff_interprocedural_slice() {
     let mut backend = MemoryBackend::new();
-    let main = Node::new(NodeType::Function, "main".into()).with_file_path("alias.rs".into());
-    let process = Node::new(NodeType::Function, "process".into())
-        .with_file_path("alias.rs".into())
+    let main = Node::new(NodeType::Function, "main").with_file_path("alias.rs");
+    let process = Node::new(NodeType::Function, "process")
+        .with_file_path("alias.rs")
         .with_parameters(vec![GraphParameter {
             name: "input".into(),
             param_type: Some("String".into()),
             default_value: None,
         }]);
-    let helper = Node::new(NodeType::Function, "helper".into())
-        .with_file_path("alias.rs".into())
+    let helper = Node::new(NodeType::Function, "helper")
+        .with_file_path("alias.rs")
         .with_parameters(vec![GraphParameter {
             name: "value".into(),
             param_type: Some("String".into()),
@@ -72,9 +72,9 @@ fn read_input() -> String { String::new() }
 #[test]
 fn mutually_recursive_slice_no_refcell_panic() {
     let mut backend = MemoryBackend::new();
-    let a = Node::new(NodeType::Function, "a".into()).with_file_path("rec.rs".into());
-    let b = Node::new(NodeType::Function, "b".into())
-        .with_file_path("rec.rs".into())
+    let a = Node::new(NodeType::Function, "a").with_file_path("rec.rs");
+    let b = Node::new(NodeType::Function, "b")
+        .with_file_path("rec.rs")
         .with_parameters(vec![GraphParameter {
             name: "flag".into(),
             param_type: Some("bool".into()),
@@ -287,9 +287,9 @@ def g(request):
 #[test]
 fn handoff_index_one_leaves_other_param_slices_empty_of_mutation() {
     let mut backend = MemoryBackend::new();
-    let main = Node::new(NodeType::Function, "main".into()).with_file_path("idx.rs".into());
-    let foo = Node::new(NodeType::Function, "foo".into())
-        .with_file_path("idx.rs".into())
+    let main = Node::new(NodeType::Function, "main").with_file_path("idx.rs");
+    let foo = Node::new(NodeType::Function, "foo")
+        .with_file_path("idx.rs")
         .with_parameters(vec![
             GraphParameter {
                 name: "x".into(),

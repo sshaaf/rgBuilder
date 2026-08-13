@@ -45,8 +45,8 @@ const NESTING_CONTAINER_KINDS: &[&str] = &[
 ];
 
 /// Per-file extraction context: package prefix, anonymous-class synthetic
-/// names, and instance-initializer counters. Rebuilt once per parse (symbols
-/// pass and relations pass each get their own, since each re-parses source).
+/// names, and instance-initializer counters. Rebuilt once per symbols or
+/// relations walk (both walks may share one tree via `extract_all`).
 struct ExtractCtx {
     package: Option<String>,
     /// Maps an anonymous class's `class_body` node id to a synthetic owner
@@ -1069,6 +1069,45 @@ impl JavaPlugin {
         })
     }
 
+    fn symbols_from_tree(
+        &self,
+        root: Node,
+        source: &[u8],
+        file_path: &Path,
+    ) -> Result<Vec<Symbol>> {
+        let ctx = ExtractCtx::new(root, source);
+        let mut symbols = Vec::new();
+        self.traverse(root, source, &file_path.to_string_lossy(), &ctx, &mut symbols)?;
+        Ok(symbols)
+    }
+
+    fn relations_from_tree(
+        &self,
+        root: Node,
+        source: &[u8],
+        file_path: &Path,
+        symbols: &[Symbol],
+    ) -> Result<Vec<Relation>> {
+        let ctx = ExtractCtx::new(root, source);
+        let mut relations = Vec::new();
+
+        self.extract_calls(root, source, file_path, symbols, &mut relations)?;
+        self.extract_inheritance(root, source, file_path, symbols, &mut relations)?;
+        self.extract_annotated_with(root, source, file_path, &ctx, &mut relations)?;
+        self.extract_object_creation(root, source, file_path, &ctx, &mut relations)?;
+        self.extract_method_references(root, source, file_path, &ctx, &mut relations)?;
+        self.extract_ctor_chaining(root, source, file_path, &ctx, &mut relations)?;
+        self.extract_import_uses(root, source, file_path, &ctx, &mut relations)?;
+        self.extract_field_access(root, source, file_path, &ctx, &mut relations)?;
+        self.extract_array_creation(root, source, file_path, &ctx, &mut relations)?;
+        self.extract_class_literal(root, source, file_path, &ctx, &mut relations)?;
+        self.extract_lambda_calls(root, source, file_path, &ctx, &mut relations)?;
+        self.extract_throws_refs(root, source, file_path, &ctx, &mut relations)?;
+        self.extract_module_relations(root, source, file_path, &mut relations)?;
+
+        Ok(relations)
+    }
+
     fn traverse(
         &self,
         node: Node,
@@ -1178,11 +1217,7 @@ impl LanguagePlugin for JavaPlugin {
                 message: "Failed to parse Java source".to_string(),
             })?;
 
-        let root = tree.root_node();
-        let ctx = ExtractCtx::new(root, source);
-        let mut symbols = Vec::new();
-        self.traverse(root, source, &file_path.to_string_lossy(), &ctx, &mut symbols)?;
-        Ok(symbols)
+        self.symbols_from_tree(tree.root_node(), source, file_path)
     }
 
     fn extract_relations(
@@ -1204,25 +1239,31 @@ impl LanguagePlugin for JavaPlugin {
                 message: "Failed to parse Java source".to_string(),
             })?;
 
+        self.relations_from_tree(tree.root_node(), source, file_path, symbols)
+    }
+
+    fn extract_all(
+        &self,
+        file_path: &Path,
+        source: &[u8],
+    ) -> Result<(Vec<Symbol>, Vec<Relation>)> {
+        let mut parser = Parser::new();
+        parser
+            .set_language(&tree_sitter_java::LANGUAGE.into())
+            .map_err(|e| Error::PluginError(format!("Failed to set Java grammar: {e}")))?;
+
+        let tree = parser
+            .parse(source, None)
+            .ok_or_else(|| Error::ParseError {
+                file: file_path.to_path_buf(),
+                line: 0,
+                message: "Failed to parse Java source".to_string(),
+            })?;
+
         let root = tree.root_node();
-        let ctx = ExtractCtx::new(root, source);
-        let mut relations = Vec::new();
-
-        self.extract_calls(root, source, file_path, symbols, &mut relations)?;
-        self.extract_inheritance(root, source, file_path, symbols, &mut relations)?;
-        self.extract_annotated_with(root, source, file_path, &ctx, &mut relations)?;
-        self.extract_object_creation(root, source, file_path, &ctx, &mut relations)?;
-        self.extract_method_references(root, source, file_path, &ctx, &mut relations)?;
-        self.extract_ctor_chaining(root, source, file_path, &ctx, &mut relations)?;
-        self.extract_import_uses(root, source, file_path, &ctx, &mut relations)?;
-        self.extract_field_access(root, source, file_path, &ctx, &mut relations)?;
-        self.extract_array_creation(root, source, file_path, &ctx, &mut relations)?;
-        self.extract_class_literal(root, source, file_path, &ctx, &mut relations)?;
-        self.extract_lambda_calls(root, source, file_path, &ctx, &mut relations)?;
-        self.extract_throws_refs(root, source, file_path, &ctx, &mut relations)?;
-        self.extract_module_relations(root, source, file_path, &mut relations)?;
-
-        Ok(relations)
+        let symbols = self.symbols_from_tree(root, source, file_path)?;
+        let relations = self.relations_from_tree(root, source, file_path, &symbols)?;
+        Ok((symbols, relations))
     }
 
     fn calculate_complexity(&self, symbol: &Symbol, source: &[u8]) -> Result<Option<ComplexityMetrics>> {

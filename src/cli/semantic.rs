@@ -311,10 +311,10 @@ impl BlastSummaryProvider for EngineBlastProvider<'_> {
         Ok(Some(blast_summary_from_result(
             &crate::analysis::SemanticEntry {
                 node_id: anchor_id,
-                name: node.name,
-                qualified_name: node.qualified_name,
-                file_path: node.file_path,
-                code_hash: node.code_hash,
+                name: node.name.to_string(),
+                qualified_name: node.qualified_name.as_ref().map(|s| s.to_string()),
+                file_path: node.file_path.as_ref().map(|s| s.to_string()),
+                code_hash: node.code_hash.as_ref().map(|s| s.to_string()),
             },
             result.direct_caller_ids.len(),
             result.impact_zone_ids.len(),
@@ -348,9 +348,9 @@ pub(crate) fn expand_gql_neighbors(
                 }
                 out.push(SemanticExpandedNode {
                     node_id: node.id.to_string(),
-                    name: node.name.clone(),
-                    qualified_name: node.qualified_name.clone(),
-                    file_path: node.file_path.clone(),
+                    name: node.name.to_string(),
+                    qualified_name: node.qualified_name.as_ref().map(|s| s.to_string()),
+                    file_path: node.file_path.as_ref().map(|s| s.to_string()),
                     relation: "gql_calls".into(),
                     anchor_node_id: Some(hit.entry.node_id.to_string()),
                 });

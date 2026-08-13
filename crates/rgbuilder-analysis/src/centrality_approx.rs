@@ -145,7 +145,7 @@ impl SampledBetweenness {
             return vec![0.0; n];
         }
 
-        let out_adj = build_out_adjacency(index);
+        let out_adj = index.build_out_adj();
         let pivots = sample_pivot_indices(n, k, seed);
         let mut betweenness = vec![0.0f64; n];
 
@@ -310,21 +310,21 @@ impl HyperLogLog {
 
 fn hyperball_exact(index: &FlatGraphIndex, max_rounds: usize) -> Vec<f64> {
     let n = index.node_count;
-    let out_adj = build_out_adjacency(index);
+    let out_adj = index.build_out_adj();
     let rounds = max_rounds.max(1);
     let norm = 1.0 / (n as f64 - 1.0);
 
-    let mut balls: Vec<HashSet<usize>> = (0..n).map(|i| HashSet::from([i])).collect();
+    let mut current: Vec<HashSet<usize>> = (0..n).map(|i| HashSet::from([i])).collect();
+    let mut next: Vec<HashSet<usize>> = vec![HashSet::new(); n];
     let mut harmonic = vec![0.0f64; n];
     let mut prev_count: Vec<usize> = vec![1; n];
 
     for distance in 1..=rounds {
-        let mut next: Vec<HashSet<usize>> = (0..n).map(|i| HashSet::from([i])).collect();
         for node in 0..n {
+            next[node].clear();
+            next[node].extend(current[node].iter().copied()); // keep prior ball
             for &neighbor in &out_adj[node] {
-                for &reachable in &balls[neighbor] {
-                    next[node].insert(reachable);
-                }
+                next[node].extend(current[neighbor].iter().copied());
             }
         }
 
@@ -339,7 +339,7 @@ fn hyperball_exact(index: &FlatGraphIndex, max_rounds: usize) -> Vec<f64> {
             prev_count[node] = count;
         }
 
-        balls = next;
+        std::mem::swap(&mut current, &mut next);
         if !grew {
             break;
         }
@@ -369,7 +369,7 @@ fn adaptive_hyperball_rounds(node_count: usize, max_rounds: usize) -> usize {
 
 fn hyperball_hll_parallel(index: &FlatGraphIndex, rounds: usize) -> Vec<f64> {
     let n = index.node_count;
-    let out_adj = build_out_adjacency(index);
+    let out_adj = index.build_out_adj();
     let norm = 1.0 / (n as f64 - 1.0);
     let precision = hll_precision_for(n);
 
@@ -415,14 +415,6 @@ fn hyperball_hll_parallel(index: &FlatGraphIndex, rounds: usize) -> Vec<f64> {
     harmonic
 }
 
-fn build_out_adjacency(index: &FlatGraphIndex) -> Vec<Vec<usize>> {
-    let mut adj = vec![Vec::new(); index.node_count];
-    for &(src, dst) in &index.flat_edges {
-        adj[src].push(dst);
-    }
-    adj
-}
-
 fn hash_node_id(node: usize) -> u64 {
     splitmix64(node as u64 ^ 0x9E37_79B9_7F4A_7C15)
 }
@@ -439,6 +431,17 @@ fn sample_pivot_indices(n: usize, k: usize, seed: u64) -> Vec<usize> {
     if k >= n {
         return (0..n).collect();
     }
+    if k >= n / 2 {
+        let mut indices: Vec<usize> = (0..n).collect();
+        let mut rng = seed;
+        for i in 0..k {
+            rng = rng.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+            let j = i + ((rng as usize) % (n - i));
+            indices.swap(i, j);
+        }
+        indices.truncate(k);
+        return indices;
+    }
     let mut rng = seed;
     let mut chosen = vec![false; n];
     let mut pivots = Vec::with_capacity(k);
@@ -454,7 +457,7 @@ fn sample_pivot_indices(n: usize, k: usize, seed: u64) -> Vec<usize> {
 }
 
 /// Brandes single-source accumulation on a flat directed adjacency list.
-fn brandes_single_source(out_adj: &[Vec<usize>], source: usize, n: usize) -> Vec<f64> {
+pub(crate) fn brandes_single_source(out_adj: &[Vec<usize>], source: usize, n: usize) -> Vec<f64> {
     let mut stack = Vec::new();
     let mut pred = vec![Vec::new(); n];
     let mut sigma = vec![0.0f64; n];
@@ -559,7 +562,7 @@ mod tests {
     #[test]
     fn sampled_betweenness_finds_bridge() {
         let mut backend = rgbuilder_graph::backend::MemoryBackend::new();
-        let bridge = Node::new(NodeType::Function, "bridge".into());
+        let bridge = Node::new(NodeType::Function, "bridge");
         let id_bridge = bridge.id;
         backend.insert_node(bridge).unwrap();
 
@@ -641,6 +644,22 @@ mod tests {
         let head = view.uuid_to_index[&ids[0]].index();
         assert!(harmonic[head] > 0.0);
         assert!(harmonic.iter().any(|&s| s > 0.0));
+    }
+
+    #[test]
+    fn sample_pivot_indices_fisher_yates_and_full() {
+        let full = sample_pivot_indices(10, 10, 1);
+        assert_eq!(full.len(), 10);
+        let mut sorted = full.clone();
+        sorted.sort_unstable();
+        assert_eq!(sorted, (0..10).collect::<Vec<_>>());
+
+        let half = sample_pivot_indices(10, 6, 42);
+        assert_eq!(half.len(), 6);
+        let mut uniq = half.clone();
+        uniq.sort_unstable();
+        uniq.dedup();
+        assert_eq!(uniq.len(), 6);
     }
 
     #[test]

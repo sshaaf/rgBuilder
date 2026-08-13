@@ -46,8 +46,8 @@ impl ConfigAnalyzer {
             .into_iter()
             .filter(|k| !used.contains(&k.id))
             .map(|k| UnusedConfigKey {
-                key: k.name.clone(),
-                file: k.file_path.clone(),
+                key: k.name.to_string(),
+                file: k.file_path.as_ref().map(|s| s.to_string()),
                 confidence: if k.name.contains("legacy") || k.name.contains("old") {
                     0.9
                 } else {
@@ -86,9 +86,9 @@ impl ConfigAnalyzer {
         for node in env_nodes {
             if node.has_label("env") {
                 referenced
-                    .entry(node.name.clone())
+                    .entry(node.name.to_string())
                     .or_default()
-                    .push(node.file_path.clone().unwrap_or_default());
+                    .push(node.file_path.clone().unwrap_or_default().to_string());
             }
         }
 

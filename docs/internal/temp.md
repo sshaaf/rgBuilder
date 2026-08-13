@@ -39,6 +39,18 @@ spiked peak RSS on kernel-scale graphs.
 `rg-build metrics` still uses **`analyze_with_view`** (HashMap report) but shares the same flat
 compute core and adaptive gating.
 
+### rgbuilder-analysis-perf (2026-08-13)
+
+Phase 1–3 implementation complete (`openspec/changes/rgbuilder-analysis-perf/`):
+
+- **Shared `out_adj`** on `FlatGraphIndex`; exact Brandes/Harmonic reuse flat buffers; HyperBall exact double-buffer; Fisher–Yates pivots when `k ≥ n/2`.
+- **Blast BFS** uses pre-built function-id set + `with_node` for name/complexity paths; reachability LRU promote O(1); `bitset_to_words` via set iterator.
+- **Alias** integer union-find; **community** modularity flat `Vec<f64>`; **semantic diffuse** borrows callee slices.
+- **Dataflow** BitSet IN/OUT over global def index; **PDG** interned `u32` dedup keys; **CFG** monotonic block IDs + exception-edge `HashSet`.
+- **Macro lookup** BLOB-only writes; **handoff** `resolve_handoff_seeds_with_call_graph`.
+
+Cold profiles: see `openspec/changes/rgbuilder-analysis-perf/PROFILE.md`. Linux centrality ~2.65 s wall; betweenness ~2.13 s on 2.66M nodes.
+
 ---
 
 ## Adaptive gating (V > 500,000)
@@ -158,11 +170,23 @@ Currently hard-coded via `DEFAULT_*` and `LARGE_GRAPH_*` constants.
 
 ## Scale measurements (release build, Jul 2026)
 
-### Linux kernel (`example/linux`, 2.65M nodes, 8.56M edges)
+### Linux kernel (`example/linux`, ~2.65M nodes default discover, 8.56M edges)
 
+> **Note (Aug 2026 / perf-ingest-scale-gates):** Layer F field `Variable` nodes are **gated behind `--with-cfg`**. Default cold discover no longer materializes C struct fields as graph nodes (restores pre–Layer F node counts). CSR builds from mmap via streaming `for_each_edge` (no full edge `Vec`).
+>
 > **Note (Jul 2026 / #29 + #31):** default `discover` skips HyperBall harmonic and dashboard export.
-> Expected cold wall ≈ **~130–135s** (r3 no-harmonic ~142s minus ~8–9s `save_dashboard`).
-> Use `--with-harmonic` / `--with-dashboard` to restore those stages.
+> Expected cold wall ≈ **~130–155s** without field materialization.
+> Use `--with-harmonic` / `--with-dashboard` / `--with-cfg` to restore those stages.
+
+#### Cold profile gates
+
+Manual tests: `cargo test --release --test cold_profile_gates -- --ignored --nocapture`
+
+| Repo | Command | Gate |
+|------|---------|------|
+| `example/linux` | `discover . -v` | wall ≤ 170s, nodes ≤ 2.8M |
+| `example/metasfresh-4.9.8b` | `discover . --with-cfg --with-security --with-taint -v` | wall ≤ 584s |
+| `example/kafka` | `discover . -v` | wall ≤ baseline × 1.10 (`RGBUILDER_KAFKA_COLD_BASELINE_SECS`) |
 
 #### Cold profile after CSR + backend drop (2026-07-20)
 
@@ -216,7 +240,9 @@ High RSS is **duplicate graph residency** (backend + prepared clone + petgraph v
 | Drop undirected `UnGraph` + UUID HashMap→dense `Vec`; EdgeFiltered SCC (no call-only DiGraph clone) | done |
 | Early mmap write → drop prepared; drop topology view after blast engine build | done |
 | Full CSR topology replacing typed `DiGraph` for community/centrality/blast | **done** (`CodeGraphCsr` + `StructuralTopology`; `PetGraphView` is CSR façade) |
-| Release backend edge storage after CSR build | **done** (`MemoryBackend::release_edge_storage`) |
+| CSR from mmap without `edge_topology_typed()` `Vec` | **done** (`CodeGraphCsr::from_store_topology`) |
+| Layer F field `Variable` nodes gated on `--with-cfg` | **done** (default discover skips field materialization) |
+| Cold profile gates (linux / metasfresh / kafka) | **done** (`tests/cold_profile_gates.rs`) |
 | ColdMetadataDb (mmap) opened after early snapshot; **drop `CodeGraph` before community/centrality/blast** | **done** (hydrate only for `--with-dashboard` / migration / JSON) |
 | **Lever 1: discover ingest skips `MemoryBackend`** — `write_columnar_from_nodes_edges` | **done** |
 | **Lever 1.5: segmented disk spill** — `SegmentedSpill` + external sort + `write_columnar_from_spill`; `GraphBuilder::with_spill` | **done** (resolution HashMaps still in RAM) |
@@ -271,6 +297,23 @@ Lines to watch:
 cargo test --release -p rgbuilder-analysis centrality
 cargo test --release --test centrality_approx_scale -- --nocapture
 ```
+
+---
+
+## rgbuilder-graph-perf (Aug 2026)
+
+Phases 1–2 and most of phase 3 landed in `crates/rgbuilder-graph`:
+
+- **Adjacency indexes** on `MemoryBackend` (`outgoing_adj` / `incoming_adj`) for O(degree) edge lookup.
+- **Query pipeline** unified to `execute_node_ids` → `get_nodes_by_ids`; property filters use `for_each_node`.
+- **Columnar I/O**: string-pool dedup, bulk row memcpy, lazy `id_to_index` (`OnceLock`), pre-sized snapshot buffers.
+- **Compaction**: O(1) invalidated-path lookup via normalized `HashSet`.
+
+Deferred follow-ups: none (phase 3 complete).
+
+Profile results: `openspec/changes/rgbuilder-graph-perf/PROFILE.md`.
+
+Bench: `cargo bench -p rgbuilder-graph --bench columnar_snapshot`.
 
 ---
 

@@ -43,7 +43,7 @@ pub use graph_compactor::{
     compact_repo_snapshot, compact_snapshot_file, CompactStats, DeltaSegment, GraphCompactor,
 };
 pub use migration::{migrate_snapshot, migrate_v1_to_v2};
-pub use schema::{AccessType, CallType, GraphParameter, GRAPH_SCHEMA_VERSION};
+pub use schema::{AccessType, CallType, GraphParameter, SharedStr, GRAPH_SCHEMA_VERSION};
 pub use segmented_spill::{
     write_columnar_from_spill, FinishedSpill, SegmentedSpill, DEFAULT_SORT_RUN_BYTES,
 };

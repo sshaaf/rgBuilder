@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn test_render_graphml_header() {
-        let node = Node::new(NodeType::Function, "main".into());
+        let node = Node::new(NodeType::Function, "main");
         let xml = render_graphml(&[node], &[]);
         assert!(xml.contains("graphml"));
         assert!(xml.contains("<key id=\"name\""));

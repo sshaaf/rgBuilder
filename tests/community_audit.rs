@@ -41,7 +41,7 @@ fn dumbbell_coupling_contains_does_not_merge_domains() {
     let mut graph = CodeGraph::new();
     let backend = graph.backend_mut();
 
-    let parent = Node::new(NodeType::Module, "shared_pkg".into());
+    let parent = Node::new(NodeType::Module, "shared_pkg");
     let id_parent = parent.id;
     backend.insert_node(parent).unwrap();
 
@@ -88,9 +88,9 @@ fn non_determinism_stress_100_runs_stable() {
     let mut graph = CodeGraph::new();
     let backend = graph.backend_mut();
 
-    let left = Node::new(NodeType::Function, "left_hub".into());
-    let right = Node::new(NodeType::Function, "right_hub".into());
-    let center = Node::new(NodeType::Function, "center".into());
+    let left = Node::new(NodeType::Function, "left_hub");
+    let right = Node::new(NodeType::Function, "right_hub");
+    let center = Node::new(NodeType::Function, "center");
     let id_left = left.id;
     let id_right = right.id;
     let id_center = center.id;
@@ -147,10 +147,9 @@ fn modularity_singleton_partition_negative_q() {
 
     let view = PetGraphView::from_backend(backend).unwrap();
     let labels: HashMap<_, _> = view
-        .directed
-        .node_indices()
+        .index_uuid_iter()
         .enumerate()
-        .map(|(i, idx)| (idx, i))
+        .map(|(i, (idx, _))| (idx, i))
         .collect();
 
     let q = CommunityDetector::new().calculate_modularity(&view, &labels, &[EdgeType::Calls]);

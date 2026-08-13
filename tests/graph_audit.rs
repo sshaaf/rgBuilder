@@ -24,7 +24,7 @@ pub fn deep_chain(n: usize) -> MemoryBackend {
 /// Star: `leaves` callers → hub.
 pub fn star(leaves: usize) -> MemoryBackend {
     let mut backend = MemoryBackend::new();
-    let hub = Node::new(NodeType::Function, "hub".into());
+    let hub = Node::new(NodeType::Function, "hub");
     let hub_id = hub.id;
     backend.insert_node(hub).unwrap();
     for i in 0..leaves {
@@ -85,10 +85,10 @@ pub fn structural_topology() -> (MemoryBackend, uuid::Uuid, uuid::Uuid, uuid::Uu
 /// Hub with one incoming edge of each type Calls, Contains, Uses.
 pub fn mixed_edge_hub() -> MemoryBackend {
     let mut backend = MemoryBackend::new();
-    let target = Node::new(NodeType::Function, "target".into());
-    let caller = Node::new(NodeType::Function, "caller".into());
-    let module = Node::new(NodeType::Module, "module".into());
-    let importer = Node::new(NodeType::Function, "importer".into());
+    let target = Node::new(NodeType::Function, "target");
+    let caller = Node::new(NodeType::Function, "caller");
+    let module = Node::new(NodeType::Module, "module");
+    let importer = Node::new(NodeType::Function, "importer");
     let id_t = target.id;
     let id_c = caller.id;
     let id_m = module.id;

@@ -65,8 +65,7 @@ impl StructuralTopology {
             uuid_to_index.insert(id, i as u32);
             index_to_uuid.push(id);
         }
-        let edges = store.edge_topology_typed()?;
-        let csr = CodeGraphCsr::from_typed_edges(node_count, &edges, &uuid_to_index);
+        let csr = CodeGraphCsr::from_store_topology(store, &uuid_to_index)?;
         Ok(Self {
             csr,
             index_to_uuid,
@@ -313,9 +312,9 @@ mod tests {
     #[test]
     fn topology_from_backend_and_scc() {
         let mut backend = MemoryBackend::new();
-        let a = Node::new(NodeType::Function, "a".into());
-        let b = Node::new(NodeType::Function, "b".into());
-        let c = Node::new(NodeType::Function, "c".into());
+        let a = Node::new(NodeType::Function, "a");
+        let b = Node::new(NodeType::Function, "b");
+        let c = Node::new(NodeType::Function, "c");
         let a_id = a.id;
         let b_id = b.id;
         let c_id = c.id;

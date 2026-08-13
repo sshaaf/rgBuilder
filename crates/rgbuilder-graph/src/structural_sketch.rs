@@ -25,19 +25,15 @@ pub fn build_token_bloom(
     body: Option<&str>,
 ) -> TokenBloom {
     let mut bloom = empty_bloom();
-    let mut tokens = HashSet::new();
-    tokenize_string_into(name, &mut tokens);
+    tokenize_into_bloom(name, &mut bloom);
     if let Some(qn) = qualified_name {
-        tokenize_string_into(qn, &mut tokens);
+        tokenize_into_bloom(qn, &mut bloom);
     }
     if let Some(sig) = signature {
-        tokenize_string_into(sig, &mut tokens);
+        tokenize_into_bloom(sig, &mut bloom);
     }
     if let Some(text) = body {
-        tokenize_string_into(text, &mut tokens);
-    }
-    for token in tokens {
-        insert_token(&mut bloom, &token);
+        tokenize_into_bloom(text, &mut bloom);
     }
     bloom
 }
@@ -81,7 +77,7 @@ pub fn keyword_overlap_score(keywords: &[String], bloom: &TokenBloom) -> f64 {
     matched as f64 / keywords.len() as f64
 }
 
-/// Split on camelCase, snake_case, and non-alphanumeric boundaries.
+/// Split on camelCase, snake_case, and non-alphanumeric boundaries into a set.
 pub fn tokenize_string_into(text: &str, set: &mut HashSet<String>) {
     let mut current_token = String::with_capacity(16);
 
@@ -94,21 +90,52 @@ pub fn tokenize_string_into(text: &str, set: &mut HashSet<String>) {
                     .last()
                     .is_some_and(|last| last.is_lowercase())
             {
-                push_token(&current_token, set);
+                push_token_set(&current_token, set);
                 current_token.clear();
             }
             current_token.push(c);
         } else {
-            push_token(&current_token, set);
+            push_token_set(&current_token, set);
             current_token.clear();
         }
     }
-    push_token(&current_token, set);
+    push_token_set(&current_token, set);
 }
 
-fn push_token(token: &str, set: &mut HashSet<String>) {
+fn tokenize_into_bloom(text: &str, bloom: &mut TokenBloom) {
+    let mut current_token = String::with_capacity(16);
+
+    for c in text.chars() {
+        if c.is_alphanumeric() {
+            if !current_token.is_empty()
+                && c.is_uppercase()
+                && current_token
+                    .chars()
+                    .last()
+                    .is_some_and(|last| last.is_lowercase())
+            {
+                push_token_bloom(&current_token, bloom);
+                current_token.clear();
+            }
+            current_token.push(c);
+        } else {
+            push_token_bloom(&current_token, bloom);
+            current_token.clear();
+        }
+    }
+    push_token_bloom(&current_token, bloom);
+}
+
+fn push_token_set(token: &str, set: &mut HashSet<String>) {
     if token.len() >= MIN_TOKEN_LEN {
         set.insert(token.to_ascii_lowercase());
+    }
+}
+
+fn push_token_bloom(token: &str, bloom: &mut TokenBloom) {
+    if token.len() >= MIN_TOKEN_LEN {
+        let lower = token.to_ascii_lowercase();
+        insert_token(bloom, &lower);
     }
 }
 

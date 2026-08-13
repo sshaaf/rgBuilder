@@ -1,6 +1,7 @@
 //! `rg-build discover` — index and analyze a repository.
 
 use super::context::CliContext;
+use super::discover_impl::{run_full_analysis, AnalysisOptions};
 use anyhow::Result;
 
 pub struct DiscoverArgs {
@@ -44,22 +45,24 @@ pub fn run(ctx: &CliContext, args: DiscoverArgs) -> Result<()> {
         })
         .unwrap_or_else(|| ctx.repo.to_string_lossy().into_owned());
 
-    super::discover_impl::run_full_analysis(
+    run_full_analysis(
         ctx,
         &path,
-        args.languages,
-        args.exclude,
-        args.with_security,
-        args.with_cfg,
-        args.with_taint,
-        args.with_dfg_loops,
-        args.with_ast_skeleton,
-        args.write_json_graph,
-        args.with_dashboard,
-        args.export_migration_hints,
-        args.with_harmonic,
-        &args.migration_preset,
-        &args.migration_order,
-        &ctx.db,
+        AnalysisOptions {
+            languages: args.languages,
+            exclude: args.exclude,
+            with_security: args.with_security,
+            with_cfg: args.with_cfg,
+            with_taint: args.with_taint,
+            with_dfg_loops: args.with_dfg_loops,
+            with_ast_skeleton: args.with_ast_skeleton,
+            write_json_graph: args.write_json_graph,
+            with_dashboard: args.with_dashboard,
+            export_migration_hints: args.export_migration_hints,
+            with_harmonic: args.with_harmonic,
+            migration_preset: &args.migration_preset,
+            migration_order: &args.migration_order,
+            db_path: &ctx.db,
+        },
     )
 }

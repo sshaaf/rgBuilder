@@ -72,7 +72,8 @@ pub use blast_radius_scc::{
 };
 pub use blast_slice_handoff::{
     criterion_for_parameter, filter_handoff_seeds_by_index, load_source_files,
-    resolve_handoff_seeds, resolve_handoff_seeds_for_indices, trace_blast_to_slices,
+    resolve_handoff_seeds, resolve_handoff_seeds_for_indices,
+    resolve_handoff_seeds_with_call_graph, trace_blast_to_slices,
     trace_blast_to_slices_with_blast, BlastSliceTrace, SliceHandoffSeed,
 };
 pub use callgraph::CallGraph;

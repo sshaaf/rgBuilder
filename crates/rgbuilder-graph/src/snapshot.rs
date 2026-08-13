@@ -58,7 +58,7 @@ impl PreparedGraphSnapshot {
 
         for node in &nodes {
             name_index
-                .entry(node.name.clone())
+                .entry(node.name.to_string())
                 .or_default()
                 .push(node.id);
             type_index.entry(node.node_type).or_default().push(node.id);
@@ -190,6 +190,22 @@ impl MmappedGraphSnapshot {
         }
     }
 
+    /// Stream edges without allocating a full topology `Vec`.
+    pub fn for_each_edge(
+        &self,
+        mut f: impl FnMut(Uuid, Uuid, EdgeType) -> Result<()>,
+    ) -> Result<()> {
+        match &self.backing {
+            SnapshotBacking::Legacy(p) => {
+                for e in &p.edges {
+                    f(e.from, e.to, e.edge_type)?;
+                }
+            }
+            SnapshotBacking::Columnar(c) => c.for_each_edge(f)?,
+        }
+        Ok(())
+    }
+
     /// Columnar view when available.
     pub fn columnar(&self) -> Option<&ColumnarGraphMmap> {
         match &self.backing {
@@ -276,6 +292,14 @@ impl SnapshotNodeStore {
         self.snapshot.edge_topology_typed()
     }
 
+    /// Stream edges without allocating a full topology `Vec`.
+    pub fn for_each_edge(
+        &self,
+        f: impl FnMut(Uuid, Uuid, EdgeType) -> Result<()>,
+    ) -> Result<()> {
+        self.snapshot.for_each_edge(f)
+    }
+
     /// Lookup a node by UUID without hydrating [`MemoryBackend`].
     pub fn get_node(&self, id: Uuid) -> Result<Option<Node>> {
         if let Some(col) = self.snapshot.columnar() {
@@ -349,7 +373,7 @@ mod tests {
     #[test]
     fn snapshot_round_trip_columnar_v2() {
         let mut backend = MemoryBackend::new();
-        let n = Node::new(NodeType::Function, "main".into());
+        let n = Node::new(NodeType::Function, "main");
         let id = n.id;
         backend.insert_node(n).unwrap();
         backend
@@ -375,7 +399,7 @@ mod tests {
     fn hydrate_uses_prepared_indexes_without_rescan() {
         let mut backend = MemoryBackend::new();
         for name in ["alpha", "beta"] {
-            let n = Node::new(NodeType::Function, name.into());
+            let n = Node::new(NodeType::Function, name);
             backend.insert_node(n).unwrap();
         }
         let prepared = PreparedGraphSnapshot::from_backend(&backend).unwrap();

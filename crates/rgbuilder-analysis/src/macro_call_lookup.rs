@@ -146,7 +146,7 @@ pub fn canonical_fqn_from_node(node: &Node) -> String {
     if let Some(class) = class_name_from_node(node) {
         return format!("{class}::{}", node.name);
     }
-    node.name.clone()
+    node.name.to_string()
 }
 
 /// Convert language-native qualified names to canonical double-colon form.
@@ -311,7 +311,7 @@ fn node_to_candidate(
         id: node.id,
         symbol_name: symbol_name.to_string(),
         class_name: class_name_from_node(node),
-        file_path: node.file_path.clone().unwrap_or_default(),
+        file_path: node.file_path.clone().unwrap_or_default().to_string(),
         score,
         direct_caller_ids: Vec::new(),
         impact_zone_ids: Vec::new(),
@@ -614,11 +614,6 @@ impl MacroCallLookupDb {
                 )
                 .map_err(sql_err)?;
             for entry in entries {
-                let direct = serde_json::to_string(&entry.direct_callers).map_err(json_err)?;
-                let impact = serde_json::to_string(&entry.impact_zone).map_err(json_err)?;
-                let direct_ids =
-                    serde_json::to_string(&entry.direct_caller_ids).map_err(json_err)?;
-                let impact_ids = serde_json::to_string(&entry.impact_zone_ids).map_err(json_err)?;
                 let direct_bin = encode_blob(&entry.direct_callers)?;
                 let impact_bin = encode_blob(&entry.impact_zone)?;
                 let direct_ids_bin = encode_blob(&entry.direct_caller_ids)?;
@@ -629,10 +624,10 @@ impl MacroCallLookupDb {
                     entry.class_name,
                     entry.file_path,
                     entry.score,
-                    direct,
-                    impact,
-                    direct_ids,
-                    impact_ids,
+                    "[]",
+                    "[]",
+                    "[]",
+                    "[]",
                     entry.language,
                     entry.signature,
                     entry.canonical_fqn,
@@ -665,10 +660,6 @@ impl MacroCallLookupDb {
                 )
                 .map_err(sql_err)?;
             for row in rows {
-                let direct = serde_json::to_string(&row.direct_callers).map_err(json_err)?;
-                let impact = serde_json::to_string(&row.impact_zone).map_err(json_err)?;
-                let direct_ids = serde_json::to_string(&row.direct_caller_ids).map_err(json_err)?;
-                let impact_ids = serde_json::to_string(&row.impact_zone_ids).map_err(json_err)?;
                 let direct_bin = encode_blob(&row.direct_callers)?;
                 let impact_bin = encode_blob(&row.impact_zone)?;
                 let direct_ids_bin = encode_blob(&row.direct_caller_ids)?;
@@ -677,10 +668,10 @@ impl MacroCallLookupDb {
                     row.symbol_name,
                     row.node_id.to_string(),
                     row.score,
-                    direct,
-                    impact,
-                    direct_ids,
-                    impact_ids,
+                    "[]",
+                    "[]",
+                    "[]",
+                    "[]",
                     direct_bin,
                     impact_bin,
                     direct_ids_bin,
@@ -877,7 +868,7 @@ mod tests {
     #[test]
     fn canonical_fqn_java_dot_notation() {
         use rgbuilder_graph::schema::{Node, NodeType};
-        let node = Node::new(NodeType::Function, "process".into())
+        let node = Node::new(NodeType::Function, "process")
             .with_qualified_name("com.example.OrderService.process".into());
         assert_eq!(canonical_fqn_from_node(&node), "OrderService::process");
     }

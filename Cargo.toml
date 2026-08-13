@@ -351,6 +351,10 @@ path = "tests/dashboard_metasfresh.rs"
 name = "discover_perf_baselines"
 path = "tests/discover_perf_baselines.rs"
 
+[[test]]
+name = "cold_profile_gates"
+path = "tests/cold_profile_gates.rs"
+
 [[bench]]
 name = "parsing"
 harness = false

@@ -2,32 +2,74 @@
 
 use super::args::OutputFormat;
 use super::context::CliContext;
+use super::discover_cfg::{
+    preload_file_sources, run_cfg_analysis_batch, CfgAnalysisOptions, FileSourceCache,
+};
 use super::discover_output::build_discover_response;
 use super::stage_profile::{secs, DiscoverStageReport};
+use crate::analysis::graph_utils::PetGraphView;
+use crate::analysis::{
+    build_function_skeleton, cfg_language_id_from_path, cfg_language_list, AnalysisResults,
+    AnalysisStorage, AstSkeletonArchive, BlastEngineSnapshot, BlastRadiusEngine,
+    CentralityAnalyzer, CfgPdgArchive, CommunityDetector, ComplexityAnalyzer, DependencyAnalyzer,
+    MacroCallIndex, MacroCallLookupDb, NodeLookup,
+};
+use crate::config::secret_detector::{DetectedSecret, SecretDetector};
+use crate::discovery::{DiscoveryConfig, FileDiscoverer};
+use crate::incremental::FileTracker;
+use crate::languages::registry::LanguageRegistry;
+use crate::pipeline::{PipelineConfig, PipelineStats, ProcessingPipeline};
 use anyhow::Result;
-use std::path::Path;
-use std::time::Instant;
+use rayon::prelude::*;
+use rgbuilder_core::memory::MemoryMonitor;
+use rgbuilder_graph::schema::NodeType;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tracing::{debug, error, info, info_span, warn};
 
-#[allow(clippy::too_many_arguments)]
+/// Discover analysis flags and output paths (replaces a 16-argument function signature).
+#[derive(Debug, Clone)]
+pub(crate) struct AnalysisOptions<'a> {
+    pub languages: Option<String>,
+    pub exclude: Option<String>,
+    pub with_security: bool,
+    pub with_cfg: bool,
+    pub with_taint: bool,
+    pub with_dfg_loops: bool,
+    pub with_ast_skeleton: bool,
+    pub write_json_graph: bool,
+    pub with_dashboard: bool,
+    pub export_migration_hints: bool,
+    pub with_harmonic: bool,
+    pub migration_preset: &'a str,
+    pub migration_order: &'a str,
+    pub db_path: &'a Path,
+}
+
 pub(crate) fn run_full_analysis(
     ctx: &CliContext,
     path: &str,
-    languages: Option<String>,
-    exclude: Option<String>,
-    with_security: bool,
-    with_cfg: bool,
-    with_taint: bool,
-    with_dfg_loops: bool,
-    with_ast_skeleton: bool,
-    write_json_graph: bool,
-    with_dashboard: bool,
-    export_migration_hints: bool,
-    with_harmonic: bool,
-    migration_preset: &str,
-    migration_order: &str,
-    db_path: &Path,
+    opts: AnalysisOptions<'_>,
 ) -> Result<()> {
+    let AnalysisOptions {
+        languages,
+        exclude,
+        with_security,
+        with_cfg,
+        with_taint,
+        with_dfg_loops,
+        with_ast_skeleton,
+        write_json_graph,
+        with_dashboard,
+        export_migration_hints,
+        with_harmonic,
+        migration_preset,
+        migration_order,
+        db_path,
+    } = opts;
+
     let verbose = ctx.verbose;
     let json_output = ctx.format == OutputFormat::Json;
     let human_output = !json_output;
@@ -37,19 +79,6 @@ pub(crate) fn run_full_analysis(
     let run_cfg_pass = with_cfg || with_taint || with_dfg_loops || with_ast_skeleton;
     profile.cfg_enabled = run_cfg_pass;
     profile.security_enabled = with_security;
-    use crate::analysis::graph_utils::PetGraphView;
-    use crate::analysis::{
-        CentralityAnalyzer, CommunityDetector, ComplexityAnalyzer, DependencyAnalyzer,
-    };
-    use crate::config::secret_detector::SecretDetector;
-    use crate::discovery::{DiscoveryConfig, FileDiscoverer};
-    use crate::incremental::FileTracker;
-    use crate::languages::registry::LanguageRegistry;
-    use crate::pipeline::{PipelineConfig, PipelineStats, ProcessingPipeline};
-    use rayon::prelude::*;
-    use std::path::Path;
-    use std::sync::Arc;
-    use std::time::Duration;
 
     let root = Path::new(path);
     let mut discovery = DiscoveryConfig::default();
@@ -89,7 +118,6 @@ pub(crate) fn run_full_analysis(
     }
 
     // Initialize memory monitoring with periodic peak sampling (#33).
-    use rgbuilder_core::memory::MemoryMonitor;
     let mut mem_monitor = MemoryMonitor::new();
     mem_monitor.start_periodic_sampling(std::time::Duration::from_millis(250));
 
@@ -100,6 +128,7 @@ pub(crate) fn run_full_analysis(
         PipelineConfig {
             discovery,
             show_progress: human_output,
+            materialize_fields: run_cfg_pass,
             ..PipelineConfig::default()
         },
     );
@@ -116,19 +145,17 @@ pub(crate) fn run_full_analysis(
     // Lever 1: write columnar from GraphBuilder Vecs — never build MemoryBackend for discover.
     let index_start = Instant::now();
     let graph_from_snapshot = file_changes.is_empty() && snapshot_path.is_file();
+    let mut cold_reused: Option<crate::analysis::ColdMetadataDb> = None;
     let (index_stats, graph_digest) = if graph_from_snapshot {
         let load_start = Instant::now();
-        let cold_peek = crate::analysis::ColdMetadataDb::open(&snapshot_path)?;
-        let digest = cold_peek
-            .store()
-            .content_digest()?
-            .to_string();
+        let cold = crate::analysis::ColdMetadataDb::open(&snapshot_path)?;
+        let digest = cold.store().content_digest()?.to_string();
         let load_elapsed = load_start.elapsed();
         if verbose {
             debug!(
                 path = %snapshot_path.display(),
-                nodes = cold_peek.node_count(),
-                edges = cold_peek.edge_count(),
+                nodes = cold.node_count(),
+                edges = cold.edge_count(),
                 "No file changes — reusing columnar snapshot (no hydrate)"
             );
         }
@@ -136,12 +163,13 @@ pub(crate) fn run_full_analysis(
             files_discovered: files.len(),
             files_processed: files.len(),
             files_failed: 0,
-            nodes_created: cold_peek.node_count(),
-            edges_created: cold_peek.edge_count(),
+            nodes_created: cold.node_count(),
+            edges_created: cold.edge_count(),
             duration: load_elapsed,
             extract_duration: Duration::default(),
             graph_build_duration: load_elapsed,
         };
+        cold_reused = Some(cold);
         (stats, digest)
     } else {
         std::fs::create_dir_all(rgbuilder_graph::paths::artifact_dir(root))?;
@@ -203,12 +231,12 @@ pub(crate) fn run_full_analysis(
     debug!("{}", mem_monitor.report());
 
     // Cold metadata + CSR from snapshot — no fat CodeGraph through analysis (#33 / Lever 1).
-    let cold = crate::analysis::ColdMetadataDb::open(&snapshot_path)?;
+    let cold = match cold_reused {
+        Some(cold) => cold,
+        None => crate::analysis::ColdMetadataDb::open(&snapshot_path)?,
+    };
 
     // Initialize columnar analysis results
-    use crate::analysis::AnalysisResults;
-    use crate::analysis::NodeLookup;
-    use rgbuilder_graph::schema::NodeType;
     let mut node_ids = cold.store().all_node_ids();
     node_ids.sort_unstable();
     let mut analysis_results = AnalysisResults::new(node_ids);
@@ -216,24 +244,7 @@ pub(crate) fn run_full_analysis(
     // Complexity from cold mmap payloads.
     let complexity_start = Instant::now();
     let complexity_report = ComplexityAnalyzer::analyze_lookup(&cold)?;
-    {
-        let complexity_data: Vec<_> = complexity_report
-            .functions
-            .iter()
-            .filter_map(|func| {
-                analysis_results
-                    .get_compact_id(func.node.id)
-                    .map(|compact_id| (compact_id, func.cyclomatic as u32, func.cognitive as u32))
-            })
-            .collect();
-        let table = analysis_results.init_complexity();
-        table.avg_cyclomatic = complexity_report.avg_cyclomatic;
-        table.max_cyclomatic = complexity_report.max_cyclomatic as u32;
-        for (compact_id, cyclomatic, cognitive) in complexity_data {
-            table.cyclomatic[compact_id as usize] = cyclomatic;
-            table.cognitive[compact_id as usize] = cognitive;
-        }
-    }
+    analysis_results.fill_complexity(&complexity_report);
     profile.complexity.secs = secs(complexity_start.elapsed());
     if verbose {
         debug!("✓ Complexity analysis:");
@@ -293,24 +304,7 @@ pub(crate) fn run_full_analysis(
     // Community detection - write to columnar table
     let community_start = Instant::now();
     let community_result = CommunityDetector::new().detect_with_view(&petgraph_view)?;
-    {
-        let community_data: Vec<_> = community_result
-            .assignments
-            .iter()
-            .filter_map(|(node_id, community_id)| {
-                analysis_results
-                    .get_compact_id(*node_id)
-                    .map(|compact_id| (compact_id, *community_id))
-            })
-            .collect();
-        let table = analysis_results.init_community();
-        table.modularity = community_result.modularity;
-        table.num_communities = community_result.communities.len();
-        table.infrastructure_community_id = community_result.infrastructure_community_id;
-        for (compact_id, community_id) in community_data {
-            table.assignments[compact_id as usize] = community_id;
-        }
-    }
+    analysis_results.fill_community(&community_result);
     profile.community.secs = secs(community_start.elapsed());
     if human_output {
         info!(
@@ -375,7 +369,7 @@ pub(crate) fn run_full_analysis(
             cold.get_node(uuid)
                 .ok()
                 .flatten()
-                .map(|n| (n.name.clone(), n.file_path.clone()))
+                .map(|n| (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())))
         });
     }
 
@@ -403,25 +397,33 @@ pub(crate) fn run_full_analysis(
         if human_output {
             println!("\n✓ Security analysis:");
         }
-        let detector = SecretDetector::new();
-        let mut total_secrets = 0usize;
+        let findings: Vec<(PathBuf, Vec<DetectedSecret>)> = files
+            .par_iter()
+            .take(100)
+            .filter_map(|file| {
+                let content = std::fs::read_to_string(file).ok()?;
+                let secrets = SecretDetector::new().scan(&content);
+                if secrets.is_empty() {
+                    None
+                } else {
+                    Some((file.clone(), secrets))
+                }
+            })
+            .collect();
 
-        for file in files.iter().take(100) {
-            if let Ok(content) = std::fs::read_to_string(file) {
-                let found = detector.scan(&content);
-                total_secrets += found.len();
+        let total_secrets: usize = findings.iter().map(|(_, secrets)| secrets.len()).sum();
 
-                if verbose {
-                    for secret in &found {
-                        println!(
-                            "  [{}] {}:{} - {} ({:?})",
-                            file.display(),
-                            secret.line,
-                            secret.secret_type,
-                            secret.value,
-                            secret.severity
-                        );
-                    }
+        if verbose {
+            for (file, secrets) in &findings {
+                for secret in secrets {
+                    println!(
+                        "  [{}] {}:{} - {} ({:?})",
+                        file.display(),
+                        secret.line,
+                        secret.secret_type,
+                        secret.value,
+                        secret.severity
+                    );
                 }
             }
         }
@@ -439,15 +441,18 @@ pub(crate) fn run_full_analysis(
         if human_output {
             println!("\n✓ Control flow analysis:");
         }
-        use super::discover_cfg::{run_cfg_analysis_batch, CfgAnalysisOptions};
-        use crate::analysis::{cfg_language_list, AnalysisStorage, CfgPdgArchive};
-
         let storage = AnalysisStorage::new(&output_dir);
         storage.ensure_dir()?;
 
         if with_taint && !with_cfg && verbose {
             debug!("--with-taint implies CFG/PDG pass");
         }
+
+        let file_sources: Option<FileSourceCache> = if with_ast_skeleton {
+            Some(preload_file_sources(&functions, root, None))
+        } else {
+            None
+        };
 
         let batch = run_cfg_analysis_batch(
             &functions,
@@ -459,6 +464,7 @@ pub(crate) fn run_full_analysis(
                 enable_taint: with_taint,
                 dfg_loops: with_dfg_loops,
             },
+            file_sources.as_ref(),
         );
         let success_count = batch.success_count;
         let error_count = batch.error_count;
@@ -544,9 +550,9 @@ pub(crate) fn run_full_analysis(
         profile.field_write.secs = secs(fw_start.elapsed());
 
         if with_ast_skeleton {
-            use crate::analysis::{
-                build_function_skeleton, cfg_language_id_from_path, AstSkeletonArchive,
-            };
+            let sources = file_sources
+                .as_ref()
+                .expect("AST skeleton preload runs before CFG batch");
             let mut skel = AstSkeletonArchive {
                 version: crate::analysis::AST_SKELETON_VERSION,
                 graph_digest: Some(graph_digest.clone()),
@@ -559,17 +565,12 @@ pub(crate) fn run_full_analysis(
                 let Some(lang) = cfg_language_id_from_path(Path::new(file)) else {
                     continue;
                 };
-                let path = if Path::new(file).is_file() {
-                    Path::new(file).to_path_buf()
-                } else {
-                    root.join(file)
-                };
-                let Ok(source) = std::fs::read_to_string(&path) else {
+                let Some(source) = sources.get(file) else {
                     continue;
                 };
                 if let Ok(rec) = build_function_skeleton(
                     lang,
-                    &source,
+                    source,
                     &func.name,
                     file,
                     Some(func.id),
@@ -629,8 +630,6 @@ pub(crate) fn run_full_analysis(
     }
 
     // Blast radius analysis with SCC + Dense Bitsets engine
-    use crate::analysis::BlastRadiusEngine;
-
     let blast_start = Instant::now();
 
     // Build SCC engine (one-time cost: Tarjan's + topo sort + bitset propagation)
@@ -701,7 +700,7 @@ pub(crate) fn run_full_analysis(
         if result.score > max_impact_score {
             max_impact_score = result.score;
             if let Ok(Some(node)) = cold.get_node(*func_id) {
-                max_impact_function = node.name.clone();
+                max_impact_function = node.name.to_string();
             }
         }
     }
@@ -715,7 +714,6 @@ pub(crate) fn run_full_analysis(
     // Persist SCC engine snapshot for instant blast-radius cache misses
     let blast_snap_start = Instant::now();
     {
-        use crate::analysis::BlastEngineSnapshot;
         let blast_path = BlastEngineSnapshot::default_path(root);
         if BlastEngineSnapshot::digest_matches(&blast_path, &graph_digest)? {
             if verbose {
@@ -738,8 +736,6 @@ pub(crate) fn run_full_analysis(
     // Serialize minimized macro-call index for instant blast-radius lookups
     let macro_start = Instant::now();
     {
-        use crate::analysis::MacroCallIndex;
-        use crate::analysis::MacroCallLookupDb;
         let macro_path = rgbuilder_graph::paths::artifact_path(root, "macro_call_index.bin");
         let lookup_db_path = MacroCallLookupDb::default_path(root);
 
@@ -884,21 +880,19 @@ pub(crate) fn run_full_analysis(
 
     // Save graph topology (no analysis properties!)
     let save_tracker_start = Instant::now();
-    let mut node_mapping: std::collections::HashMap<String, Vec<uuid::Uuid>> =
-        std::collections::HashMap::new();
+    let mut node_mapping: HashMap<String, Vec<uuid::Uuid>> = HashMap::new();
+    let mut normalized_path_cache: HashMap<String, String> = HashMap::new();
     cold.for_each_node(&mut |node| {
-        let file = if let Some(path) = node.file_path.as_deref() {
-            Some(path.to_string())
-        } else if matches!(node.node_type, NodeType::File) {
-            Some(node.name.clone())
-        } else {
-            None
-        };
-        if let Some(file) = file {
-            node_mapping
-                .entry(crate::incremental::normalize_path_str(&file))
-                .or_default()
-                .push(node.id);
+        let raw_path = node.file_path.as_deref().or_else(|| {
+            if matches!(node.node_type, NodeType::File) {
+                Some(node.name.as_str())
+            } else {
+                None
+            }
+        });
+        if let Some(path) = raw_path {
+            let normalized = normalized_path_cached(&mut normalized_path_cache, path);
+            node_mapping.entry(normalized).or_default().push(node.id);
         }
     })?;
     file_tracker.index_files_with_mapping(&files, node_mapping)?;
@@ -1052,4 +1046,13 @@ pub(crate) fn run_full_analysis(
     }
 
     Ok(())
+}
+
+fn normalized_path_cached(cache: &mut HashMap<String, String>, path: &str) -> String {
+    if let Some(norm) = cache.get(path) {
+        return norm.clone();
+    }
+    let norm = crate::incremental::normalize_path_str(path);
+    cache.insert(path.to_string(), norm.clone());
+    norm
 }

@@ -31,7 +31,11 @@ pub struct ProgramDependenceGraph {
     #[serde(default)]
     line_nodes: HashMap<usize, Vec<PdgNodeId>>,
     #[serde(skip)]
-    seen_data_edges: HashSet<(PdgNodeId, PdgNodeId, String, u8)>,
+    seen_data_edges: HashSet<(PdgNodeId, PdgNodeId, u32, u8)>,
+    #[serde(skip)]
+    var_intern: HashMap<String, u32>,
+    #[serde(skip)]
+    next_var_id: u32,
 }
 
 impl<'de> Deserialize<'de> for ProgramDependenceGraph {
@@ -139,7 +143,19 @@ impl ProgramDependenceGraph {
             data_succ,
             line_nodes,
             seen_data_edges: HashSet::new(),
+            var_intern: HashMap::new(),
+            next_var_id: 0,
         }
+    }
+
+    fn intern_var(&mut self, variable: &str) -> u32 {
+        if let Some(&id) = self.var_intern.get(variable) {
+            return id;
+        }
+        let id = self.next_var_id;
+        self.next_var_id += 1;
+        self.var_intern.insert(variable.to_string(), id);
+        id
     }
 
     /// Build a PDG from a CFG and source bytes for def-use refinement.
@@ -365,7 +381,8 @@ impl ProgramDependenceGraph {
         if from == to {
             return;
         }
-        let key = (from, to, variable.clone(), dep_type as u8);
+        let var_id = self.intern_var(&variable);
+        let key = (from, to, var_id, dep_type as u8);
         if !self.seen_data_edges.insert(key) {
             return;
         }

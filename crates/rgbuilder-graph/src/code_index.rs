@@ -85,7 +85,7 @@ impl CodeIndex {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let json = serde_json::to_string_pretty(&self.hash_to_code)?;
+        let json = serde_json::to_string(&self.hash_to_code)?;
         std::fs::write(path, json)?;
         Ok(())
     }

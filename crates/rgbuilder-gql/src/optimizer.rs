@@ -201,7 +201,7 @@ mod tests {
                 .unwrap();
         }
         backend
-            .insert_node(Node::new(NodeType::Function, "rare".into()))
+            .insert_node(Node::new(NodeType::Function, "rare"))
             .unwrap();
 
         let q1 = parse("MATCH (a:Function) WHERE a.name = 'fn_0' RETURN a").unwrap();

@@ -67,7 +67,7 @@ fn test_execute_multi_hop_calls() {
     let pairs: HashSet<(String, String)> = result
         .rows
         .iter()
-        .map(|row| (row["a"].name.clone(), row["b"].name.clone()))
+        .map(|row| (row["a"].name.to_string(), row["b"].name.to_string()))
         .collect();
 
     assert!(pairs.contains(&("main".into(), "authenticate".into())));

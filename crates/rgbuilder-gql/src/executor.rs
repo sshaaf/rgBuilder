@@ -240,7 +240,7 @@ impl<'a> QueryExecutor<'a> {
                     .uuid_to_index
                     .get(&start_node.id)
                     .copied()
-                    .ok_or_else(|| Error::NodeNotFound(start_node.name.clone()))?;
+                    .ok_or_else(|| Error::NodeNotFound(start_node.name.to_string()))?;
 
                 for end_idx in traverse_edge(view, start_idx, edge) {
                     let end_uuid = view
@@ -340,8 +340,8 @@ fn resolve_property(
     community: Option<&CommunityQueryContext>,
 ) -> Option<String> {
     match key {
-        "name" => Some(node.name.clone()),
-        "qualified_name" => node.qualified_name.clone(),
+        "name" => Some(node.name.to_string()),
+        "qualified_name" => node.qualified_name.as_ref().map(|s| s.to_string()),
         "type" => {
             if is_virtual_community(node) {
                 Some("Community".into())
@@ -350,7 +350,7 @@ fn resolve_property(
             }
         }
         "label" if is_virtual_community(node) => {
-            node.get_property("label").map(String::from).or_else(|| Some(node.name.clone()))
+            node.get_property("label").map(String::from).or_else(|| Some(node.name.to_string()))
         }
         "signature" => node.signature_text().map(str::to_string),
         "return_type" => node.return_type_text().map(str::to_string),

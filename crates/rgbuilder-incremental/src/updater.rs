@@ -292,7 +292,12 @@ impl IncrementalUpdater {
         paths_to_update.dedup();
 
         let extractor = Extractor::new(Arc::clone(&self.registry));
-        let mut builder = GraphBuilder::new();
+        let spill_dir = repo_root.join(".rgbuilder").join("spill_delta");
+        if spill_dir.exists() {
+            std::fs::remove_dir_all(&spill_dir)?;
+        }
+        std::fs::create_dir_all(&spill_dir)?;
+        let mut builder = GraphBuilder::with_spill(&spill_dir)?;
         let (_files_processed, tails) = stream_into_graph(
             self.config.thread_count,
             &extractor,
@@ -304,7 +309,10 @@ impl IncrementalUpdater {
         )?;
         builder.build_resolution_indexes();
         extractor.populate_pass2(&tails, &mut builder)?;
-        let (new_nodes, new_edges) = builder.into_graph();
+        let finished = builder.finish_spill()?;
+        let (new_nodes, new_edges) =
+            rgbuilder_graph::segmented_spill::materialize_sorted_graph(&finished)?;
+        finished.cleanup()?;
         result.nodes_added = new_nodes.len();
         result.edges_added = new_edges.len();
 

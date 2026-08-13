@@ -90,14 +90,14 @@ pub fn gql_response_from_result(result: &QueryResult, explain: bool) -> GqlJsonR
                     let virtual_community = is_virtual_community(node);
                     GqlRowBinding {
                         binding: name.clone(),
-                        node: node.name.clone(),
+                        node: node.name.to_string(),
                         node_type: if virtual_community {
                             "Community".into()
                         } else {
                             format!("{:?}", node.node_type)
                         },
-                        qualified_name: node.qualified_name.clone(),
-                        file: node.file_path.clone(),
+                        qualified_name: node.qualified_name.as_ref().map(|s| s.to_string()),
+                        file: node.file_path.as_ref().map(|s| s.to_string()),
                         community_id: node
                             .get_property("community_id")
                             .and_then(|s| s.parse().ok()),
@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn projected_properties_allowlist() {
-        let mut node = Node::new(NodeType::Function, "lam".into());
+        let mut node = Node::new(NodeType::Function, "lam");
         node.properties.insert("is_lambda".into(), "true".into());
         node.properties.insert("type_params".into(), "<T>".into());
         node.properties
@@ -184,8 +184,8 @@ mod tests {
 
     #[test]
     fn projects_qualified_name_when_present() {
-        let node = Node::new(NodeType::Class, "Context".into())
-            .with_qualified_name("org.openmrs.api.context.Context".into());
+        let node = Node::new(NodeType::Class, "Context")
+            .with_qualified_name("org.openmrs.api.context.Context");
         let mut row = HashMap::new();
         row.insert("n".to_string(), node);
         let response = gql_response_from_result(

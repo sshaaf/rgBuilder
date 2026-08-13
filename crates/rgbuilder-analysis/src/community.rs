@@ -301,7 +301,10 @@ impl CommunityDetector {
             node_community[idx.index()] = label;
         }
 
-        let mut internal_by_community: HashMap<usize, f64> = HashMap::new();
+        let max_label = labels.values().copied().max().unwrap_or(0);
+        let comm_count = max_label + 1;
+        let mut internal_by_community = vec![0.0f64; comm_count];
+        let mut degree_sum_by_community = vec![0.0f64; comm_count];
 
         let _ = view.for_each_edge(|src, dst, ty| {
             if !allowed_types.contains(&ty) {
@@ -313,7 +316,10 @@ impl CommunityDetector {
             degrees[s] += 1.0;
             degrees[t] += 1.0;
             if node_community[s] == node_community[t] {
-                *internal_by_community.entry(node_community[s]).or_default() += 1.0;
+                let c = node_community[s];
+                if c < internal_by_community.len() {
+                    internal_by_community[c] += 1.0;
+                }
             }
         });
 
@@ -321,17 +327,19 @@ impl CommunityDetector {
             return 0.0;
         }
 
-        let mut degree_sum_by_community: HashMap<usize, f64> = HashMap::new();
         for (&idx, &label) in labels {
-            *degree_sum_by_community.entry(label).or_default() += degrees[idx.index()];
+            let i = idx.index();
+            if label < degree_sum_by_community.len() {
+                degree_sum_by_community[label] += degrees[i];
+            }
         }
 
         let mut q = 0.0;
-        for (&community, &degree_sum) in &degree_sum_by_community {
-            let internal = internal_by_community
-                .get(&community)
-                .copied()
-                .unwrap_or(0.0);
+        for (community, &degree_sum) in degree_sum_by_community.iter().enumerate() {
+            if degree_sum == 0.0 {
+                continue;
+            }
+            let internal = internal_by_community.get(community).copied().unwrap_or(0.0);
             let expected = (degree_sum * degree_sum) / (4.0 * m);
             q += (internal / m) - (expected / m);
         }
@@ -563,9 +571,9 @@ fn build_dashboard_community(
             }
 
             if let Some(path) = &node.file_path {
-                file_paths.push(path.clone());
+                file_paths.push(path.to_string());
             }
-            names.push(node.name.clone());
+            names.push(node.name.to_string());
         })?;
     }
 
@@ -706,9 +714,9 @@ mod tests {
     #[test]
     fn test_deterministic_tie_break() {
         let mut backend = MemoryBackend::new();
-        let a = Node::new(NodeType::Function, "a".into());
-        let b = Node::new(NodeType::Function, "b".into());
-        let c = Node::new(NodeType::Function, "c".into());
+        let a = Node::new(NodeType::Function, "a");
+        let b = Node::new(NodeType::Function, "b");
+        let c = Node::new(NodeType::Function, "c");
         let id_a = a.id;
         let id_b = b.id;
         let id_c = c.id;
@@ -748,7 +756,7 @@ mod tests {
             backend.insert_node(a).unwrap();
             backend.insert_node(b).unwrap();
         }
-        let hub = Node::new(NodeType::Function, "shared_db".into());
+        let hub = Node::new(NodeType::Function, "shared_db");
         let id_hub = hub.id;
         backend.insert_node(hub).unwrap();
 

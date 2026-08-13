@@ -7,7 +7,6 @@ use rgbuilder_error::{Error, Result};
 use rgbuilder_plugin_helpers::extract_name_from_node;
 use std::collections::{HashMap, HashSet};
 use tree_sitter::{Node, Tree};
-use uuid::Uuid;
 
 /// Build a CFG for a named function in source text.
 pub fn build_cfg_for_function(
@@ -237,6 +236,10 @@ struct CfgBuilder<'a> {
     switch_case_labels: Vec<HashMap<String, BlockId>>,
     /// Exit blocks for nested local-function / lambda sub-CFGs (not function exits).
     nested_exits: Vec<BlockId>,
+    /// Monotonic block id counter (function-local; avoids `Uuid::new_v4` per block).
+    next_block_serial: u64,
+    /// Pending exception edges to avoid scanning all CFG edges on each statement.
+    pending_exception_edges: HashSet<(BlockId, BlockId)>,
 }
 
 struct BreakableContext {
@@ -273,6 +276,8 @@ impl<'a> CfgBuilder<'a> {
             setjmp_sites: Vec::new(),
             switch_case_labels: Vec::new(),
             nested_exits: Vec::new(),
+            next_block_serial: 1,
+            pending_exception_edges: HashSet::new(),
         }
     }
 
@@ -299,7 +304,8 @@ impl<'a> CfgBuilder<'a> {
     }
 
     fn new_block(&mut self) -> BlockId {
-        let id = Uuid::new_v4();
+        let id = BlockId::from_u128(self.next_block_serial as u128);
+        self.next_block_serial += 1;
         self.cfg.add_block(BasicBlock {
             id,
             statements: Vec::new(),
@@ -351,10 +357,7 @@ impl<'a> CfgBuilder<'a> {
         };
         let handlers = handlers.clone();
         for h in handlers {
-            let already = self.cfg.edges.iter().any(|e| {
-                e.from == from && e.to == h && e.edge_type == CfgEdgeType::Exception
-            });
-            if !already {
+            if self.pending_exception_edges.insert((from, h)) {
                 self.cfg.add_edge(from, h, CfgEdgeType::Exception);
             }
         }

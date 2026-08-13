@@ -2,11 +2,161 @@
 //!
 //! Defines the schema for the code knowledge graph including node and edge types.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::structural_sketch::TokenBloom;
+
+mod serde_arc_str {
+    use super::*;
+
+    pub fn serialize<S>(value: &SharedStr, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(value.as_str())
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<SharedStr, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(SharedStr::from(s))
+    }
+}
+
+mod serde_arc_str_option {
+    use super::*;
+
+    pub fn serialize<S>(value: &Option<SharedStr>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match value {
+            Some(v) => serializer.serialize_some(v.as_str()),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<SharedStr>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let opt = Option::<String>::deserialize(deserializer)?;
+        Ok(opt.map(SharedStr::from))
+    }
+}
+
+/// Interned graph string stored as a shared handle.
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct SharedStr(Arc<str>);
+
+impl SharedStr {
+    /// Borrow the UTF-8 contents.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Default for SharedStr {
+    fn default() -> Self {
+        Self::from("")
+    }
+}
+
+impl std::ops::Deref for SharedStr {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::borrow::Borrow<str> for SharedStr {
+    fn borrow(&self) -> &str {
+        &self.0
+    }
+}
+
+impl AsRef<str> for SharedStr {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl AsRef<std::path::Path> for SharedStr {
+    fn as_ref(&self) -> &std::path::Path {
+        std::path::Path::new(self.as_str())
+    }
+}
+
+impl AsRef<std::ffi::OsStr> for SharedStr {
+    fn as_ref(&self) -> &std::ffi::OsStr {
+        std::ffi::OsStr::new(self.as_str())
+    }
+}
+
+impl From<String> for SharedStr {
+    fn from(value: String) -> Self {
+        Self(Arc::from(value))
+    }
+}
+
+impl From<&str> for SharedStr {
+    fn from(value: &str) -> Self {
+        Self(Arc::from(value))
+    }
+}
+
+impl From<Arc<str>> for SharedStr {
+    fn from(value: Arc<str>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<SharedStr> for String {
+    fn from(value: SharedStr) -> Self {
+        value.0.to_string()
+    }
+}
+
+impl From<SharedStr> for Arc<str> {
+    fn from(value: SharedStr) -> Self {
+        value.0
+    }
+}
+
+impl std::fmt::Display for SharedStr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl PartialEq<&str> for SharedStr {
+    fn eq(&self, other: &&str) -> bool {
+        self.0.as_ref() == *other
+    }
+}
+
+impl PartialEq<str> for SharedStr {
+    fn eq(&self, other: &str) -> bool {
+        self.0.as_ref() == other
+    }
+}
+
+impl PartialEq<String> for SharedStr {
+    fn eq(&self, other: &String) -> bool {
+        self.0.as_ref() == other.as_str()
+    }
+}
+
+/// Wrap a string slice in a shared handle for hot node fields.
+pub fn arc_str(value: impl AsRef<str>) -> SharedStr {
+    SharedStr::from(value.as_ref())
+}
 
 /// Current graph schema version (Phase 12.0 enrichment).
 pub const GRAPH_SCHEMA_VERSION: u32 = 2;
@@ -208,33 +358,36 @@ pub struct Node {
     pub node_type: NodeType,
 
     /// Node name/identifier
-    pub name: String,
+    #[serde(with = "serde_arc_str")]
+    pub name: SharedStr,
 
     /// Fully qualified name
-    pub qualified_name: Option<String>,
+    #[serde(with = "serde_arc_str_option", default)]
+    pub qualified_name: Option<SharedStr>,
 
     /// Full function/method signature (Phase 12.0)
-    #[serde(default)]
-    pub signature: Option<String>,
+    #[serde(with = "serde_arc_str_option", default)]
+    pub signature: Option<SharedStr>,
 
     /// Return type if known (Phase 12.0)
-    #[serde(default)]
-    pub return_type: Option<String>,
+    #[serde(with = "serde_arc_str_option", default)]
+    pub return_type: Option<SharedStr>,
 
     /// Structured parameters (Phase 12.0)
     #[serde(default)]
     pub parameters: Vec<GraphParameter>,
 
     /// BLAKE3 hash of symbol body for change detection (Phase 12.0)
-    #[serde(default)]
-    pub code_hash: Option<String>,
+    #[serde(with = "serde_arc_str_option", default)]
+    pub code_hash: Option<SharedStr>,
 
     /// 256-bit token bloom sketch (eager structural index at extract time).
     #[serde(default)]
     pub token_bloom: Option<TokenBloom>,
 
     /// Source file path
-    pub file_path: Option<String>,
+    #[serde(with = "serde_arc_str_option", default)]
+    pub file_path: Option<SharedStr>,
 
     /// Start line in source file
     pub start_line: Option<usize>,
@@ -251,11 +404,11 @@ pub struct Node {
 
 impl Node {
     /// Create a new node
-    pub fn new(node_type: NodeType, name: String) -> Self {
+    pub fn new(node_type: NodeType, name: impl Into<SharedStr>) -> Self {
         Self {
             id: Uuid::new_v4(),
             node_type,
-            name,
+            name: name.into(),
             qualified_name: None,
             signature: None,
             return_type: None,
@@ -271,14 +424,14 @@ impl Node {
     }
 
     /// Set the qualified name
-    pub fn with_qualified_name(mut self, qualified_name: String) -> Self {
-        self.qualified_name = Some(qualified_name);
+    pub fn with_qualified_name(mut self, qualified_name: impl Into<SharedStr>) -> Self {
+        self.qualified_name = Some(qualified_name.into());
         self
     }
 
     /// Set the file path
-    pub fn with_file_path(mut self, file_path: String) -> Self {
-        self.file_path = Some(file_path);
+    pub fn with_file_path(mut self, file_path: impl Into<SharedStr>) -> Self {
+        self.file_path = Some(file_path.into());
         self
     }
 
@@ -290,13 +443,13 @@ impl Node {
     }
 
     /// Set the function signature.
-    pub fn with_signature(mut self, signature: impl Into<String>) -> Self {
+    pub fn with_signature(mut self, signature: impl Into<SharedStr>) -> Self {
         self.signature = Some(signature.into());
         self
     }
 
     /// Set the return type.
-    pub fn with_return_type(mut self, return_type: impl Into<String>) -> Self {
+    pub fn with_return_type(mut self, return_type: impl Into<SharedStr>) -> Self {
         self.return_type = Some(return_type.into());
         self
     }
@@ -308,7 +461,7 @@ impl Node {
     }
 
     /// Set the code body hash for change detection.
-    pub fn with_code_hash(mut self, code_hash: impl Into<String>) -> Self {
+    pub fn with_code_hash(mut self, code_hash: impl Into<SharedStr>) -> Self {
         self.code_hash = Some(code_hash.into());
         self
     }
@@ -444,7 +597,7 @@ mod tests {
     #[test]
     fn test_create_node() {
         let node = Node::new(NodeType::Function, "test_function".to_string());
-        assert_eq!(node.name, "test_function");
+        assert_eq!(node.name.as_str(), "test_function");
         assert_eq!(node.node_type, NodeType::Function);
         assert!(node.qualified_name.is_none());
     }
@@ -486,9 +639,9 @@ mod tests {
             .with_property("visibility".to_string(), "public".to_string())
             .with_label("critical".to_string());
 
-        assert_eq!(node.name, "add");
-        assert_eq!(node.qualified_name, Some("math::add".to_string()));
-        assert_eq!(node.file_path, Some("src/math.rs".to_string()));
+        assert_eq!(node.name.as_str(), "add");
+        assert_eq!(node.qualified_name.as_deref(), Some("math::add"));
+        assert_eq!(node.file_path.as_deref(), Some("src/math.rs"));
         assert_eq!(node.start_line, Some(10));
         assert_eq!(node.end_line, Some(15));
         assert_eq!(node.get_property("visibility"), Some("public"));

@@ -36,6 +36,7 @@ use crate::BUILD_INFO;
 use args::{ExportFormat, InspectLayer, PdgEdgeLayer, SliceDirection, SliceView};
 use clap::{Parser, Subcommand};
 use context::CliContext;
+use std::time::{Duration, Instant};
 
 #[derive(Parser)]
 #[command(name = "rg-build")]
@@ -506,10 +507,18 @@ pub enum CpgCommands {
 
 impl Cli {
     pub fn run(self) -> anyhow::Result<()> {
+        let wall_start = Instant::now();
+        let command_label = command_label_for(&self.command);
+        let long_running = matches!(self.command, Commands::Serve { .. });
+
         let verbose = matches!(self.command, Commands::Discover { verbose: true, .. });
         let discover_json = matches!(self.command, Commands::Discover { .. })
             && self.format.as_ref() == Some(&OutputFormat::Json);
         init_logging(verbose, discover_json);
+
+        if !long_running {
+            eprintln!("[>] rg-build {command_label}");
+        }
 
         let ctx = CliContext::new(
             self.repo,
@@ -519,7 +528,7 @@ impl Cli {
             verbose,
         );
 
-        match self.command {
+        let result = match self.command {
             Commands::Discover {
                 path,
                 languages,
@@ -805,7 +814,63 @@ impl Cli {
                     )
                 }
             }
+        };
+
+        if !long_running {
+            log_command_wall_time(command_label, wall_start.elapsed(), result.is_ok());
         }
+
+        result
+    }
+}
+
+fn command_label_for(command: &Commands) -> &'static str {
+    match command {
+        Commands::Discover { .. } => "discover",
+        Commands::Gql { .. } => "gql",
+        Commands::Slice { .. } => "slice",
+        Commands::BlastRadius { .. } => "blast-radius",
+        Commands::Inspect { .. } => "inspect",
+        Commands::Metrics { .. } => "metrics",
+        Commands::Semantic { action } => match action {
+            SemanticCommands::Index { .. } => "semantic index",
+            SemanticCommands::Query { .. } => "semantic query",
+        },
+        Commands::Communities { action } => match action {
+            CommunitiesCommands::List => "communities list",
+            CommunitiesCommands::Label { .. } => "communities label",
+        },
+        Commands::Cpg { action } => match action {
+            CpgCommands::Status => "cpg status",
+            CpgCommands::Function { .. } => "cpg function",
+            CpgCommands::Calls { .. } => "cpg calls",
+            CpgCommands::Mutations { .. } => "cpg mutations",
+            CpgCommands::Flows { .. } => "cpg flows",
+            CpgCommands::Ast { .. } => "cpg ast",
+            CpgCommands::Export { .. } => "cpg export",
+            CpgCommands::Pdg { .. } => "cpg pdg",
+            CpgCommands::Slice { .. } => "cpg slice",
+        },
+        Commands::Check { .. } => "check",
+        Commands::Export { .. } => "export",
+        Commands::Serve { .. } => "serve",
+    }
+}
+
+fn log_command_wall_time(command: &str, elapsed: Duration, ok: bool) {
+    let mark = if ok { "✓" } else { "✗" };
+    let duration = format_elapsed(elapsed);
+    eprintln!("[{mark}] rg-build {command} finished in {duration}");
+}
+
+fn format_elapsed(elapsed: Duration) -> String {
+    let secs = elapsed.as_secs_f64();
+    if secs < 1.0 {
+        format!("{:.0}ms", secs * 1000.0)
+    } else if secs < 10.0 {
+        format!("{:.2}s", secs)
+    } else {
+        format!("{:.1}s", secs)
     }
 }
 

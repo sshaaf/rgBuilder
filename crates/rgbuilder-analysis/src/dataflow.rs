@@ -5,6 +5,7 @@
 
 use crate::cfg::{BasicBlock, BlockId, ControlFlowGraph};
 use crate::pdg::ProgramDependenceGraph;
+use bit_set::BitSet;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 /// Result of reaching-definitions analysis.
@@ -29,47 +30,67 @@ pub struct Definition {
     pub pdg_node: uuid::Uuid,
 }
 
+struct DefCatalog {
+    defs: Vec<Definition>,
+    by_var: HashMap<String, Vec<usize>>,
+}
+
+impl DefCatalog {
+    fn push(&mut self, def: Definition) -> usize {
+        let idx = self.defs.len();
+        self.by_var
+            .entry(def.variable.clone())
+            .or_default()
+            .push(idx);
+        self.defs.push(def);
+        idx
+    }
+}
+
 /// Compute reaching definitions for all blocks in `cfg`.
 pub fn compute_reaching_definitions(
     cfg: &ControlFlowGraph,
     pdg: &ProgramDependenceGraph,
 ) -> ReachingDefs {
-    let mut gen_sets = HashMap::with_capacity(cfg.blocks.len());
-    let mut kill_sets = HashMap::with_capacity(cfg.blocks.len());
-    let mut in_set = HashMap::with_capacity(cfg.blocks.len());
-    let mut out_set = HashMap::with_capacity(cfg.blocks.len());
-
-    let mut global_defs_by_var: HashMap<String, Vec<Definition>> = HashMap::new();
-    let mut block_local_defs = HashMap::with_capacity(cfg.blocks.len());
+    let mut catalog = DefCatalog {
+        defs: Vec::new(),
+        by_var: HashMap::new(),
+    };
+    let mut block_local_defs: HashMap<BlockId, Vec<usize>> =
+        HashMap::with_capacity(cfg.blocks.len());
 
     for (&block_id, block) in &cfg.blocks {
-        let defs = collect_block_definitions(block, pdg);
-        for def in &defs {
-            global_defs_by_var
-                .entry(def.variable.clone())
-                .or_default()
-                .push(def.clone());
+        let mut local = Vec::new();
+        for def in collect_block_definitions(block, pdg) {
+            let idx = catalog.push(def);
+            local.push(idx);
         }
-        block_local_defs.insert(block_id, defs);
+        block_local_defs.insert(block_id, local);
     }
+
+    let mut gen_sets: HashMap<BlockId, BitSet> = HashMap::with_capacity(cfg.blocks.len());
+    let mut kill_sets: HashMap<BlockId, BitSet> = HashMap::with_capacity(cfg.blocks.len());
+    let mut in_set_bits: HashMap<BlockId, BitSet> = HashMap::with_capacity(cfg.blocks.len());
+    let mut out_set_bits: HashMap<BlockId, BitSet> = HashMap::with_capacity(cfg.blocks.len());
 
     for &block_id in cfg.blocks.keys() {
         let local_defs = &block_local_defs[&block_id];
 
-        let mut gen_b = HashSet::new();
-        let mut defined_in_block = HashSet::new();
-        for def in local_defs.iter().rev() {
-            if defined_in_block.insert(def.variable.clone()) {
-                gen_b.insert(def.clone());
+        let mut gen_b = BitSet::new();
+        let mut defined_vars = HashSet::new();
+        for &def_idx in local_defs.iter().rev() {
+            let var = &catalog.defs[def_idx].variable;
+            if defined_vars.insert(var.clone()) {
+                gen_b.insert(def_idx);
             }
         }
 
-        let mut kill_b = HashSet::new();
-        for var in &defined_in_block {
-            if let Some(all_defs_of_var) = global_defs_by_var.get(var) {
-                for def in all_defs_of_var {
-                    if !gen_b.contains(def) {
-                        kill_b.insert(def.clone());
+        let mut kill_b = BitSet::new();
+        for var in &defined_vars {
+            if let Some(all_defs_of_var) = catalog.by_var.get(var) {
+                for &def_idx in all_defs_of_var {
+                    if !gen_b.contains(def_idx) {
+                        kill_b.insert(def_idx);
                     }
                 }
             }
@@ -77,8 +98,8 @@ pub fn compute_reaching_definitions(
 
         gen_sets.insert(block_id, gen_b);
         kill_sets.insert(block_id, kill_b);
-        in_set.insert(block_id, HashSet::new());
-        out_set.insert(block_id, HashSet::new());
+        in_set_bits.insert(block_id, BitSet::new());
+        out_set_bits.insert(block_id, BitSet::new());
     }
 
     let mut worklist: VecDeque<BlockId> = cfg.blocks.keys().copied().collect();
@@ -87,34 +108,50 @@ pub fn compute_reaching_definitions(
     while let Some(block_id) = worklist.pop_front() {
         on_worklist.remove(&block_id);
 
-        let mut in_b = HashSet::new();
+        let mut in_b = BitSet::new();
         for &pred in cfg.predecessors(block_id) {
-            if let Some(pred_out) = out_set.get(&pred) {
-                in_b.extend(pred_out.iter().cloned());
+            if let Some(pred_out) = out_set_bits.get(&pred) {
+                in_b.union_with(pred_out);
             }
         }
 
         let gen_b = &gen_sets[&block_id];
         let kill_b = &kill_sets[&block_id];
 
-        let out_b: HashSet<Definition> = gen_b
-            .iter()
-            .cloned()
-            .chain(in_b.iter().filter(|def| !kill_b.contains(def)).cloned())
-            .collect();
+        let mut out_b = gen_b.clone();
+        for def_idx in in_b.iter() {
+            if !kill_b.contains(def_idx) {
+                out_b.insert(def_idx);
+            }
+        }
 
-        if out_set.get(&block_id) != Some(&out_b) {
-            out_set.insert(block_id, out_b);
-            in_set.insert(block_id, in_b);
+        if out_set_bits.get(&block_id) != Some(&out_b) {
+            out_set_bits.insert(block_id, out_b);
+            in_set_bits.insert(block_id, in_b);
             for &succ in cfg.successors(block_id) {
                 if on_worklist.insert(succ) {
                     worklist.push_back(succ);
                 }
             }
         } else {
-            in_set.insert(block_id, in_b);
+            in_set_bits.insert(block_id, in_b);
         }
     }
+
+    let bitset_to_hashset = |bits: &BitSet| -> HashSet<Definition> {
+        bits.iter()
+            .map(|idx| catalog.defs[idx].clone())
+            .collect()
+    };
+
+    let in_set = in_set_bits
+        .into_iter()
+        .map(|(block, bits)| (block, bitset_to_hashset(&bits)))
+        .collect();
+    let out_set = out_set_bits
+        .into_iter()
+        .map(|(block, bits)| (block, bitset_to_hashset(&bits)))
+        .collect();
 
     ReachingDefs { in_set, out_set }
 }

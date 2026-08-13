@@ -89,7 +89,7 @@ fn bench_analyze_with_policy(c: &mut Criterion) {
     let star = {
         let mut graph = CodeGraph::new();
         let backend = graph.backend_mut();
-        let hub = Node::new(NodeType::Function, "hub".into());
+        let hub = Node::new(NodeType::Function, "hub");
         let hub_id = hub.id;
         backend.insert_node(hub).unwrap();
         for i in 0..1_000 {

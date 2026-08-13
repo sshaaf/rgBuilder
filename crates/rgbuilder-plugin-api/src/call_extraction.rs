@@ -15,11 +15,16 @@ pub const JS_CALL_KINDS: &[&str] = &["call_expression"];
 pub const TS_CALL_KINDS: &[&str] = &["call_expression"];
 
 /// Find the innermost function symbol containing `node`.
-pub fn containing_function<'a>(node: Node, symbols: &'a [Symbol]) -> Option<&'a Symbol> {
+///
+/// `function_symbols` SHOULD already be filtered to [`SymbolType::Function`].
+pub fn containing_function<'a>(
+    node: Node,
+    function_symbols: &[&'a Symbol],
+) -> Option<&'a Symbol> {
     let line = node.start_position().row + 1;
-    symbols
+    function_symbols
         .iter()
-        .filter(|s| s.symbol_type == SymbolType::Function)
+        .copied()
         .filter(|s| line >= s.location.start_line && line <= s.location.end_line)
         .min_by_key(|s| s.location.end_line - s.location.start_line)
 }
@@ -82,6 +87,7 @@ pub fn push_call_relation(
     source: &[u8],
     file_path: &Path,
     symbols: &[Symbol],
+    function_symbols: &[&Symbol],
     call_kinds: &[&str],
     language: &str,
     relations: &mut Vec<Relation>,
@@ -104,7 +110,7 @@ pub fn push_call_relation(
         return;
     }
 
-    let Some(from_fn) = containing_function(node, symbols) else {
+    let Some(from_fn) = containing_function(node, function_symbols) else {
         return;
     };
 
@@ -306,6 +312,10 @@ pub fn walk_calls(
     relations: &mut Vec<Relation>,
 ) {
     const MAX_DEPTH: usize = 2048;
+    let function_symbols: Vec<&Symbol> = symbols
+        .iter()
+        .filter(|s| s.symbol_type == SymbolType::Function)
+        .collect();
     let mut stack = vec![(root, 0usize)];
 
     while let Some((node, depth)) = stack.pop() {
@@ -319,13 +329,21 @@ pub fn walk_calls(
         }
 
         push_call_relation(
-            node, source, file_path, symbols, call_kinds, language, relations,
+            node,
+            source,
+            file_path,
+            symbols,
+            &function_symbols,
+            call_kinds,
+            language,
+            relations,
         );
 
-        let mut cursor = node.walk();
-        let children: Vec<Node> = node.children(&mut cursor).collect();
-        for child in children.into_iter().rev() {
-            stack.push((child, depth + 1));
+        let child_count = node.child_count();
+        for i in (0..child_count).rev() {
+            if let Some(child) = node.child(i) {
+                stack.push((child, depth + 1));
+            }
         }
     }
 }

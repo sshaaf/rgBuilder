@@ -230,9 +230,9 @@ fn call_edges(backend: &MemoryBackend, node_id: Uuid) -> Result<Vec<(String, Uui
 fn node_to_expanded(node: &Node, relation: String, anchor: Option<Uuid>) -> SemanticExpandedNode {
     SemanticExpandedNode {
         node_id: node.id.to_string(),
-        name: node.name.clone(),
-        qualified_name: node.qualified_name.clone(),
-        file_path: node.file_path.clone(),
+        name: node.name.to_string(),
+        qualified_name: node.qualified_name.as_ref().map(|s| s.to_string()),
+        file_path: node.file_path.as_ref().map(|s| s.to_string()),
         relation,
         anchor_node_id: anchor.map(|id| id.to_string()),
     }
@@ -267,9 +267,9 @@ mod tests {
     #[test]
     fn expand_call_neighbors_finds_callees_and_callers() {
         let mut backend = MemoryBackend::new();
-        let anchor = Node::new(NodeType::Function, "anchor".into());
-        let callee = Node::new(NodeType::Function, "callee".into());
-        let caller = Node::new(NodeType::Function, "caller".into());
+        let anchor = Node::new(NodeType::Function, "anchor");
+        let callee = Node::new(NodeType::Function, "callee");
+        let caller = Node::new(NodeType::Function, "caller");
         let anchor_id = anchor.id;
         let callee_id = callee.id;
         let caller_id = caller.id;

@@ -128,7 +128,7 @@ mod tests {
         std::fs::create_dir_all(abs.parent().unwrap()).unwrap();
         std::fs::write(&abs, "fn process_sk_buff() {\n    ntohs(value);\n}\n").unwrap();
 
-        let node = Node::new(NodeType::Function, "process_sk_buff".into())
+        let node = Node::new(NodeType::Function, "process_sk_buff")
             .with_file_path(rel.into())
             .with_location(1, 2);
 

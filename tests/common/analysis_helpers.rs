@@ -98,8 +98,8 @@ pub fn has_type(types: &[VariableType], var: &str, expected: InferredType) -> bo
 /// Two-function backend (main -> helper).
 pub fn sample_backend() -> MemoryBackend {
     let mut backend = MemoryBackend::new();
-    let main = Node::new(NodeType::Function, "main".into()).with_file_path("app.rs".into());
-    let helper = Node::new(NodeType::Function, "helper".into()).with_file_path("app.rs".into());
+    let main = Node::new(NodeType::Function, "main").with_file_path("app.rs");
+    let helper = Node::new(NodeType::Function, "helper").with_file_path("app.rs");
     let id_main = main.id;
     let id_helper = helper.id;
     backend.insert_node(main).unwrap();
@@ -117,7 +117,7 @@ pub fn build_sample_backend_with_chain(depth: usize) -> (MemoryBackend, HashMap<
     let mut ids = Vec::with_capacity(depth);
     for i in 0..depth {
         let name = format!("f{i}");
-        let node = Node::new(NodeType::Function, name.clone()).with_file_path("app.rs".into());
+        let node = Node::new(NodeType::Function, name.clone()).with_file_path("app.rs");
         ids.push(node.id);
         backend.insert_node(node).unwrap();
     }
@@ -149,9 +149,9 @@ pub fn build_sample_backend_with_chain(depth: usize) -> (MemoryBackend, HashMap<
 /// Backend with GraphParameter metadata on the leaf function.
 pub fn build_backend_with_parameters() -> (MemoryBackend, HashMap<String, String>) {
     let mut backend = MemoryBackend::new();
-    let main = Node::new(NodeType::Function, "main".into()).with_file_path("chain.rs".into());
-    let process = Node::new(NodeType::Function, "process".into())
-        .with_file_path("chain.rs".into())
+    let main = Node::new(NodeType::Function, "main").with_file_path("chain.rs");
+    let process = Node::new(NodeType::Function, "process")
+        .with_file_path("chain.rs")
         .with_parameters(vec![
             GraphParameter {
                 name: "input".into(),
@@ -199,7 +199,7 @@ pub fn large_graph(n: usize) -> MemoryBackend {
             .unwrap();
     }
     backend
-        .insert_node(Node::new(NodeType::Function, "rare_target".into()))
+        .insert_node(Node::new(NodeType::Function, "rare_target"))
         .unwrap();
     backend
 }

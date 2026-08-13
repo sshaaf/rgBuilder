@@ -54,10 +54,10 @@ ip_test!(topological_order_chain, {
 
 ip_test!(topological_order_diamond, {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
-    let a = Node::new(NodeType::Function, "a".into());
-    let b = Node::new(NodeType::Function, "b".into());
-    let c = Node::new(NodeType::Function, "c".into());
-    let d = Node::new(NodeType::Function, "d".into());
+    let a = Node::new(NodeType::Function, "a");
+    let b = Node::new(NodeType::Function, "b");
+    let c = Node::new(NodeType::Function, "c");
+    let d = Node::new(NodeType::Function, "d");
     let id_a = a.id;
     let id_b = b.id;
     let id_c = c.id;
@@ -87,7 +87,7 @@ ip_test!(topological_order_diamond, {
 
 ip_test!(recursive_self_loop_detected, {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
-    let f = Node::new(NodeType::Function, "fact".into());
+    let f = Node::new(NodeType::Function, "fact");
     let id = f.id;
     backend.insert_node(f).unwrap();
     backend
@@ -100,8 +100,8 @@ ip_test!(recursive_self_loop_detected, {
 
 ip_test!(recursive_mutual_pair, {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
-    let a = Node::new(NodeType::Function, "a".into());
-    let b = Node::new(NodeType::Function, "b".into());
+    let a = Node::new(NodeType::Function, "a");
+    let b = Node::new(NodeType::Function, "b");
     let id_a = a.id;
     let id_b = b.id;
     backend.insert_node(a).unwrap();
@@ -229,7 +229,7 @@ ip_test!(parameters_from_graph_parameter, {
 });
 
 ip_test!(graph_parameter_stored_on_node, {
-    let node = Node::new(NodeType::Function, "foo".into()).with_parameters(vec![GraphParameter {
+    let node = Node::new(NodeType::Function, "foo").with_parameters(vec![GraphParameter {
         name: "x".into(),
         param_type: Some("i32".into()),
         default_value: None,
@@ -315,9 +315,9 @@ ip_test!(test_multi_argument_index_isolation, {
     };
 
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
-    let main = Node::new(NodeType::Function, "main".into()).with_file_path("vars.rs".into());
-    let foo = Node::new(NodeType::Function, "foo".into())
-        .with_file_path("vars.rs".into())
+    let main = Node::new(NodeType::Function, "main").with_file_path("vars.rs");
+    let foo = Node::new(NodeType::Function, "foo")
+        .with_file_path("vars.rs")
         .with_parameters(vec![
             GraphParameter {
                 name: "x".into(),

@@ -105,8 +105,8 @@ fn changed_function_symbols(
                         continue;
                     }
                     if let Some(ref fp) = node.file_path {
-                        if paths.iter().any(|p| fp.ends_with(p) || p.ends_with(fp)) {
-                            symbols.push(node.name.clone());
+                        if paths.iter().any(|p| fp.ends_with(p) || p.ends_with(fp.as_str())) {
+                            symbols.push(node.name.to_string());
                         }
                     }
                 }
@@ -120,6 +120,6 @@ fn changed_function_symbols(
     Ok(backend
         .collect_nodes_by_type(NodeType::Function)?
         .into_iter()
-        .map(|n| n.name)
+        .map(|n| n.name.to_string())
         .collect())
 }

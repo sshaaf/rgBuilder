@@ -80,9 +80,9 @@ fn fixture_interprocedural_handoff_trace() {
     use rgbuilder::analysis::{resolve_handoff_seeds, BlastRadiusEngine, InterproceduralCFG};
 
     let mut backend = MemoryBackend::new();
-    let main = Node::new(NodeType::Function, "main".into()).with_file_path("chain.rs".into());
-    let process = Node::new(NodeType::Function, "process".into())
-        .with_file_path("chain.rs".into())
+    let main = Node::new(NodeType::Function, "main").with_file_path("chain.rs");
+    let process = Node::new(NodeType::Function, "process")
+        .with_file_path("chain.rs")
         .with_parameters(vec![GraphParameter {
             name: "input".into(),
             param_type: Some("String".into()),

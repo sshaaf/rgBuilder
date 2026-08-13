@@ -168,9 +168,10 @@ fn symbol_context_from_node(node: &Node) -> SymbolContext {
         id: node.id,
         fqn: node
             .qualified_name
-            .clone()
-            .unwrap_or_else(|| node.name.clone()),
-        file_path: node.file_path.clone().unwrap_or_default(),
+            .as_ref()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| node.name.to_string()),
+        file_path: node.file_path.clone().unwrap_or_default().to_string(),
     }
 }
 
@@ -248,7 +249,8 @@ pub fn build_from_engine_result(
     let file_path = target_node
         .as_ref()
         .and_then(|n| n.file_path.clone())
-        .unwrap_or_default();
+        .unwrap_or_default()
+        .to_string();
     BlastRadiusResponse {
         schema_version: BLAST_RADIUS_SCHEMA_VERSION,
         target: build_target(

@@ -6,8 +6,8 @@ use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
 
 fn sample_backend() -> rgbuilder::graph::backend::MemoryBackend {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
-    let func = Node::new(NodeType::Function, "authenticate".into());
-    let cls = Node::new(NodeType::Class, "AuthService".into());
+    let func = Node::new(NodeType::Function, "authenticate");
+    let cls = Node::new(NodeType::Class, "AuthService");
     let id_f = func.id;
     let id_c = cls.id;
     backend.insert_node(func).unwrap();
@@ -54,8 +54,8 @@ fn test_mermaid_class_diagram() {
 #[test]
 fn test_mermaid_call_graph_filters_calls() {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
-    let a = Node::new(NodeType::Function, "a".into());
-    let b = Node::new(NodeType::Function, "b".into());
+    let a = Node::new(NodeType::Function, "a");
+    let b = Node::new(NodeType::Function, "b");
     let id_a = a.id;
     let id_b = b.id;
     backend.insert_node(a).unwrap();
@@ -104,7 +104,7 @@ fn test_mermaid_empty_query_errors() {
 fn test_mermaid_escapes_quotes() {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
     backend
-        .insert_node(Node::new(NodeType::Function, r#"say "hi""#.into()))
+        .insert_node(Node::new(NodeType::Function, r#"say "hi""#))
         .unwrap();
     let out = generate_mermaid(&backend, "all", MermaidOptions::default()).unwrap();
     assert!(out.contains("\\\""));
@@ -113,9 +113,9 @@ fn test_mermaid_escapes_quotes() {
 #[test]
 fn test_mermaid_max_depth_expansion() {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
-    let a = Node::new(NodeType::Function, "a".into());
-    let b = Node::new(NodeType::Function, "b".into());
-    let c = Node::new(NodeType::Function, "c".into());
+    let a = Node::new(NodeType::Function, "a");
+    let b = Node::new(NodeType::Function, "b");
+    let c = Node::new(NodeType::Function, "c");
     let id_a = a.id;
     let id_b = b.id;
     let id_c = c.id;

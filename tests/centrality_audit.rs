@@ -24,7 +24,7 @@ fn insert_call(backend: &mut rgbuilder::graph::backend::MemoryBackend, from: Uui
 fn star_contamination_module_pagerank_zero() {
     let mut graph = CodeGraph::new();
     let backend = graph.backend_mut();
-    let module = Node::new(NodeType::Module, "root_mod".into());
+    let module = Node::new(NodeType::Module, "root_mod");
     let id_mod = module.id;
     backend.insert_node(module).unwrap();
 
@@ -65,7 +65,7 @@ fn betweenness_bridge_is_maximum() {
     let mut graph = CodeGraph::new();
     let backend = graph.backend_mut();
 
-    let bridge = Node::new(NodeType::Function, "Util_Bridge".into());
+    let bridge = Node::new(NodeType::Function, "Util_Bridge");
     let id_bridge = bridge.id;
     backend.insert_node(bridge).unwrap();
 
@@ -154,9 +154,9 @@ fn cascade_hazard_reads_betweenness_scores() {
     let mut graph = CodeGraph::new();
     let backend = graph.backend_mut();
 
-    let source = Node::new(NodeType::Function, "source".into());
-    let bridge = Node::new(NodeType::Function, "Util_Bridge".into());
-    let target = Node::new(NodeType::Function, "target".into());
+    let source = Node::new(NodeType::Function, "source");
+    let bridge = Node::new(NodeType::Function, "Util_Bridge");
+    let target = Node::new(NodeType::Function, "target");
     let id_src = source.id;
     let id_bridge = bridge.id;
     let id_target = target.id;
@@ -211,9 +211,9 @@ fn cascade_hazard_reads_betweenness_scores() {
 fn default_analyzer_skips_structural_edges() {
     let mut graph = CodeGraph::new();
     let backend = graph.backend_mut();
-    let module = Node::new(NodeType::Module, "pkg".into());
-    let a = Node::new(NodeType::Function, "a".into());
-    let b = Node::new(NodeType::Function, "b".into());
+    let module = Node::new(NodeType::Module, "pkg");
+    let a = Node::new(NodeType::Function, "a");
+    let b = Node::new(NodeType::Function, "b");
     let id_mod = module.id;
     let id_a = a.id;
     let id_b = b.id;

@@ -371,6 +371,21 @@ pub trait LanguagePlugin: Send + Sync {
         symbols: &[Symbol],
     ) -> Result<Vec<Relation>>;
 
+    /// Extract symbols and relations in one pass (prefer a single tree-sitter parse).
+    ///
+    /// Default calls [`extract_symbols`](Self::extract_symbols) then
+    /// [`extract_relations`](Self::extract_relations). Plugins that parse twice
+    /// SHOULD override to share one AST.
+    fn extract_all(
+        &self,
+        file_path: &Path,
+        source: &[u8],
+    ) -> Result<(Vec<Symbol>, Vec<Relation>)> {
+        let symbols = self.extract_symbols(file_path, source)?;
+        let relations = self.extract_relations(file_path, source, &symbols)?;
+        Ok((symbols, relations))
+    }
+
     /// Calculate complexity metrics for a symbol
     ///
     /// # Arguments

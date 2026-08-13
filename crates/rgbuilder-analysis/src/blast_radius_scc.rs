@@ -132,14 +132,14 @@ impl BlastRadiusEngine {
                             .ok()
                             .flatten()
                             .filter(|n| n.node_type == NodeType::Function)
-                            .map(|n| n.name.clone())
+                            .map(|n| n.name.to_string())
                     })
                     .unwrap_or_else(|| {
                         lookup
                             .get_node(members[0])
                             .ok()
                             .flatten()
-                            .map(|n| n.name.clone())
+                            .map(|n| n.name.to_string())
                             .unwrap_or_else(|| format!("SCC_{}", scc_id))
                     })
             } else {
@@ -430,7 +430,7 @@ impl BlastRadiusEngine {
                 })
                 .collect(),
             scc_members: self.scc_members.clone(),
-            scc_names: self.dag.node_weights().map(|n| n.name.clone()).collect(),
+            scc_names: self.dag.node_weights().map(|n| n.name.to_string()).collect(),
             node_to_scc: self
                 .node_to_scc
                 .iter()

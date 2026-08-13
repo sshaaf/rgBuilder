@@ -9,7 +9,7 @@ fn test_graphml_header_and_keys() {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
     backend
         .insert_node(
-            Node::new(NodeType::Function, "main".into()).with_file_path("src/main.rs".into()),
+            Node::new(NodeType::Function, "main").with_file_path("src/main.rs"),
         )
         .unwrap();
 
@@ -24,7 +24,7 @@ fn test_graphml_header_and_keys() {
 fn test_graphml_node_data() {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
     let node =
-        Node::new(NodeType::Function, "main".into()).with_property("cyclomatic".into(), "5".into());
+        Node::new(NodeType::Function, "main").with_property("cyclomatic".into(), "5".into());
     backend.insert_node(node).unwrap();
 
     let xml = export_graphml(&backend, "functions").unwrap();
@@ -35,8 +35,8 @@ fn test_graphml_node_data() {
 #[test]
 fn test_graphml_edges() {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
-    let a = Node::new(NodeType::Function, "a".into());
-    let b = Node::new(NodeType::Function, "b".into());
+    let a = Node::new(NodeType::Function, "a");
+    let b = Node::new(NodeType::Function, "b");
     let id_a = a.id;
     let id_b = b.id;
     backend.insert_node(a).unwrap();
@@ -54,7 +54,7 @@ fn test_graphml_edges() {
 fn test_graphml_xml_escapes_ampersand() {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
     backend
-        .insert_node(Node::new(NodeType::Class, "A&B".into()))
+        .insert_node(Node::new(NodeType::Class, "A&B"))
         .unwrap();
     let xml = export_graphml(&backend, "all").unwrap();
     assert!(xml.contains("A&amp;B"));

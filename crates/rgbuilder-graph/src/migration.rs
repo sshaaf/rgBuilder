@@ -1,6 +1,6 @@
 //! Graph schema migration (Phase 12.0).
 
-use crate::schema::{Edge, GraphParameter, Node};
+use crate::schema::{Edge, GraphParameter, Node, SharedStr};
 use rgbuilder_error::Result;
 use rgbuilder_plugin_api::Parameter;
 
@@ -24,12 +24,12 @@ pub fn migrate_v1_to_v2(nodes: &mut [Node], edges: &mut [Edge]) {
     for node in nodes.iter_mut() {
         if node.signature.is_none() {
             if let Some(sig) = node.properties.get("signature").cloned() {
-                node.signature = Some(sig);
+                node.signature = Some(SharedStr::from(sig));
             }
         }
         if node.return_type.is_none() {
             if let Some(ret) = node.properties.get("return_type").cloned() {
-                node.return_type = Some(ret);
+                node.return_type = Some(SharedStr::from(ret));
             }
         }
         if node.parameters.is_empty() {
@@ -44,7 +44,7 @@ pub fn migrate_v1_to_v2(nodes: &mut [Node], edges: &mut [Edge]) {
         }
         if node.code_hash.is_none() {
             if let Some(hash) = node.properties.get("code_hash").cloned() {
-                node.code_hash = Some(hash);
+                node.code_hash = Some(SharedStr::from(hash));
             }
         }
     }

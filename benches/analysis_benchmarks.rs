@@ -56,7 +56,7 @@ fn build_python_chain(depth: usize) -> (MemoryBackend, HashMap<String, String>) 
     let mut ids = Vec::with_capacity(depth);
     for i in 0..depth {
         let name = format!("f{i}");
-        let node = Node::new(NodeType::Function, name.clone()).with_file_path("chain.py".into());
+        let node = Node::new(NodeType::Function, name.clone()).with_file_path("chain.py");
         ids.push(node.id);
         backend.insert_node(node).unwrap();
     }
@@ -126,7 +126,7 @@ fn large_backend(n: usize) -> MemoryBackend {
             .unwrap();
     }
     backend
-        .insert_node(Node::new(NodeType::Function, "target".into()))
+        .insert_node(Node::new(NodeType::Function, "target"))
         .unwrap();
     backend
 }
