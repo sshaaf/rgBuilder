@@ -204,8 +204,8 @@ mod tests {
     #[test]
     fn test_domain_isolation_variant() {
         let mut backend = MemoryBackend::new();
-        let a = Node::new(NodeType::Function, "a".into());
-        let b = Node::new(NodeType::Function, "b".into());
+        let a = Node::new(NodeType::Function, "a");
+        let b = Node::new(NodeType::Function, "b");
         let id_a = a.id;
         let id_b = b.id;
         backend.insert_node(a).unwrap();

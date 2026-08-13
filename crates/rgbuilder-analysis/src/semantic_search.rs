@@ -724,7 +724,7 @@ mod tests {
 
     #[test]
     fn embed_text_for_function_includes_signature() {
-        let node = Node::new(NodeType::Function, "run".into())
+        let node = Node::new(NodeType::Function, "run")
             .with_qualified_name("auth::run".into())
             .with_signature("async fn run(token: &str) -> bool");
         let text = embed_text_for_node(&node).unwrap();
@@ -735,13 +735,13 @@ mod tests {
     #[test]
     fn build_and_query_from_backend() {
         let mut backend = MemoryBackend::new();
-        let n1 = Node::new(NodeType::Function, "authenticate".into())
+        let n1 = Node::new(NodeType::Function, "authenticate")
             .with_qualified_name("auth::authenticate".into())
             .with_signature("fn authenticate(token: &str) -> bool");
-        let n2 = Node::new(NodeType::Function, "revoke".into())
+        let n2 = Node::new(NodeType::Function, "revoke")
             .with_qualified_name("auth::revoke".into())
             .with_signature("fn revoke(token: &str)");
-        let class = Node::new(NodeType::Class, "AuthService".into());
+        let class = Node::new(NodeType::Class, "AuthService");
         backend.insert_node(n1.clone()).unwrap();
         backend.insert_node(n2.clone()).unwrap();
         backend.insert_node(class).unwrap();
@@ -783,10 +783,10 @@ mod tests {
     #[test]
     fn incremental_reuses_unchanged_code_hash() {
         let mut backend = MemoryBackend::new();
-        let n1 = Node::new(NodeType::Function, "authenticate".into())
+        let n1 = Node::new(NodeType::Function, "authenticate")
             .with_code_hash("h1")
             .with_signature("fn authenticate()");
-        let n2 = Node::new(NodeType::Function, "revoke".into())
+        let n2 = Node::new(NodeType::Function, "revoke")
             .with_code_hash("h2")
             .with_signature("fn revoke()");
         backend.insert_node(n1).unwrap();
@@ -854,10 +854,10 @@ mod tests {
         .unwrap();
 
         let mut backend = MemoryBackend::new();
-        let opaque = Node::new(NodeType::Function, "cryptic_a".into())
+        let opaque = Node::new(NodeType::Function, "cryptic_a")
             .with_file_path(rel.into())
             .with_location(1, 1);
-        let helper = Node::new(NodeType::Function, "cryptic_b".into())
+        let helper = Node::new(NodeType::Function, "cryptic_b")
             .with_file_path(rel.into())
             .with_location(3, 5)
             .with_code_hash("body-v1");

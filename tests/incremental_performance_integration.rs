@@ -184,7 +184,7 @@ fn test_string_interning_reduces_duplicates() {
 
     for _ in 0..1000 {
         let mut node = Node::new(NodeType::Function, "shared_name".to_string());
-        node.file_path = Some("src/common.rs".to_string());
+        node.file_path = Some("src/common.rs".into());
         node.labels.push("api:endpoint".to_string());
         backend.insert_node(node).unwrap();
     }

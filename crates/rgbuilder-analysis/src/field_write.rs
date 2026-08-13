@@ -569,14 +569,14 @@ public class OrderProcessor {
             "process CFG should define order.status"
         );
 
-        let mut order_fn = Node::new(NodeType::Function, "OrderDTO".into());
+        let mut order_fn = Node::new(NodeType::Function, "OrderDTO");
         order_fn.qualified_name = Some("OrderDTO.<init>".into());
         order_fn
             .properties
             .insert("is_constructor".into(), "true".into());
         order_fn.file_path = Some("OrderDTO.java".into());
 
-        let mut process_fn = Node::new(NodeType::Function, "process".into());
+        let mut process_fn = Node::new(NodeType::Function, "process");
         process_fn.qualified_name = Some("OrderProcessor.process".into());
         process_fn.file_path = Some("OrderProcessor.java".into());
         process_fn.parameters = vec![GraphParameter {
@@ -654,9 +654,9 @@ public class Dual {
         let cfg_first = build_cfg_for_function("java", source, "first").expect("first cfg");
         let cfg_second = build_cfg_for_function("java", source, "second").expect("second cfg");
 
-        let mut first_fn = Node::new(NodeType::Function, "first".into());
+        let mut first_fn = Node::new(NodeType::Function, "first");
         first_fn.file_path = Some(file.clone());
-        let mut second_fn = Node::new(NodeType::Function, "second".into());
+        let mut second_fn = Node::new(NodeType::Function, "second");
         second_fn.file_path = Some(file.clone());
 
         let id_first = first_fn.id;

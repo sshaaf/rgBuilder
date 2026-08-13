@@ -6,7 +6,7 @@
 //! Column-oriented metadata (names, parameters, call-site lines) avoids cloning nodes.
 
 use rgbuilder_error::{Error, Result};
-use rgbuilder_graph::backend::{GraphBackend, MemoryBackend};
+use rgbuilder_graph::backend::MemoryBackend;
 use rgbuilder_graph::schema::{CallType, EdgeType, GraphParameter, NodeType};
 use std::collections::{HashMap, HashSet, VecDeque};
 use uuid::Uuid;
@@ -111,12 +111,15 @@ impl CallGraph {
             id_to_index.insert(func_id, index as u32);
             index_to_id.push(func_id);
 
-            if let Ok(Some(node)) = backend.get_node(func_id) {
-                names.push(node.name.to_string());
-                file_paths.push(node.file_path.clone().unwrap_or_default().to_string());
-                line_numbers[index] = node.start_line.unwrap_or(0);
-                parameters.push(parameter_names_from_node(&node.parameters));
-            } else {
+            let found = backend
+                .with_node(func_id, |node| {
+                    names.push(node.name.to_string());
+                    file_paths.push(node.file_path.clone().unwrap_or_default().to_string());
+                    line_numbers[index] = node.start_line.unwrap_or(0);
+                    parameters.push(parameter_names_from_node(&node.parameters));
+                })?
+                .is_some();
+            if !found {
                 names.push(String::new());
                 file_paths.push(String::new());
                 parameters.push(Vec::new());
@@ -276,6 +279,9 @@ impl CallGraph {
     }
 
     /// Backward compatibility: Access nodes (builds cache on first call).
+    ///
+    /// Prefer columnar fields (`names`, `file_paths`, `success_list`, …) on new code paths.
+    #[deprecated(note = "use columnar CallGraph fields; legacy cache will be removed in a future release")]
     pub fn nodes(&mut self) -> &HashMap<Uuid, CallGraphNode> {
         if self.nodes_cache.is_none() {
             let mut nodes = HashMap::new();
@@ -298,6 +304,9 @@ impl CallGraph {
     }
 
     /// Backward compatibility: Access edges (builds cache on first call).
+    ///
+    /// Prefer `success_list` / `call_edges_between` on new code paths.
+    #[deprecated(note = "use columnar CallGraph fields; legacy cache will be removed in a future release")]
     pub fn edges(&mut self) -> &Vec<CallGraphEdge> {
         if self.edges_cache.is_none() {
             let mut edges = Vec::new();
@@ -431,8 +440,8 @@ mod tests {
 
     fn sample_call_graph() -> MemoryBackend {
         let mut backend = MemoryBackend::new();
-        let main = Node::new(NodeType::Function, "main".into());
-        let helper = Node::new(NodeType::Function, "helper".into());
+        let main = Node::new(NodeType::Function, "main");
+        let helper = Node::new(NodeType::Function, "helper");
         let id_main = main.id;
         let id_helper = helper.id;
         backend.insert_node(main).unwrap();

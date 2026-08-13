@@ -249,9 +249,9 @@ mod tests {
     #[test]
     fn test_interprocedural_slice_includes_caller() {
         let mut backend = MemoryBackend::new();
-        let main = Node::new(NodeType::Function, "main".into()).with_file_path("prog.rs".into());
+        let main = Node::new(NodeType::Function, "main").with_file_path("prog.rs");
         let process =
-            Node::new(NodeType::Function, "process".into()).with_file_path("prog.rs".into());
+            Node::new(NodeType::Function, "process").with_file_path("prog.rs");
         let id_main = main.id;
         let id_process = process.id;
         backend.insert_node(main).unwrap();

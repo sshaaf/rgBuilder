@@ -365,7 +365,7 @@ fn petgraph_from_snapshot_store_5k_under_500ms() {
     let view = PetGraphView::from_snapshot_store(&store).unwrap();
     let latency = start.elapsed();
 
-    assert_eq!(view.directed.node_count(), 5_000);
+    assert_eq!(view.node_count(), 5_000);
     assert!(
         latency < Duration::from_millis(500),
         "br.load.petgraph_from_snapshot_store_ms regression: {latency:?} >= 500ms"

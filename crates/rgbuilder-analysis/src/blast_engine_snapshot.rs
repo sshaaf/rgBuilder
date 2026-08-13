@@ -107,21 +107,14 @@ impl BlastEngineSnapshot {
 
 pub(crate) fn bitset_to_words(bs: &BitSet, bit_len: usize) -> Vec<u64> {
     let word_count = bit_len.div_ceil(64);
-    (0..word_count)
-        .map(|w| {
-            let mut val = 0u64;
-            for b in 0..64 {
-                let idx = w * 64 + b;
-                if idx >= bit_len {
-                    break;
-                }
-                if bs.contains(idx) {
-                    val |= 1u64 << b;
-                }
-            }
-            val
-        })
-        .collect()
+    let mut words = vec![0u64; word_count];
+    for idx in bs.iter() {
+        if idx >= bit_len {
+            break;
+        }
+        words[idx / 64] |= 1u64 << (idx % 64);
+    }
+    words
 }
 
 pub(crate) fn words_popcount(words: &[u64]) -> u32 {
@@ -212,8 +205,8 @@ impl ReachabilityCache {
     }
 
     fn insert(&mut self, key: usize, value: BitSet) {
-        if self.map.contains_key(&key) {
-            self.order.retain(|&k| k != key);
+        if let Some(pos) = self.order.iter().position(|&k| k == key) {
+            self.order.remove(pos);
         } else if self.map.len() >= self.cap {
             if let Some(evicted) = self.order.pop_front() {
                 self.map.remove(&evicted);

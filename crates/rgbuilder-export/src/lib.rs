@@ -106,9 +106,9 @@ mod tests {
 
     fn chain_backend() -> MemoryBackend {
         let mut backend = MemoryBackend::new();
-        let a = Node::new(NodeType::Function, "a".into());
-        let b = Node::new(NodeType::Function, "b".into());
-        let c = Node::new(NodeType::Function, "c".into());
+        let a = Node::new(NodeType::Function, "a");
+        let b = Node::new(NodeType::Function, "b");
+        let c = Node::new(NodeType::Function, "c");
         let id_a = a.id;
         let id_b = b.id;
         let id_c = c.id;

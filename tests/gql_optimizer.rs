@@ -65,7 +65,7 @@ gql_test!(optimizer_reorder_multi_pattern, {
             .unwrap();
     }
     backend
-        .insert_node(Node::new(NodeType::Function, "hub".into()))
+        .insert_node(Node::new(NodeType::Function, "hub"))
         .unwrap();
     let hub = backend
         .all_nodes()
@@ -92,7 +92,7 @@ gql_test!(optimizer_reorder_multi_pattern, {
 gql_test!(explain_shows_optimizations, {
     let mut backend = MemoryBackend::new();
     backend
-        .insert_node(Node::new(NodeType::Function, "main".into()))
+        .insert_node(Node::new(NodeType::Function, "main"))
         .unwrap();
     let result = execute_explain(
         &backend,
@@ -106,10 +106,10 @@ gql_test!(explain_shows_optimizations, {
 gql_test!(optimized_equals_manual_execute, {
     let mut backend = MemoryBackend::new();
     backend
-        .insert_node(Node::new(NodeType::Function, "alpha".into()))
+        .insert_node(Node::new(NodeType::Function, "alpha"))
         .unwrap();
     backend
-        .insert_node(Node::new(NodeType::Function, "beta".into()))
+        .insert_node(Node::new(NodeType::Function, "beta"))
         .unwrap();
     let q = "MATCH (f:Function) WHERE f.name = 'alpha' RETURN f";
     let optimized_result = execute(&backend, q).unwrap();
@@ -144,10 +144,10 @@ gql_test!(optimizer_large_graph_pushdown, {
 gql_test!(optimizer_type_filter_selectivity, {
     let mut backend = MemoryBackend::new();
     backend
-        .insert_node(Node::new(NodeType::Function, "only_fn".into()))
+        .insert_node(Node::new(NodeType::Function, "only_fn"))
         .unwrap();
     backend
-        .insert_node(Node::new(NodeType::Class, "OnlyClass".into()))
+        .insert_node(Node::new(NodeType::Class, "OnlyClass"))
         .unwrap();
     let query = parse("MATCH (f:Function) WHERE f.name = 'only_fn' RETURN f").unwrap();
     let (optimized, _) = QueryOptimizer::new(&backend).optimize(query);
@@ -177,9 +177,9 @@ gql_test!(optimizer_single_pattern_no_reorder, {
 
 gql_test!(optimizer_result_equivalence_chain, {
     let mut backend = MemoryBackend::new();
-    let a = Node::new(NodeType::Function, "root".into());
-    let b = Node::new(NodeType::Function, "mid".into());
-    let c = Node::new(NodeType::Function, "leaf".into());
+    let a = Node::new(NodeType::Function, "root");
+    let b = Node::new(NodeType::Function, "mid");
+    let c = Node::new(NodeType::Function, "leaf");
     let id_a = a.id;
     let id_b = b.id;
     let id_c = c.id;

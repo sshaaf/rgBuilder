@@ -63,6 +63,25 @@ pub fn diffuse_call_topology(
     let alpha = config.alpha as f32;
     let keep = 1.0 - alpha;
 
+    // Build bidirectional neighbor lists once (topology is immutable across iterations).
+    let bidirectional_neighbors: Option<Vec<Vec<u32>>> =
+        if matches!(config.mode, DiffuseNeighborMode::Bidirectional) {
+            Some(
+                (0..n)
+                    .map(|node_idx| {
+                        let mut ids = Vec::new();
+                        ids.extend_from_slice(&call_graph.success_list[node_idx]);
+                        ids.extend_from_slice(&call_graph.precursor_list[node_idx]);
+                        ids.sort_unstable();
+                        ids.dedup();
+                        ids
+                    })
+                    .collect(),
+            )
+        } else {
+            None
+        };
+
     for _ in 0..config.iterations {
         next.par_chunks_mut(dims)
             .enumerate()
@@ -70,14 +89,10 @@ pub fn diffuse_call_topology(
                 next_row.fill(0.0);
                 let local = &current[node_idx * dims..(node_idx + 1) * dims];
 
-                let neighbor_idxs: Vec<u32> = match config.mode {
-                    DiffuseNeighborMode::Callees => call_graph.success_list[node_idx].clone(),
+                let neighbor_idxs: &[u32] = match config.mode {
+                    DiffuseNeighborMode::Callees => &call_graph.success_list[node_idx],
                     DiffuseNeighborMode::Bidirectional => {
-                        let mut ids = call_graph.success_list[node_idx].clone();
-                        ids.extend_from_slice(&call_graph.precursor_list[node_idx]);
-                        ids.sort_unstable();
-                        ids.dedup();
-                        ids
+                        bidirectional_neighbors.as_ref().unwrap()[node_idx].as_slice()
                     }
                 };
 
@@ -87,7 +102,7 @@ pub fn diffuse_call_topology(
                 }
 
                 let mut sum = vec![0.0f32; dims];
-                for &nbr in &neighbor_idxs {
+                for &nbr in neighbor_idxs {
                     let start = nbr as usize * dims;
                     let row = &current[start..start + dims];
                     for d in 0..dims {
@@ -125,9 +140,9 @@ mod tests {
 
     fn tiny_call_backend() -> MemoryBackend {
         let mut backend = MemoryBackend::new();
-        let a = Node::new(NodeType::Function, "a".into());
-        let b = Node::new(NodeType::Function, "b".into());
-        let c = Node::new(NodeType::Function, "c".into());
+        let a = Node::new(NodeType::Function, "a");
+        let b = Node::new(NodeType::Function, "b");
+        let c = Node::new(NodeType::Function, "c");
         let a_id = a.id;
         let b_id = b.id;
         let c_id = c.id;
@@ -169,7 +184,7 @@ mod tests {
     #[test]
     fn isolate_keeps_local_after_normalize() {
         let mut backend = MemoryBackend::new();
-        let lonely = Node::new(NodeType::Function, "lonely".into());
+        let lonely = Node::new(NodeType::Function, "lonely");
         backend.insert_node(lonely).unwrap();
         let cg = CallGraph::from_backend(&backend).unwrap();
         let dims = 4;

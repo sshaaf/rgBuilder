@@ -5,10 +5,22 @@
 use crate::graph_builder::ConfigUsageKind;
 use regex::Regex;
 use std::path::Path;
+use std::sync::LazyLock;
 
-fn compile_pattern(pattern: &str) -> Regex {
-    Regex::new(pattern).unwrap()
-}
+static RUST_ENV_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"env::var(?:_os)?\("([^"]+)"\)"#).unwrap());
+static RUST_CONFIG_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"\.get\("([^"]+)"\)"#).unwrap());
+static PYTHON_ENV_BRACKET_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"os\.environ\[['"]([^'"]+)['"]\]"#).unwrap());
+static PYTHON_GETENV_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"os\.getenv\(['"]([^'"]+)['"]\)"#).unwrap());
+static JS_DOT_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"process\.env\.([A-Z0-9_]+)"#).unwrap());
+static JS_BRACKET_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"process\.env\[['"]([^'"]+)['"]\]"#).unwrap());
+static GO_GETENV_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"os\.Getenv\("([^"]+)"\)"#).unwrap());
 
 /// Confidence level for a detected config usage.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,6 +54,11 @@ pub struct ConfigUsageDetector;
 impl ConfigUsageDetector {
     /// Detect config usages for a supported language.
     pub fn detect(language_id: &str, source: &[u8], file_path: &Path) -> Vec<ConfigUsage> {
+        match language_id {
+            "rust" | "python" | "typescript" | "javascript" | "go" => {}
+            _ => return Vec::new(),
+        }
+
         let source = String::from_utf8_lossy(source);
         let file = file_path.to_string_lossy().to_string();
 
@@ -55,12 +72,10 @@ impl ConfigUsageDetector {
     }
 
     fn detect_rust(source: &str, file: &str) -> Vec<ConfigUsage> {
-        let env_re = compile_pattern(r#"env::var(?:_os)?\("([^"]+)"\)"#);
-        let config_re = compile_pattern(r#"\.get\("([^"]+)"\)"#);
         let mut usages = Vec::new();
 
         for (idx, line) in source.lines().enumerate() {
-            for cap in env_re.captures_iter(line) {
+            for cap in RUST_ENV_RE.captures_iter(line) {
                 usages.push(ConfigUsage {
                     key: cap[1].to_string(),
                     file: file.to_string(),
@@ -69,7 +84,7 @@ impl ConfigUsageDetector {
                     confidence: ConfigConfidence::Extracted,
                 });
             }
-            for cap in config_re.captures_iter(line) {
+            for cap in RUST_CONFIG_RE.captures_iter(line) {
                 usages.push(ConfigUsage {
                     key: cap[1].to_string(),
                     file: file.to_string(),
@@ -83,14 +98,12 @@ impl ConfigUsageDetector {
     }
 
     fn detect_python(source: &str, file: &str) -> Vec<ConfigUsage> {
-        let env_bracket = compile_pattern(r#"os\.environ\[['"]([^'"]+)['"]\]"#);
-        let env_getenv = compile_pattern(r#"os\.getenv\(['"]([^'"]+)['"]\)"#);
         let mut usages = Vec::new();
 
         for (idx, line) in source.lines().enumerate() {
-            for cap in env_bracket
+            for cap in PYTHON_ENV_BRACKET_RE
                 .captures_iter(line)
-                .chain(env_getenv.captures_iter(line))
+                .chain(PYTHON_GETENV_RE.captures_iter(line))
             {
                 usages.push(ConfigUsage {
                     key: cap[1].to_string(),
@@ -105,14 +118,12 @@ impl ConfigUsageDetector {
     }
 
     fn detect_javascript(source: &str, file: &str) -> Vec<ConfigUsage> {
-        let dot_re = compile_pattern(r#"process\.env\.([A-Z0-9_]+)"#);
-        let bracket_re = compile_pattern(r#"process\.env\[['"]([^'"]+)['"]\]"#);
         let mut usages = Vec::new();
 
         for (idx, line) in source.lines().enumerate() {
-            for cap in dot_re
+            for cap in JS_DOT_RE
                 .captures_iter(line)
-                .chain(bracket_re.captures_iter(line))
+                .chain(JS_BRACKET_RE.captures_iter(line))
             {
                 usages.push(ConfigUsage {
                     key: cap[1].to_string(),
@@ -127,11 +138,10 @@ impl ConfigUsageDetector {
     }
 
     fn detect_go(source: &str, file: &str) -> Vec<ConfigUsage> {
-        let re = compile_pattern(r#"os\.Getenv\("([^"]+)"\)"#);
         let mut usages = Vec::new();
 
         for (idx, line) in source.lines().enumerate() {
-            for cap in re.captures_iter(line) {
+            for cap in GO_GETENV_RE.captures_iter(line) {
                 usages.push(ConfigUsage {
                     key: cap[1].to_string(),
                     file: file.to_string(),
@@ -189,5 +199,12 @@ const port = process.env['DB_PORT'];
         let usages = ConfigUsageDetector::detect("javascript", source, Path::new("app.js"));
         assert!(usages.iter().any(|u| u.key == "DB_HOST"));
         assert!(usages.iter().any(|u| u.key == "DB_PORT"));
+    }
+
+    #[test]
+    fn c_early_out_empty() {
+        let src = b"int main(void) { return 0; }\n";
+        let usages = ConfigUsageDetector::detect("c", src, Path::new("main.c"));
+        assert!(usages.is_empty());
     }
 }

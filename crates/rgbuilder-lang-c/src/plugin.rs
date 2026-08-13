@@ -179,10 +179,11 @@ impl CPlugin {
                 _ => {}
             }
 
-            let mut cursor = node.walk();
-            let children: Vec<Node> = node.children(&mut cursor).collect();
-            for child in children.into_iter().rev() {
-                stack.push((child, depth + 1));
+            let child_count = node.child_count();
+            for i in (0..child_count).rev() {
+                if let Some(child) = node.child(i) {
+                    stack.push((child, depth + 1));
+                }
             }
         }
         Ok(())
@@ -232,6 +233,32 @@ impl LanguagePlugin for CPlugin {
             &mut relations,
         );
         Ok(relations)
+    }
+
+    fn extract_all(
+        &self,
+        file_path: &Path,
+        source: &[u8],
+    ) -> Result<(Vec<Symbol>, Vec<Relation>)> {
+        let tree = self.parse(file_path, source)?;
+        let mut symbols = Vec::new();
+        self.traverse(
+            tree.root_node(),
+            source,
+            &file_path.to_string_lossy(),
+            &mut symbols,
+        )?;
+        let mut relations = Vec::new();
+        walk_calls(
+            tree.root_node(),
+            source,
+            file_path,
+            &symbols,
+            C_CALL_KINDS,
+            "c",
+            &mut relations,
+        );
+        Ok((symbols, relations))
     }
 
     fn calculate_complexity(

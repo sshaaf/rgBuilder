@@ -51,6 +51,16 @@ pub fn resolve_handoff_seeds(
     symbol_id: Uuid,
 ) -> Result<Vec<SliceHandoffSeed>> {
     let call_graph = CallGraph::from_backend(backend)?;
+    resolve_handoff_seeds_with_call_graph(backend, &call_graph, blast, symbol_id)
+}
+
+/// Like [`resolve_handoff_seeds`] but reuses a pre-built [`CallGraph`].
+pub fn resolve_handoff_seeds_with_call_graph(
+    backend: &MemoryBackend,
+    call_graph: &CallGraph,
+    blast: &BlastRadiusResult,
+    symbol_id: Uuid,
+) -> Result<Vec<SliceHandoffSeed>> {
     let symbol_name = backend
         .get_node(symbol_id)?
         .map(|n| n.name.to_string())
@@ -211,15 +221,13 @@ fn source_for_function(
 pub fn load_source_files(backend: &MemoryBackend, repo_root: &Path) -> HashMap<String, String> {
     let mut files = HashMap::new();
     let mut paths = HashSet::new();
-    if let Ok(ids) = backend.find_node_ids_by_type(rgbuilder_graph::schema::NodeType::Function) {
-        for id in ids {
-            if let Ok(Some(node)) = backend.get_node(id) {
-                if let Some(path) = &node.file_path {
-                    paths.insert(path.clone());
-                }
+    let _ = backend.for_each_node(|node| {
+        if node.node_type == rgbuilder_graph::schema::NodeType::Function {
+            if let Some(path) = &node.file_path {
+                paths.insert(path.clone());
             }
         }
-    }
+    });
     for path in paths {
         let abs = repo_root.join(&path);
         let read_path = if abs.exists() {
@@ -257,7 +265,8 @@ pub fn trace_blast_to_slices_with_blast(
     symbol_name: &str,
     blast: &BlastRadiusResult,
 ) -> Result<BlastSliceTrace> {
-    let handoffs = resolve_handoff_seeds(backend, blast, symbol_id)?;
+    let call_graph = CallGraph::from_backend(backend)?;
+    let handoffs = resolve_handoff_seeds_with_call_graph(backend, &call_graph, blast, symbol_id)?;
 
     let source_files = load_source_files(backend, repo_root);
     let archive = crate::cfg_pdg_archive::CfgPdgArchive::open_if_exists(repo_root)?;

@@ -35,8 +35,8 @@ fn bench_repo(path: &Path) -> Option<(usize, usize, Duration, Duration, Duration
     let snap_path = MmappedGraphSnapshot::default_path(path);
     let store = SnapshotNodeStore::open(&snap_path).ok()?;
     let view = PetGraphView::from_snapshot_store(&store).ok()?;
-    let n = view.directed.node_count();
-    let e = view.directed.edge_count();
+    let n = view.node_count();
+    let e = view.edge_count();
 
     let analyzer = CentralityAnalyzer::new().with_exact_limit(500);
     let start = Instant::now();

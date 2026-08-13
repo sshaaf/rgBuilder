@@ -34,8 +34,10 @@ fn test_type_isolation_incoming_filtered() {
         .incoming_filtered(target_idx, &[EdgeType::Calls])
         .collect();
     let all_incoming: Vec<_> = view
-        .directed
-        .neighbors_directed(target_idx, petgraph::Direction::Incoming)
+        .incoming_filtered(
+            target_idx,
+            &[EdgeType::Calls, EdgeType::Contains, EdgeType::Uses],
+        )
         .collect();
 
     assert_eq!(call_incoming.len(), 1);
@@ -87,8 +89,8 @@ fn test_policy_scale_exceeded() {
 #[test]
 fn test_policy_domain_boundary_breached() {
     let mut backend = MemoryBackend::new();
-    let a = Node::new(NodeType::Function, "node_a".into());
-    let b = Node::new(NodeType::Function, "node_b".into());
+    let a = Node::new(NodeType::Function, "node_a");
+    let b = Node::new(NodeType::Function, "node_b");
     let id_a = a.id;
     let id_b = b.id;
     backend.insert_node(a).unwrap();
@@ -173,7 +175,7 @@ fn test_phantom_symbol_rejects_ambiguous_name() {
     for ns in ["pkg::a", "pkg::b", "pkg::c"] {
         backend
             .insert_node(
-                Node::new(NodeType::Function, "handler".into()).with_qualified_name(ns.into()),
+                Node::new(NodeType::Function, "handler").with_qualified_name(ns),
             )
             .unwrap();
     }
@@ -188,9 +190,9 @@ fn test_phantom_symbol_rejects_ambiguous_name() {
 #[test]
 fn test_unknown_edge_type_excluded_from_call_traversal() {
     let mut backend = MemoryBackend::new();
-    let caller = Node::new(NodeType::Function, "caller".into());
-    let target = Node::new(NodeType::Function, "target".into());
-    let decoy = Node::new(NodeType::Module, "decoy".into());
+    let caller = Node::new(NodeType::Function, "caller");
+    let target = Node::new(NodeType::Function, "target");
+    let decoy = Node::new(NodeType::Module, "decoy");
     let id_c = caller.id;
     let id_t = target.id;
     let id_d = decoy.id;
@@ -281,9 +283,9 @@ fn test_gql_edge_accuracy() {
 #[test]
 fn test_scc_loop_sweep() {
     let mut backend = MemoryBackend::new();
-    let a = Node::new(NodeType::Function, "a".into());
-    let b = Node::new(NodeType::Function, "b".into());
-    let c = Node::new(NodeType::Function, "c".into());
+    let a = Node::new(NodeType::Function, "a");
+    let b = Node::new(NodeType::Function, "b");
+    let c = Node::new(NodeType::Function, "c");
     let id_a = a.id;
     let id_b = b.id;
     let id_c = c.id;
@@ -317,6 +319,6 @@ fn test_memory_footprint_large_graph() {
     }
     let backend = graph_audit::large_mixed_graph(150_000, 1_000_000);
     let view = PetGraphView::from_backend(&backend).unwrap();
-    assert_eq!(view.directed.node_count(), 150_000);
-    assert_eq!(view.directed.edge_count(), 1_000_000);
+    assert_eq!(view.node_count(), 150_000);
+    assert_eq!(view.edge_count(), 1_000_000);
 }

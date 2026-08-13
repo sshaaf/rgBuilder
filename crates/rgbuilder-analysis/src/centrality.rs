@@ -127,6 +127,19 @@ impl FlatGraphIndex {
         }
         (in_degree, out_degree)
     }
+
+    /// Build outgoing adjacency lists from the flat edge list.
+    ///
+    /// This is O(E) and allocates one `Vec<usize>` per node. Call it once and
+    /// pass the result to betweenness / harmonic functions that need per-node
+    /// neighbor iteration. PageRank and degree centrality do not need this.
+    pub fn build_out_adj(&self) -> Vec<Vec<usize>> {
+        let mut adj = vec![Vec::new(); self.node_count];
+        for &(src, dst) in &self.flat_edges {
+            adj[src].push(dst);
+        }
+        adj
+    }
 }
 
 /// Cache-friendly PageRank over a filtered edge projection.
@@ -299,57 +312,28 @@ impl BetweennessCentrality {
         view: &PetGraphView,
         allowed_types: &[EdgeType],
     ) -> HashMap<Uuid, f64> {
-        use std::collections::VecDeque;
+        let index = FlatGraphIndex::from_view(view, allowed_types);
+        let out_adj = index.build_out_adj();
+        Self::compute_with_adj(view, &index, &out_adj)
+    }
 
-        let n = view.node_count();
+    /// Compute normalized betweenness from a pre-built index and adjacency list.
+    pub fn compute_with_adj(
+        view: &PetGraphView,
+        index: &FlatGraphIndex,
+        out_adj: &[Vec<usize>],
+    ) -> HashMap<Uuid, f64> {
+        let n = index.node_count;
         if n == 0 {
             return HashMap::new();
         }
 
-        let mut betweenness: HashMap<NodeIndex, f64> = HashMap::new();
-        let node_indices: Vec<NodeIndex> = (0..n).map(NodeIndex::new).collect();
-
-        for &start in &node_indices {
-            let mut stack = Vec::new();
-            let mut pred: HashMap<_, Vec<_>> = HashMap::new();
-            let mut sigma: HashMap<_, f64> = HashMap::new();
-            let mut dist: HashMap<_, i32> = HashMap::new();
-            let mut delta: HashMap<_, f64> = HashMap::new();
-
-            for &v in &node_indices {
-                pred.insert(v, vec![]);
-                sigma.insert(v, 0.0);
-                dist.insert(v, -1);
-                delta.insert(v, 0.0);
-            }
-            sigma.insert(start, 1.0);
-            dist.insert(start, 0);
-
-            let mut queue = VecDeque::new();
-            queue.push_back(start);
-
-            while let Some(v) = queue.pop_front() {
-                stack.push(v);
-                for w in view.outgoing_filtered(v, allowed_types) {
-                    if dist[&w] < 0 {
-                        dist.insert(w, dist[&v] + 1);
-                        queue.push_back(w);
-                    }
-                    if dist[&w] == dist[&v] + 1 {
-                        sigma.insert(w, sigma[&w] + sigma[&v]);
-                        pred.get_mut(&w).unwrap().push(v);
-                    }
-                }
-            }
-
-            while let Some(w) = stack.pop() {
-                for &v in &pred[&w] {
-                    let contrib = (sigma[&v] / sigma[&w]) * (1.0 + delta[&w]);
-                    delta.insert(v, delta[&v] + contrib);
-                }
-                if w != start {
-                    *betweenness.entry(w).or_default() += delta[&w];
-                }
+        let mut betweenness = vec![0.0f64; n];
+        for source in 0..n {
+            let partial =
+                crate::centrality_approx::brandes_single_source(out_adj, source, n);
+            for (node, score) in partial.iter().enumerate() {
+                betweenness[node] += score;
             }
         }
 
@@ -359,9 +343,15 @@ impl BetweennessCentrality {
             1.0
         };
 
-        betweenness
-            .into_iter()
-            .filter_map(|(idx, score)| view.get_uuid(idx).map(|uuid| (uuid, score * scale)))
+        view.index_uuid_iter()
+            .filter_map(|(idx, uuid)| {
+                let flat = idx.index();
+                if flat < n && betweenness[flat] > 0.0 {
+                    Some((uuid, betweenness[flat] * scale))
+                } else {
+                    None
+                }
+            })
             .collect()
     }
 }
@@ -376,37 +366,52 @@ impl HarmonicCentrality {
         allowed_types: &[EdgeType],
         max_nodes: usize,
     ) -> HashMap<Uuid, f64> {
-        use std::collections::VecDeque;
-
         let n = view.node_count();
         if n == 0 || n > max_nodes {
             return HashMap::new();
         }
+        let index = FlatGraphIndex::from_view(view, allowed_types);
+        let out_adj = index.build_out_adj();
+        Self::compute_with_adj(view, &index, &out_adj)
+    }
+
+    /// Compute normalized harmonic scores from a pre-built index and adjacency list.
+    pub fn compute_with_adj(
+        view: &PetGraphView,
+        index: &FlatGraphIndex,
+        out_adj: &[Vec<usize>],
+    ) -> HashMap<Uuid, f64> {
+        use std::collections::VecDeque;
+
+        let n = index.node_count;
+        if n == 0 {
+            return HashMap::new();
+        }
 
         let norm_factor = if n <= 1 { 0.0 } else { 1.0 / (n as f64 - 1.0) };
-
+        let mut visited = vec![false; n];
         let mut result = HashMap::with_capacity(n);
+
         for start_i in 0..n {
-            let start = NodeIndex::new(start_i);
+            visited.fill(false);
             let mut sum_reciprocal = 0.0;
-            let mut visited = vec![false; n];
             let mut queue = VecDeque::new();
-            visited[start.index()] = true;
-            queue.push_back((start, 0u32));
+            visited[start_i] = true;
+            queue.push_back((start_i, 0u32));
 
             while let Some((current, dist)) = queue.pop_front() {
                 if dist > 0 {
                     sum_reciprocal += 1.0 / f64::from(dist);
                 }
-                for next in view.outgoing_filtered(current, allowed_types) {
-                    if !visited[next.index()] {
-                        visited[next.index()] = true;
+                for &next in &out_adj[current] {
+                    if !visited[next] {
+                        visited[next] = true;
                         queue.push_back((next, dist + 1));
                     }
                 }
             }
 
-            if let Some(uuid) = view.get_uuid(start) {
+            if let Some(uuid) = view.get_uuid(NodeIndex::new(start_i)) {
                 result.insert(uuid, sum_reciprocal * norm_factor);
             }
         }
@@ -713,10 +718,19 @@ impl CentralityAnalyzer {
         let pagerank = pagerank_engine.compute_flat_only(&index);
         approx_stats.pagerank_ms = pagerank_start.elapsed().as_millis() as u64;
 
+        // Build outgoing adjacency once, after PageRank (which doesn't need it).
+        // Betweenness and harmonic use it for per-node neighbor iteration.
+        let needs_adj = n <= self.exact_limit || self.compute_harmonic;
+        let out_adj = if needs_adj {
+            index.build_out_adj()
+        } else {
+            Vec::new()
+        };
+
         let betweenness = if n <= self.exact_limit {
             approx_stats.betweenness_mode = Some(BetweennessMode::Exact);
             let start = Instant::now();
-            let exact_map = BetweennessCentrality::compute_unbounded(view, allowed);
+            let exact_map = BetweennessCentrality::compute_with_adj(view, &index, &out_adj);
             approx_stats.betweenness_ms = start.elapsed().as_millis() as u64;
             align_map_to_flat(view, &exact_map)
         } else {
@@ -735,7 +749,7 @@ impl CentralityAnalyzer {
         } else if n <= self.exact_limit {
             approx_stats.harmonic_mode = Some(HarmonicMode::Exact);
             let start = Instant::now();
-            let exact_map = HarmonicCentrality::compute(view, allowed, self.exact_limit);
+            let exact_map = HarmonicCentrality::compute_with_adj(view, &index, &out_adj);
             approx_stats.harmonic_ms = start.elapsed().as_millis() as u64;
             align_map_to_flat(view, &exact_map)
         } else {
@@ -1081,8 +1095,8 @@ mod tests {
     #[test]
     fn test_module_isolated_from_contains_edges() {
         let mut backend = MemoryBackend::new();
-        let module = Node::new(NodeType::Module, "mod".into());
-        let func = Node::new(NodeType::Function, "f".into());
+        let module = Node::new(NodeType::Module, "mod");
+        let func = Node::new(NodeType::Function, "f");
         let id_mod = module.id;
         let id_func = func.id;
         backend.insert_node(module).unwrap();

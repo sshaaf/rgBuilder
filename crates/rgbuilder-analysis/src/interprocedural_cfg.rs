@@ -197,9 +197,9 @@ mod tests {
     #[test]
     fn test_interprocedural_cfg_build() {
         let mut backend = MemoryBackend::new();
-        let main = Node::new(NodeType::Function, "main".into()).with_file_path("main.rs".into());
+        let main = Node::new(NodeType::Function, "main").with_file_path("main.rs");
         let helper =
-            Node::new(NodeType::Function, "helper".into()).with_file_path("main.rs".into());
+            Node::new(NodeType::Function, "helper").with_file_path("main.rs");
         let id_main = main.id;
         let id_helper = helper.id;
         backend.insert_node(main).unwrap();
@@ -230,9 +230,9 @@ fn helper() -> i32 {
         use std::sync::Arc;
 
         let mut backend = MemoryBackend::new();
-        let main = Node::new(NodeType::Function, "main".into()).with_file_path("main.rs".into());
+        let main = Node::new(NodeType::Function, "main").with_file_path("main.rs");
         let helper =
-            Node::new(NodeType::Function, "helper".into()).with_file_path("main.rs".into());
+            Node::new(NodeType::Function, "helper").with_file_path("main.rs");
         let id_main = main.id;
         let id_helper = helper.id;
         backend.insert_node(main).unwrap();

@@ -39,6 +39,18 @@ spiked peak RSS on kernel-scale graphs.
 `rg-build metrics` still uses **`analyze_with_view`** (HashMap report) but shares the same flat
 compute core and adaptive gating.
 
+### rgbuilder-analysis-perf (2026-08-13)
+
+Phase 1–3 implementation complete (`openspec/changes/rgbuilder-analysis-perf/`):
+
+- **Shared `out_adj`** on `FlatGraphIndex`; exact Brandes/Harmonic reuse flat buffers; HyperBall exact double-buffer; Fisher–Yates pivots when `k ≥ n/2`.
+- **Blast BFS** uses pre-built function-id set + `with_node` for name/complexity paths; reachability LRU promote O(1); `bitset_to_words` via set iterator.
+- **Alias** integer union-find; **community** modularity flat `Vec<f64>`; **semantic diffuse** borrows callee slices.
+- **Dataflow** BitSet IN/OUT over global def index; **PDG** interned `u32` dedup keys; **CFG** monotonic block IDs + exception-edge `HashSet`.
+- **Macro lookup** BLOB-only writes; **handoff** `resolve_handoff_seeds_with_call_graph`.
+
+Cold profiles: see `openspec/changes/rgbuilder-analysis-perf/PROFILE.md`. Linux centrality ~2.65 s wall; betweenness ~2.13 s on 2.66M nodes.
+
 ---
 
 ## Adaptive gating (V > 500,000)

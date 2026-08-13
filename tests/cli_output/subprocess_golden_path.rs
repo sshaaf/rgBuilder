@@ -22,7 +22,11 @@ use std::process::Command;
 use std::time::{Duration, Instant};
 
 fn rgbuilder_bin() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_rg_build"))
+    option_env!("CARGO_BIN_EXE_rg_build")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/release/rg-build")
+        })
 }
 
 fn fixture_root() -> PathBuf {

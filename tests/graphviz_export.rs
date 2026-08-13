@@ -6,8 +6,8 @@ use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
 
 fn mixed_backend() -> rgbuilder::graph::backend::MemoryBackend {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
-    let func = Node::new(NodeType::Function, "run".into());
-    let cls = Node::new(NodeType::Class, "Runner".into());
+    let func = Node::new(NodeType::Function, "run");
+    let cls = Node::new(NodeType::Class, "Runner");
     let id_f = func.id;
     let id_c = cls.id;
     backend.insert_node(func).unwrap();
@@ -63,7 +63,7 @@ fn test_dot_rankdir_horizontal() {
 fn test_dot_special_char_escaping() {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
     backend
-        .insert_node(Node::new(NodeType::Function, r#"fn "test""#.into()))
+        .insert_node(Node::new(NodeType::Function, r#"fn "test""#))
         .unwrap();
     let dot = generate_dot(&backend, "all", GraphvizOptions::default(), None).unwrap();
     assert!(dot.contains("\\\""));

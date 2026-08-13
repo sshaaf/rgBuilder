@@ -148,7 +148,7 @@ fn build_compound_query_graph() -> CodeGraph {
 
     backend
         .insert_node(
-            Node::new(NodeType::Function, "needle".into())
+            Node::new(NodeType::Function, "needle")
                 .with_property("repo".into(), "backend".into()),
         )
         .unwrap();

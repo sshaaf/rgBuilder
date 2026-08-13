@@ -128,7 +128,7 @@ mod tests {
     #[test]
     fn backend_names_used_when_present() {
         let mut backend = rgbuilder_graph::backend::MemoryBackend::new();
-        let node = Node::new(NodeType::Function, "main".into());
+        let node = Node::new(NodeType::Function, "main");
         let id = node.id;
         backend.insert_node(node).unwrap();
         let cache = function_meta_map(std::env::temp_dir().as_path(), &backend);

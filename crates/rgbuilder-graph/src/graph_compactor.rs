@@ -286,7 +286,7 @@ fn node_matches_invalidated_path(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schema::EdgeType;
+    use crate::schema::{EdgeType, NodeType};
     use crate::write_columnar_from_nodes_edges;
     use tempfile::TempDir;
 

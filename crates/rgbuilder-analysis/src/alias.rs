@@ -7,70 +7,108 @@
 use crate::cfg::ControlFlowGraph;
 use std::collections::{HashMap, HashSet};
 
+struct VarIntern {
+    names: Vec<String>,
+    ids: HashMap<String, u32>,
+}
+
+impl VarIntern {
+    fn intern(&mut self, name: &str) -> u32 {
+        if let Some(&id) = self.ids.get(name) {
+            return id;
+        }
+        let id = self.names.len() as u32;
+        self.names.push(name.to_string());
+        self.ids.insert(name.to_string(), id);
+        id
+    }
+}
+
+fn uf_find(parent: &mut [u32], x: u32) -> u32 {
+    if parent[x as usize] == x {
+        return x;
+    }
+    let root = uf_find(parent, parent[x as usize]);
+    parent[x as usize] = root;
+    root
+}
+
+fn uf_union(parent: &mut [u32], a: u32, b: u32) {
+    let ra = uf_find(parent, a);
+    let rb = uf_find(parent, b);
+    if ra != rb {
+        parent[ra as usize] = rb;
+    }
+}
+
+fn grow_parent(parent: &mut Vec<u32>, id: u32) {
+    let need = (id + 1) as usize;
+    if parent.len() < need {
+        let old = parent.len();
+        parent.resize(need, 0);
+        for i in old..need {
+            parent[i] = i as u32;
+        }
+    }
+}
+
+fn union_names(intern: &mut VarIntern, parent: &mut Vec<u32>, a: &str, b: &str) {
+    let a_id = intern.intern(a);
+    let b_id = intern.intern(b);
+    grow_parent(parent, a_id.max(b_id));
+    uf_union(parent, a_id, b_id);
+}
+
 /// Expand `seed` to a may-alias name set for slicing / flows.
 pub fn may_alias_names(cfg: &ControlFlowGraph, seed: &str) -> HashSet<String> {
-    let mut parent: HashMap<String, String> = HashMap::new();
+    let mut intern = VarIntern {
+        names: Vec::new(),
+        ids: HashMap::new(),
+    };
+    let mut parent: Vec<u32> = Vec::new();
 
-    fn ensure(parent: &mut HashMap<String, String>, name: &str) {
-        parent
-            .entry(name.to_string())
-            .or_insert_with(|| name.to_string());
-    }
-
-    fn find(parent: &mut HashMap<String, String>, x: &str) -> String {
-        let p = parent.get(x).cloned().unwrap_or_else(|| x.to_string());
-        if p == x {
-            return p;
-        }
-        let root = find(parent, &p);
-        parent.insert(x.to_string(), root.clone());
-        root
-    }
-
-    fn union(parent: &mut HashMap<String, String>, a: &str, b: &str) {
-        ensure(parent, a);
-        ensure(parent, b);
-        let ra = find(parent, a);
-        let rb = find(parent, b);
-        if ra != rb {
-            parent.insert(ra, rb);
-        }
-    }
-
-    ensure(&mut parent, seed);
+    let seed_id = intern.intern(seed);
+    grow_parent(&mut parent, seed_id);
     if let Some((base, _)) = seed.split_once('.') {
-        union(&mut parent, seed, base);
+        union_names(&mut intern, &mut parent, seed, base);
     }
 
     for block in cfg.blocks.values() {
         for stmt in &block.statements {
             for d in &stmt.defined_vars {
-                ensure(&mut parent, d);
+                grow_parent(&mut parent, intern.intern(d));
                 if let Some((base, _)) = d.split_once('.') {
-                    union(&mut parent, d, base);
+                    union_names(&mut intern, &mut parent, d, base);
                 }
             }
             for u in &stmt.used_vars {
-                ensure(&mut parent, u);
+                grow_parent(&mut parent, intern.intern(u));
                 if let Some((base, _)) = u.split_once('.') {
-                    union(&mut parent, u, base);
+                    union_names(&mut intern, &mut parent, u, base);
                 }
             }
-            // Simple copy: exactly one defined local and one used local (no fields).
             if stmt.defined_vars.len() == 1 && stmt.used_vars.len() == 1 {
                 let d = stmt.defined_vars.iter().next().unwrap();
                 let u = stmt.used_vars.iter().next().unwrap();
                 if !d.contains('.') && !u.contains('.') {
-                    union(&mut parent, d, u);
+                    union_names(&mut intern, &mut parent, d, u);
                 }
             }
         }
     }
 
-    let seed_root = find(&mut parent, seed);
-    let keys: Vec<String> = parent.keys().cloned().collect();
-    keys.into_iter()
-        .filter(|k| find(&mut parent, k) == seed_root)
+    let seed_root = uf_find(&mut parent, seed_id);
+    intern
+        .names
+        .iter()
+        .enumerate()
+        .filter_map(|(i, name)| {
+            if uf_find(&mut parent, i as u32) == seed_root {
+                Some(name.clone())
+            } else {
+                None
+            }
+        })
         .collect()
 }
 

@@ -165,9 +165,9 @@ mod tests {
     fn chain_graph() -> CodeGraph {
         let mut graph = CodeGraph::new();
         let backend = graph.backend_mut();
-        let a = Node::new(NodeType::Function, "a".into()).with_file_path("src/lib.rs".into());
-        let b = Node::new(NodeType::Function, "b".into()).with_file_path("src/lib.rs".into());
-        let c = Node::new(NodeType::Function, "c".into()).with_file_path("src/lib.rs".into());
+        let a = Node::new(NodeType::Function, "a").with_file_path("src/lib.rs");
+        let b = Node::new(NodeType::Function, "b").with_file_path("src/lib.rs");
+        let c = Node::new(NodeType::Function, "c").with_file_path("src/lib.rs");
         let id_a = a.id;
         let id_b = b.id;
         let id_c = c.id;

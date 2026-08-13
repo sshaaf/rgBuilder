@@ -104,7 +104,7 @@ fn test_parallel_pipeline_many_files() {
         .find_by_type(NodeType::Function)
         .unwrap()
         .into_iter()
-        .map(|n| n.name)
+        .map(|n| n.name.to_string())
         .collect();
     for i in 0..25 {
         assert!(names.contains(&format!("func{i}")));
@@ -170,7 +170,7 @@ fn test_parallel_incremental_update_many_files() {
         .find_by_type(NodeType::Function)
         .unwrap()
         .into_iter()
-        .map(|n| n.name)
+        .map(|n| n.name.to_string())
         .collect();
     for i in 0..20 {
         assert!(names.contains(&format!("extra{i}")));
@@ -214,19 +214,19 @@ fn test_compound_repo_and_type_query() {
 
     backend
         .insert_node(
-            Node::new(NodeType::Function, "api_main".into())
+            Node::new(NodeType::Function, "api_main")
                 .with_property("repo".into(), "backend".into()),
         )
         .unwrap();
     backend
         .insert_node(
-            Node::new(NodeType::Class, "ApiService".into())
+            Node::new(NodeType::Class, "ApiService")
                 .with_property("repo".into(), "backend".into()),
         )
         .unwrap();
     backend
         .insert_node(
-            Node::new(NodeType::Function, "ui_main".into())
+            Node::new(NodeType::Function, "ui_main")
                 .with_property("repo".into(), "frontend".into()),
         )
         .unwrap();
@@ -293,7 +293,7 @@ fn build_selectivity_graph() -> CodeGraph {
     // Single unique target
     backend
         .insert_node(
-            Node::new(NodeType::Function, "needle".into())
+            Node::new(NodeType::Function, "needle")
                 .with_property("repo".into(), "backend".into()),
         )
         .unwrap();
@@ -302,7 +302,7 @@ fn build_selectivity_graph() -> CodeGraph {
 }
 
 fn name_set(nodes: &[Node]) -> HashSet<String> {
-    nodes.iter().map(|n| n.name.clone()).collect()
+    nodes.iter().map(|n| n.name.to_string()).collect()
 }
 
 #[test]

@@ -267,9 +267,9 @@ mod tests {
     #[test]
     fn expand_call_neighbors_finds_callees_and_callers() {
         let mut backend = MemoryBackend::new();
-        let anchor = Node::new(NodeType::Function, "anchor".into());
-        let callee = Node::new(NodeType::Function, "callee".into());
-        let caller = Node::new(NodeType::Function, "caller".into());
+        let anchor = Node::new(NodeType::Function, "anchor");
+        let callee = Node::new(NodeType::Function, "callee");
+        let caller = Node::new(NodeType::Function, "caller");
         let anchor_id = anchor.id;
         let callee_id = callee.id;
         let caller_id = caller.id;

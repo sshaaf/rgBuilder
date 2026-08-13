@@ -144,6 +144,12 @@ impl<'a> BlastRadiusAnalyzer<'a> {
         let direct_caller_ids = incoming_callers(view, self.backend, source_idx);
         let direct_callers = uuid_list_to_names(self.backend, &direct_caller_ids);
 
+        let function_ids: HashSet<Uuid> = self
+            .backend
+            .find_node_ids_by_type(NodeType::Function)?
+            .into_iter()
+            .collect();
+
         let mut impact_ids = HashSet::new();
         let mut queue: VecDeque<(Uuid, usize)> =
             direct_caller_ids.iter().map(|id| (*id, 1usize)).collect();
@@ -160,12 +166,10 @@ impl<'a> BlastRadiusAnalyzer<'a> {
             };
             for pred in view.incoming_filtered(caller_idx, CALL_EDGES) {
                 if let Some(uuid) = view.get_uuid(pred) {
-                    if let Ok(Some(node)) = self.backend.get_node(uuid) {
-                        if node.node_type == NodeType::Function && uuid != symbol_id {
-                            let next_depth = depth + 1;
-                            if next_depth <= self.max_depth {
-                                queue.push_back((uuid, next_depth));
-                            }
+                    if function_ids.contains(&uuid) && uuid != symbol_id {
+                        let next_depth = depth + 1;
+                        if next_depth <= self.max_depth {
+                            queue.push_back((uuid, next_depth));
                         }
                     }
                 }
@@ -240,7 +244,12 @@ fn incoming_callers(
 fn uuid_list_to_names(backend: &MemoryBackend, ids: &[Uuid]) -> Vec<String> {
     let mut names: Vec<String> = ids
         .iter()
-        .filter_map(|id| backend.get_node(*id).ok().flatten().map(|n| n.name.to_string()))
+        .filter_map(|id| {
+            backend
+                .with_node(*id, |n| n.name.to_string())
+                .ok()
+                .flatten()
+        })
         .collect();
     names.sort();
     names
@@ -249,7 +258,12 @@ fn uuid_list_to_names(backend: &MemoryBackend, ids: &[Uuid]) -> Vec<String> {
 fn ids_to_names(backend: &MemoryBackend, ids: &HashSet<Uuid>) -> Vec<String> {
     let mut names: Vec<String> = ids
         .iter()
-        .filter_map(|id| backend.get_node(*id).ok().flatten().map(|n| n.name.to_string()))
+        .filter_map(|id| {
+            backend
+                .with_node(*id, |n| n.name.to_string())
+                .ok()
+                .flatten()
+        })
         .collect();
     names.sort();
     names
@@ -280,16 +294,16 @@ fn average_complexity(backend: &MemoryBackend, ids: &HashSet<Uuid>) -> f64 {
     if ids.is_empty() {
         return 0.0;
     }
-    let sum: f64 = ids
-        .iter()
-        .filter_map(|id| {
-            backend.get_node(*id).ok().flatten().and_then(|n| {
-                n.get_property("complexity")
-                    .or_else(|| n.get_property("cyclomatic_complexity"))
-                    .and_then(|v| v.parse::<f64>().ok())
-            })
-        })
-        .sum();
+    let mut sum = 0.0f64;
+    for id in ids {
+        if let Ok(Some(Some(value))) = backend.with_node(*id, |n| {
+            n.get_property("complexity")
+                .or_else(|| n.get_property("cyclomatic_complexity"))
+                .and_then(|v| v.parse::<f64>().ok())
+        }) {
+            sum += value;
+        }
+    }
     let count = ids.len() as f64;
     if sum == 0.0 {
         1.0

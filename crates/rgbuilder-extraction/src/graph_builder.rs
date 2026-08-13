@@ -131,13 +131,10 @@ impl GraphBuilder {
 
     fn index_symbol_resolution(&mut self, key: &str, node: &Node) {
         if let Some(qualified) = &node.qualified_name {
-            let entry = self
-                .symbols_by_qualified
+            self.symbols_by_qualified
                 .entry(qualified.to_string())
-                .or_default();
-            if !entry.contains(&node.id) {
-                entry.push(node.id);
-            }
+                .or_default()
+                .push(node.id);
             // Package-qualified suffixes (Java/Go): `com.foo.Bar.baz` → `Bar.baz`, `baz`.
             // Skip for C struct field nodes (`Struct.field`, label `field`) — bare names
             // like `data` would collide across the whole kernel.
@@ -146,25 +143,19 @@ impl GraphBuilder {
             if !is_field_member && parts.len() >= 3 {
                 for i in 0..parts.len() {
                     let suffix = parts[i..].join(".");
-                    let entry = self.symbols_by_suffix.entry(suffix).or_default();
-                    if !entry.contains(&node.id) {
-                        entry.push(node.id);
-                    }
+                    self.symbols_by_suffix.entry(suffix).or_default().push(node.id);
                 }
             }
         } else {
-            let entry = self.symbols_by_suffix.entry(node.name.to_string()).or_default();
-            if !entry.contains(&node.id) {
-                entry.push(node.id);
-            }
+            self.symbols_by_suffix
+                .entry(node.name.to_string())
+                .or_default()
+                .push(node.id);
         }
         let parts: Vec<&str> = key.split("::").collect();
         for i in 1..parts.len() {
             let suffix = parts[i..].join("::");
-            let entry = self.symbols_by_suffix.entry(suffix).or_default();
-            if !entry.contains(&node.id) {
-                entry.push(node.id);
-            }
+            self.symbols_by_suffix.entry(suffix).or_default().push(node.id);
         }
     }
 
