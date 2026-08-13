@@ -28,6 +28,8 @@ pub struct PipelineConfig {
     pub batch_size: usize,
     /// Max in-flight extractions between parallel workers and graph merge
     pub stream_channel_capacity: usize,
+    /// Materialize `Symbol.fields` as Variable graph nodes (CPG / `--with-cfg`).
+    pub materialize_fields: bool,
 }
 
 impl Default for PipelineConfig {
@@ -38,6 +40,7 @@ impl Default for PipelineConfig {
             thread_count: None,
             batch_size: 64,
             stream_channel_capacity: DEFAULT_STREAM_CHANNEL_CAPACITY,
+            materialize_fields: false,
         }
     }
 }
@@ -120,6 +123,7 @@ impl ProcessingPipeline {
         }
         std::fs::create_dir_all(&spill_dir)?;
         let mut builder = GraphBuilder::with_spill(&spill_dir)?;
+        builder.set_materialize_fields(self.config.materialize_fields);
 
         let progress_for_stream = progress.clone();
         let (files_processed, tails) = stream_into_graph(
@@ -195,6 +199,7 @@ impl ProcessingPipeline {
         let extractor = Extractor::new(Arc::clone(&self.registry));
         let extract_start = Instant::now();
         let mut builder = GraphBuilder::new();
+        builder.set_materialize_fields(self.config.materialize_fields);
         let progress_for_stream = progress.clone();
         let (files_processed, tails) = stream_into_graph(
             self.config.thread_count,

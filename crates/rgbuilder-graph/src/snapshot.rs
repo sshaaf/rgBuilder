@@ -190,6 +190,22 @@ impl MmappedGraphSnapshot {
         }
     }
 
+    /// Stream edges without allocating a full topology `Vec`.
+    pub fn for_each_edge(
+        &self,
+        mut f: impl FnMut(Uuid, Uuid, EdgeType) -> Result<()>,
+    ) -> Result<()> {
+        match &self.backing {
+            SnapshotBacking::Legacy(p) => {
+                for e in &p.edges {
+                    f(e.from, e.to, e.edge_type)?;
+                }
+            }
+            SnapshotBacking::Columnar(c) => c.for_each_edge(f)?,
+        }
+        Ok(())
+    }
+
     /// Columnar view when available.
     pub fn columnar(&self) -> Option<&ColumnarGraphMmap> {
         match &self.backing {
@@ -274,6 +290,14 @@ impl SnapshotNodeStore {
     /// Typed edge topology without hydrating a backend.
     pub fn edge_topology_typed(&self) -> Result<Vec<(Uuid, Uuid, EdgeType)>> {
         self.snapshot.edge_topology_typed()
+    }
+
+    /// Stream edges without allocating a full topology `Vec`.
+    pub fn for_each_edge(
+        &self,
+        f: impl FnMut(Uuid, Uuid, EdgeType) -> Result<()>,
+    ) -> Result<()> {
+        self.snapshot.for_each_edge(f)
     }
 
     /// Lookup a node by UUID without hydrating [`MemoryBackend`].

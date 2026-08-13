@@ -46,6 +46,8 @@ pub struct GraphBuilder {
     indexes_built: bool,
     /// `OwnerType.field` → simple field type (for late Go selector resolution; spill-safe).
     field_type_index: HashMap<String, String>,
+    /// When false (default discover), `Symbol.fields` stay on symbols only — no Variable nodes.
+    materialize_fields: bool,
 }
 
 #[derive(Debug, Default)]
@@ -74,6 +76,16 @@ impl GraphBuilder {
         let mut builder = Self::new();
         builder.spill = Some(SegmentedSpill::create(spill_dir)?);
         Ok(builder)
+    }
+
+    /// When true, materialize `Symbol.fields` as `Variable` graph nodes (CPG / `--with-cfg`).
+    pub fn set_materialize_fields(&mut self, materialize: bool) {
+        self.materialize_fields = materialize;
+    }
+
+    /// Whether field members are emitted as graph nodes.
+    pub fn materialize_fields(&self) -> bool {
+        self.materialize_fields
     }
 
     /// Whether this builder is spilling to disk.
@@ -126,14 +138,18 @@ impl GraphBuilder {
             if !entry.contains(&node.id) {
                 entry.push(node.id);
             }
-            // Index dotted suffixes so `Marker` resolves `demo.Marker` and
-            // `Foo.bar` resolves `demo.Foo.bar` (Java package-qualified QNs).
+            // Package-qualified suffixes (Java/Go): `com.foo.Bar.baz` → `Bar.baz`, `baz`.
+            // Skip for C struct field nodes (`Struct.field`, label `field`) — bare names
+            // like `data` would collide across the whole kernel.
+            let is_field_member = node.has_label("field");
             let parts: Vec<&str> = qualified.split('.').collect();
-            for i in 0..parts.len() {
-                let suffix = parts[i..].join(".");
-                let entry = self.symbols_by_suffix.entry(suffix).or_default();
-                if !entry.contains(&node.id) {
-                    entry.push(node.id);
+            if !is_field_member && parts.len() >= 3 {
+                for i in 0..parts.len() {
+                    let suffix = parts[i..].join(".");
+                    let entry = self.symbols_by_suffix.entry(suffix).or_default();
+                    if !entry.contains(&node.id) {
+                        entry.push(node.id);
+                    }
                 }
             }
         } else {
@@ -292,7 +308,9 @@ impl GraphBuilder {
         self.commit_node(node);
         self.add_edge(id, file_id, EdgeType::DefinedIn);
         self.add_edge(file_id, id, EdgeType::Contains);
-        self.add_field_members(id, symbol, file_id);
+        if self.materialize_fields {
+            self.add_field_members(id, symbol, file_id);
+        }
         id
     }
 
@@ -300,6 +318,7 @@ impl GraphBuilder {
     ///
     /// Enables hybrid CPG member queries without waiting for per-language Variable
     /// symbols. Idempotent via `symbol_index` keys (`Owner.field` FQN).
+    /// Only runs when [`Self::materialize_fields`] is true (`--with-cfg` discover).
     fn add_field_members(&mut self, owner_id: Uuid, symbol: &Symbol, file_id: Uuid) {
         if symbol.fields.is_empty() {
             return;
@@ -1422,6 +1441,7 @@ mod tests {
     #[test]
     fn test_add_symbol_materializes_fields() {
         let mut builder = GraphBuilder::new();
+        builder.set_materialize_fields(true);
         let file_id = builder.ensure_file_node(Path::new("OrderDTO.java"));
         let mut symbol = sample_symbol();
         symbol.name = "OrderDTO".to_string();
@@ -1590,6 +1610,80 @@ mod tests {
             resolved.is_none(),
             "QE: fuzzy suffix multi-match must not return Some(uuid) without signaling ambiguity \
              (got {resolved:?}); see rgbuilder-tests/correctness/QE.md"
+        );
+    }
+
+    #[test]
+    fn test_c_struct_fields_not_materialized_by_default() {
+        let mut builder = GraphBuilder::new();
+        let file_id = builder.ensure_file_node(Path::new("cart.c"));
+        let mut symbol = Symbol {
+            name: "Cart".to_string(),
+            symbol_type: SymbolType::Class,
+            location: SourceLocation {
+                file: "cart.c".to_string(),
+                start_line: 1,
+                end_line: 5,
+                start_column: 0,
+                end_column: 0,
+            },
+            qualified_name: None,
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![rgbuilder_plugin_api::Field {
+                name: "total".to_string(),
+                field_type: Some("int".to_string()),
+                visibility: None,
+            }],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({}),
+        };
+        builder.add_symbol(&symbol, file_id);
+        assert!(
+            !builder
+                .nodes()
+                .iter()
+                .any(|n| n.name == "total" && n.node_type == NodeType::Variable),
+            "default discover must not emit field Variable nodes"
+        );
+    }
+
+    #[test]
+    fn test_field_suffix_not_indexed_for_c_struct_field() {
+        let mut builder = GraphBuilder::new();
+        builder.set_materialize_fields(true);
+        let file_id = builder.ensure_file_node(Path::new("cart.c"));
+        let mut symbol = Symbol {
+            name: "Cart".to_string(),
+            symbol_type: SymbolType::Class,
+            location: SourceLocation {
+                file: "cart.c".to_string(),
+                start_line: 1,
+                end_line: 5,
+                start_column: 0,
+                end_column: 0,
+            },
+            qualified_name: None,
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![rgbuilder_plugin_api::Field {
+                name: "total".to_string(),
+                field_type: Some("int".to_string()),
+                visibility: None,
+            }],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({}),
+        };
+        builder.add_symbol(&symbol, file_id);
+        builder.build_resolution_indexes();
+        let bare = builder.symbols_by_suffix.get("total");
+        assert!(
+            bare.is_none() || bare.is_some_and(|v| v.is_empty()),
+            "bare field suffix must not be indexed for C struct fields"
         );
     }
 }

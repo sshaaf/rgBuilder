@@ -210,6 +210,71 @@ impl CodeGraphCsr {
         }
     }
 
+    /// Build CSR by streaming edges from a mmap snapshot store (no full edge `Vec`).
+    pub fn from_store_topology(
+        store: &crate::snapshot::SnapshotNodeStore,
+        uuid_to_index: &HashMap<Uuid, u32>,
+    ) -> Result<Self> {
+        let node_count = store.node_count();
+        let mut out_deg = vec![0u32; node_count];
+        let mut in_deg = vec![0u32; node_count];
+        let mut resolved_count = 0usize;
+
+        store.for_each_edge(|from, to, _ty| {
+            if let (Some(&src), Some(&dst)) = (uuid_to_index.get(&from), uuid_to_index.get(&to)) {
+                out_deg[src as usize] += 1;
+                in_deg[dst as usize] += 1;
+                resolved_count += 1;
+            }
+            Ok(())
+        })?;
+
+        let mut row_ptr = Vec::with_capacity(node_count + 1);
+        let mut in_row_ptr = Vec::with_capacity(node_count + 1);
+        row_ptr.push(0);
+        in_row_ptr.push(0);
+        for i in 0..node_count {
+            row_ptr.push(row_ptr[i] + out_deg[i]);
+            in_row_ptr.push(in_row_ptr[i] + in_deg[i]);
+        }
+
+        let mut targets = vec![0u32; resolved_count];
+        let mut edge_types = vec![0u8; resolved_count];
+        let mut in_targets = vec![0u32; resolved_count];
+        let mut in_edge_types = vec![0u8; resolved_count];
+        let mut out_cursor = row_ptr[..node_count].to_vec();
+        let mut in_cursor = in_row_ptr[..node_count].to_vec();
+
+        store.for_each_edge(|from, to, ty| {
+            let Some(&src) = uuid_to_index.get(&from) else {
+                return Ok(());
+            };
+            let Some(&dst) = uuid_to_index.get(&to) else {
+                return Ok(());
+            };
+            let code = edge_type_to_u8(ty);
+            let o = out_cursor[src as usize] as usize;
+            targets[o] = dst;
+            edge_types[o] = code;
+            out_cursor[src as usize] += 1;
+
+            let i = in_cursor[dst as usize] as usize;
+            in_targets[i] = src;
+            in_edge_types[i] = code;
+            in_cursor[dst as usize] += 1;
+            Ok(())
+        })?;
+
+        Ok(Self {
+            row_ptr,
+            targets,
+            edge_types,
+            in_row_ptr,
+            in_targets,
+            in_edge_types,
+        })
+    }
+
     /// Build CSR from a live backend (dense index order = `all_node_ids` encounter order).
     pub fn from_backend(backend: &MemoryBackend) -> Result<(Self, Vec<Uuid>, HashMap<Uuid, u32>)> {
         let node_ids = backend.all_node_ids()?;
@@ -254,5 +319,40 @@ mod tests {
         let (in_t, _) = csr.in_neighbors(bi);
         assert_eq!(in_t, &[ai]);
         assert_eq!(ids.len(), 2);
+    }
+
+    #[test]
+    fn csr_store_topology_matches_typed_edges() {
+        use crate::snapshot::SnapshotNodeStore;
+        use tempfile::tempdir;
+
+        let mut backend = MemoryBackend::new();
+        let a = Node::new(NodeType::Function, "a".into());
+        let b = Node::new(NodeType::Function, "b".into());
+        let a_id = a.id;
+        let b_id = b.id;
+        backend.insert_node(a).unwrap();
+        backend.insert_node(b).unwrap();
+        backend
+            .insert_edge(Edge::new(a_id, b_id, EdgeType::Calls))
+            .unwrap();
+
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("graph.snapshot.bin");
+        crate::write_columnar_from_backend(&backend, &path).unwrap();
+        let store = SnapshotNodeStore::open(&path).unwrap();
+        let ids = store.all_node_ids();
+        let mut uuid_to_index = HashMap::new();
+        for (i, id) in ids.into_iter().enumerate() {
+            uuid_to_index.insert(id, i as u32);
+        }
+        let edges = store.edge_topology_typed().unwrap();
+        let legacy = CodeGraphCsr::from_typed_edges(store.node_count(), &edges, &uuid_to_index);
+        let streamed =
+            CodeGraphCsr::from_store_topology(&store, &uuid_to_index).unwrap();
+        assert_eq!(legacy.node_count(), streamed.node_count());
+        assert_eq!(legacy.edge_count(), streamed.edge_count());
+        assert_eq!(legacy.targets, streamed.targets);
+        assert_eq!(legacy.edge_types, streamed.edge_types);
     }
 }

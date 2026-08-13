@@ -101,7 +101,7 @@ Required for high-quality `cpg mutations` / typed field writes. Reference: Java 
 | F6 | Golden mutation fixture: type `T` with field write outside ctor → `cpg mutations` / index query hits it with `--exclude-ctors` | `field_write::tests::{id}_cfg_captures_field_write_and_query` | Exactly one non-ctor hit for the typed write |
 | F7 | Document resolution limits (no reflection, no full inference) | This doc + hybrid plan | Honesty note in PR / language section |
 
-**Graph extract** must **materialize** `Symbol.fields` as `Variable` nodes under the owning type (`Contains`) — empty `fields` on the symbol is not enough (`rgbuilder-extraction` graph builder).
+**Graph extract** must populate `Symbol.fields` on type symbols (F1). **Graph materialization** of those fields as `Variable` nodes under the owning type (`Contains`) happens only when discover runs with **`--with-cfg`** (CPG path) — default discover keeps fields on symbols without emitting per-field graph nodes (`rgbuilder-extraction` graph builder). Empty `fields` on the symbol is not enough for Tier 1 plugins.
 
 **Non-negotiable:** a new Tier 1 language that skips Layer F is **not mergeable** as Tier 1. Ship it as Tier 2 until F1–F6 land.
 

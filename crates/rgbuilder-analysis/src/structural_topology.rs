@@ -65,8 +65,7 @@ impl StructuralTopology {
             uuid_to_index.insert(id, i as u32);
             index_to_uuid.push(id);
         }
-        let edges = store.edge_topology_typed()?;
-        let csr = CodeGraphCsr::from_typed_edges(node_count, &edges, &uuid_to_index);
+        let csr = CodeGraphCsr::from_store_topology(store, &uuid_to_index)?;
         Ok(Self {
             csr,
             index_to_uuid,

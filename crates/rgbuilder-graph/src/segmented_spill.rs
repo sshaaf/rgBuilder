@@ -151,6 +151,68 @@ impl FinishedSpill {
     }
 }
 
+/// Read externally-sorted nodes and edges from a finished spill (for delta compact).
+pub fn materialize_sorted_graph(spill: &FinishedSpill) -> Result<(Vec<Node>, Vec<Edge>)> {
+    let dir = &spill.dir;
+    let nodes_unsorted = dir.join("nodes.seg");
+    let edges_unsorted = dir.join("edges.seg");
+    let nodes_sorted = dir.join("nodes.sorted.seg");
+    let edges_sorted = dir.join("edges.sorted.seg");
+
+    external_sort_records(
+        &nodes_unsorted,
+        &nodes_sorted,
+        NODE_KEY_LEN,
+        DEFAULT_SORT_RUN_BYTES,
+        spill.node_count,
+    )?;
+    external_sort_records(
+        &edges_unsorted,
+        &edges_sorted,
+        EDGE_KEY_LEN,
+        DEFAULT_SORT_RUN_BYTES,
+        spill.edge_count,
+    )?;
+
+    let mut nodes = Vec::with_capacity(spill.node_count);
+    {
+        let mut reader = BufReader::with_capacity(8 * 1024 * 1024, File::open(&nodes_sorted)?);
+        for _ in 0..spill.node_count {
+            let mut key = [0u8; NODE_KEY_LEN];
+            reader.read_exact(&mut key)?;
+            let mut len_buf = [0u8; 8];
+            reader.read_exact(&mut len_buf)?;
+            let len = u64::from_le_bytes(len_buf) as usize;
+            let mut blob = vec![0u8; len];
+            reader.read_exact(&mut blob)?;
+            let node: Node = bincode::deserialize(&blob).map_err(|e| {
+                Error::SerdeError(format!("segmented spill node deserialize: {e}"))
+            })?;
+            nodes.push(node);
+        }
+    }
+
+    let mut edges = Vec::with_capacity(spill.edge_count);
+    {
+        let mut reader = BufReader::with_capacity(8 * 1024 * 1024, File::open(&edges_sorted)?);
+        for _ in 0..spill.edge_count {
+            let mut key = [0u8; EDGE_KEY_LEN];
+            reader.read_exact(&mut key)?;
+            let mut len_buf = [0u8; 8];
+            reader.read_exact(&mut len_buf)?;
+            let len = u64::from_le_bytes(len_buf) as usize;
+            let mut blob = vec![0u8; len];
+            reader.read_exact(&mut blob)?;
+            let edge: Edge = bincode::deserialize(&blob).map_err(|e| {
+                Error::SerdeError(format!("segmented spill edge deserialize: {e}"))
+            })?;
+            edges.push(edge);
+        }
+    }
+
+    Ok((nodes, edges))
+}
+
 /// Compile a columnar v2 snapshot from a finished spill (external sort + stream encode).
 ///
 /// Digest matches [`crate::write_columnar_from_nodes_edges`] for the same node/edge set.

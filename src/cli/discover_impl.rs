@@ -100,6 +100,7 @@ pub(crate) fn run_full_analysis(
         PipelineConfig {
             discovery,
             show_progress: human_output,
+            materialize_fields: run_cfg_pass,
             ..PipelineConfig::default()
         },
     );
