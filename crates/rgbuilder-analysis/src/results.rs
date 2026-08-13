@@ -24,6 +24,8 @@ use std::collections::HashMap;
 use std::path::Path;
 use uuid::Uuid;
 
+use crate::community::CommunityResult;
+use crate::complexity::ComplexityReport;
 use crate::graph_utils::PetGraphView;
 
 /// Compact node ID for dense array indexing.
@@ -327,10 +329,47 @@ impl AnalysisResults {
         self.community.as_mut().unwrap()
     }
 
+    /// Write community assignments directly into the columnar table (no staging buffer).
+    pub fn fill_community(&mut self, result: &CommunityResult) {
+        let node_count = self.node_count();
+        if self.community.is_none() {
+            self.community = Some(CommunityTable::with_capacity(node_count));
+        }
+        let uuid_to_compact = &self.uuid_to_compact;
+        let table = self.community.as_mut().unwrap();
+        table.modularity = result.modularity;
+        table.num_communities = result.communities.len();
+        table.infrastructure_community_id = result.infrastructure_community_id;
+        for (node_id, community_id) in &result.assignments {
+            if let Some(&compact_id) = uuid_to_compact.get(node_id) {
+                table.assignments[compact_id as usize] = *community_id;
+            }
+        }
+    }
+
     /// Initialize complexity table.
     pub fn init_complexity(&mut self) -> &mut ComplexityTable {
         self.complexity = Some(ComplexityTable::with_capacity(self.node_count()));
         self.complexity.as_mut().unwrap()
+    }
+
+    /// Write complexity metrics directly into the columnar table (no staging buffer).
+    pub fn fill_complexity(&mut self, report: &ComplexityReport) {
+        let node_count = self.node_count();
+        if self.complexity.is_none() {
+            self.complexity = Some(ComplexityTable::with_capacity(node_count));
+        }
+        let uuid_to_compact = &self.uuid_to_compact;
+        let table = self.complexity.as_mut().unwrap();
+        table.avg_cyclomatic = report.avg_cyclomatic;
+        table.max_cyclomatic = report.max_cyclomatic as u32;
+        for func in &report.functions {
+            if let Some(&compact_id) = uuid_to_compact.get(&func.node.id) {
+                let idx = compact_id as usize;
+                table.cyclomatic[idx] = func.cyclomatic as u32;
+                table.cognitive[idx] = func.cognitive as u32;
+            }
+        }
     }
 
     /// Initialize centrality table.

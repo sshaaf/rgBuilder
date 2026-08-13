@@ -90,8 +90,48 @@ struct FunctionWorkItem {
     language: String,
 }
 
-struct FileSourceCache {
+/// Parallel file read cache keyed by node `file_path` strings.
+pub struct FileSourceCache {
     sources: HashMap<String, Arc<String>>,
+}
+
+impl FileSourceCache {
+    /// Source text for a function's `file_path` metadata field.
+    pub fn get(&self, file_path: &str) -> Option<&str> {
+        self.sources.get(file_path).map(|s| s.as_str())
+    }
+}
+
+fn resolve_read_path(repo_root: &Path, file_path: &str) -> std::path::PathBuf {
+    let path = Path::new(file_path);
+    if path.is_file() {
+        path.to_path_buf()
+    } else {
+        repo_root.join(file_path)
+    }
+}
+
+/// Read each unique function source file once (parallel when `thread_count` is set).
+pub fn preload_file_sources(
+    functions: &[Node],
+    repo_root: &Path,
+    thread_count: Option<usize>,
+) -> FileSourceCache {
+    let paths: HashSet<String> = functions
+        .iter()
+        .filter_map(|n| n.file_path.clone())
+        .collect();
+    let sources: HashMap<String, Arc<String>> = with_pool(thread_count, || {
+        paths
+            .par_iter()
+            .filter_map(|path| {
+                let read_path = resolve_read_path(repo_root, path);
+                let content = std::fs::read_to_string(&read_path).ok()?;
+                Some((path.clone(), Arc::new(content)))
+            })
+            .collect()
+    });
+    FileSourceCache { sources }
 }
 
 struct CfgWorkContext<'a> {
@@ -110,6 +150,7 @@ pub fn run_cfg_analysis_batch(
     storage: &AnalysisStorage,
     repo_root: &Path,
     options: CfgAnalysisOptions,
+    file_sources: Option<&FileSourceCache>,
 ) -> CfgAnalysisBatchResult {
     let cache = load_incremental_cache(storage, repo_root);
 
@@ -123,7 +164,14 @@ pub fn run_cfg_analysis_batch(
         return result;
     }
 
-    let sources = preload_file_sources(functions, options.thread_count);
+    let owned_sources;
+    let sources = match file_sources {
+        Some(preloaded) => preloaded,
+        None => {
+            owned_sources = preload_file_sources(functions, repo_root, options.thread_count);
+            &owned_sources
+        }
+    };
     let work_items = flatten_work_items(functions);
     let stage = options.verbose.then(CfgStageTimings::default);
     let stage_ref = stage.as_ref();
@@ -330,23 +378,6 @@ fn sync_storage_function_ids(storage: &AnalysisStorage, functions: &[Node]) -> u
 fn load_incremental_cache(storage: &AnalysisStorage, _repo_root: &Path) -> CfgIncrementalCache {
     let index = storage.load_analysis_index().unwrap_or_default();
     CfgIncrementalCache { index }
-}
-
-fn preload_file_sources(functions: &[Node], thread_count: Option<usize>) -> FileSourceCache {
-    let paths: HashSet<String> = functions
-        .iter()
-        .filter_map(|n| n.file_path.clone())
-        .collect();
-    let sources: HashMap<String, Arc<String>> = with_pool(thread_count, || {
-        paths
-            .par_iter()
-            .filter_map(|path| {
-                let content = std::fs::read_to_string(path).ok()?;
-                Some((path.clone(), Arc::new(content)))
-            })
-            .collect()
-    });
-    FileSourceCache { sources }
 }
 
 fn active_stable_keys(functions: &[Node], sources: Option<&FileSourceCache>) -> HashSet<String> {
