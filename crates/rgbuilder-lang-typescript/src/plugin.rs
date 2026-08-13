@@ -429,43 +429,26 @@ impl TypeScriptPlugin {
         traverse(node, &mut count);
         count
     }
-}
 
-impl Default for TypeScriptPlugin {
-    fn default() -> Self {
-        Self::new().expect("Failed to create TypeScriptPlugin")
-    }
-}
-
-impl LanguagePlugin for TypeScriptPlugin {
-    fn language_id(&self) -> &str {
-        "typescript"
-    }
-
-    fn file_extensions(&self) -> Vec<&str> {
-        vec!["ts", "tsx"]
-    }
-
-    fn grammar(&self) -> Option<tree_sitter::Language> {
-        Some(tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into())
-    }
-
-    fn extract_symbols(&self, file_path: &Path, source: &[u8]) -> Result<Vec<Symbol>> {
+    fn parse(&self, file_path: &Path, source: &[u8]) -> Result<tree_sitter::Tree> {
         let mut parser = Parser::new();
         parser
             .set_language(&tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into())
-            .map_err(|e| Error::PluginError(format!("Failed to set TypeScript grammar: {}", e)))?;
+            .map_err(|e| Error::PluginError(format!("Failed to set TypeScript grammar: {e}")))?;
+        parser.parse(source, None).ok_or_else(|| Error::ParseError {
+            file: file_path.to_path_buf(),
+            line: 0,
+            message: "Failed to parse TypeScript source".to_string(),
+        })
+    }
 
-        let tree = parser
-            .parse(source, None)
-            .ok_or_else(|| Error::ParseError {
-                file: file_path.to_string_lossy().to_string().into(),
-                line: 0,
-                message: "Failed to parse TypeScript source".to_string(),
-            })?;
-
+    fn symbols_from_tree(
+        &self,
+        root: Node,
+        source: &[u8],
+        file_path: &Path,
+    ) -> Result<Vec<Symbol>> {
         let mut symbols = Vec::new();
-        let root_node = tree.root_node();
         let file_path_str = file_path.to_string_lossy();
 
         fn traverse_for_symbols(
@@ -496,32 +479,20 @@ impl LanguagePlugin for TypeScriptPlugin {
             Ok(())
         }
 
-        traverse_for_symbols(root_node, source, &file_path_str, &mut symbols, self)?;
+        traverse_for_symbols(root, source, &file_path_str, &mut symbols, self)?;
         Ok(symbols)
     }
 
-    fn extract_relations(
+    fn relations_from_tree(
         &self,
-        file_path: &Path,
+        root: Node,
         source: &[u8],
+        file_path: &Path,
         symbols: &[Symbol],
     ) -> Result<Vec<Relation>> {
-        let mut parser = Parser::new();
-        parser
-            .set_language(&tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into())
-            .map_err(|e| Error::PluginError(format!("Failed to set TypeScript grammar: {e}")))?;
-
-        let tree = parser
-            .parse(source, None)
-            .ok_or_else(|| Error::ParseError {
-                file: file_path.to_path_buf(),
-                line: 0,
-                message: "Failed to parse TypeScript source".to_string(),
-            })?;
-
         let mut relations = Vec::new();
         walk_calls(
-            tree.root_node(),
+            root,
             source,
             file_path,
             symbols,
@@ -530,6 +501,53 @@ impl LanguagePlugin for TypeScriptPlugin {
             &mut relations,
         );
         Ok(relations)
+    }
+}
+
+impl Default for TypeScriptPlugin {
+    fn default() -> Self {
+        Self::new().expect("Failed to create TypeScriptPlugin")
+    }
+}
+
+impl LanguagePlugin for TypeScriptPlugin {
+    fn language_id(&self) -> &str {
+        "typescript"
+    }
+
+    fn file_extensions(&self) -> Vec<&str> {
+        vec!["ts", "tsx"]
+    }
+
+    fn grammar(&self) -> Option<tree_sitter::Language> {
+        Some(tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into())
+    }
+
+    fn extract_symbols(&self, file_path: &Path, source: &[u8]) -> Result<Vec<Symbol>> {
+        let tree = self.parse(file_path, source)?;
+        self.symbols_from_tree(tree.root_node(), source, file_path)
+    }
+
+    fn extract_relations(
+        &self,
+        file_path: &Path,
+        source: &[u8],
+        symbols: &[Symbol],
+    ) -> Result<Vec<Relation>> {
+        let tree = self.parse(file_path, source)?;
+        self.relations_from_tree(tree.root_node(), source, file_path, symbols)
+    }
+
+    fn extract_all(
+        &self,
+        file_path: &Path,
+        source: &[u8],
+    ) -> Result<(Vec<Symbol>, Vec<Relation>)> {
+        let tree = self.parse(file_path, source)?;
+        let root = tree.root_node();
+        let symbols = self.symbols_from_tree(root, source, file_path)?;
+        let relations = self.relations_from_tree(root, source, file_path, &symbols)?;
+        Ok((symbols, relations))
     }
 
     fn calculate_complexity(

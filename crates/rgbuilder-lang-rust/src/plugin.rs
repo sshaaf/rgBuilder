@@ -415,43 +415,26 @@ impl RustPlugin {
         traverse(node, &mut count);
         count
     }
-}
 
-impl Default for RustPlugin {
-    fn default() -> Self {
-        Self::new().expect("Failed to create RustPlugin")
-    }
-}
-
-impl LanguagePlugin for RustPlugin {
-    fn language_id(&self) -> &str {
-        "rust"
-    }
-
-    fn file_extensions(&self) -> Vec<&str> {
-        vec!["rs"]
-    }
-
-    fn grammar(&self) -> Option<tree_sitter::Language> {
-        Some(tree_sitter_rust::LANGUAGE.into())
-    }
-
-    fn extract_symbols(&self, file_path: &Path, source: &[u8]) -> Result<Vec<Symbol>> {
+    fn parse(&self, file_path: &Path, source: &[u8]) -> Result<tree_sitter::Tree> {
         let mut parser = Parser::new();
         parser
             .set_language(&tree_sitter_rust::LANGUAGE.into())
-            .map_err(|e| Error::PluginError(format!("Failed to set Rust grammar: {}", e)))?;
+            .map_err(|e| Error::PluginError(format!("Failed to set Rust grammar: {e}")))?;
+        parser.parse(source, None).ok_or_else(|| Error::ParseError {
+            file: file_path.to_path_buf(),
+            line: 0,
+            message: "Failed to parse Rust source".to_string(),
+        })
+    }
 
-        let tree = parser
-            .parse(source, None)
-            .ok_or_else(|| Error::ParseError {
-                file: file_path.to_string_lossy().to_string().into(),
-                line: 0,
-                message: "Failed to parse Rust source".to_string(),
-            })?;
-
+    fn symbols_from_tree(
+        &self,
+        root: Node,
+        source: &[u8],
+        file_path: &Path,
+    ) -> Result<Vec<Symbol>> {
         let mut symbols = Vec::new();
-        let root_node = tree.root_node();
         let file_path_str = file_path.to_string_lossy();
 
         fn traverse_for_symbols(
@@ -482,32 +465,20 @@ impl LanguagePlugin for RustPlugin {
             Ok(())
         }
 
-        traverse_for_symbols(root_node, source, &file_path_str, &mut symbols, self)?;
+        traverse_for_symbols(root, source, &file_path_str, &mut symbols, self)?;
         Ok(symbols)
     }
 
-    fn extract_relations(
+    fn relations_from_tree(
         &self,
-        file_path: &Path,
+        root: Node,
         source: &[u8],
+        file_path: &Path,
         symbols: &[Symbol],
     ) -> Result<Vec<Relation>> {
-        let mut parser = Parser::new();
-        parser
-            .set_language(&tree_sitter_rust::LANGUAGE.into())
-            .map_err(|e| Error::PluginError(format!("Failed to set Rust grammar: {e}")))?;
-
-        let tree = parser
-            .parse(source, None)
-            .ok_or_else(|| Error::ParseError {
-                file: file_path.to_path_buf(),
-                line: 0,
-                message: "Failed to parse Rust source".to_string(),
-            })?;
-
         let mut relations = Vec::new();
         walk_calls(
-            tree.root_node(),
+            root,
             source,
             file_path,
             symbols,
@@ -516,6 +487,53 @@ impl LanguagePlugin for RustPlugin {
             &mut relations,
         );
         Ok(relations)
+    }
+}
+
+impl Default for RustPlugin {
+    fn default() -> Self {
+        Self::new().expect("Failed to create RustPlugin")
+    }
+}
+
+impl LanguagePlugin for RustPlugin {
+    fn language_id(&self) -> &str {
+        "rust"
+    }
+
+    fn file_extensions(&self) -> Vec<&str> {
+        vec!["rs"]
+    }
+
+    fn grammar(&self) -> Option<tree_sitter::Language> {
+        Some(tree_sitter_rust::LANGUAGE.into())
+    }
+
+    fn extract_symbols(&self, file_path: &Path, source: &[u8]) -> Result<Vec<Symbol>> {
+        let tree = self.parse(file_path, source)?;
+        self.symbols_from_tree(tree.root_node(), source, file_path)
+    }
+
+    fn extract_relations(
+        &self,
+        file_path: &Path,
+        source: &[u8],
+        symbols: &[Symbol],
+    ) -> Result<Vec<Relation>> {
+        let tree = self.parse(file_path, source)?;
+        self.relations_from_tree(tree.root_node(), source, file_path, symbols)
+    }
+
+    fn extract_all(
+        &self,
+        file_path: &Path,
+        source: &[u8],
+    ) -> Result<(Vec<Symbol>, Vec<Relation>)> {
+        let tree = self.parse(file_path, source)?;
+        let root = tree.root_node();
+        let symbols = self.symbols_from_tree(root, source, file_path)?;
+        let relations = self.relations_from_tree(root, source, file_path, &symbols)?;
+        Ok((symbols, relations))
     }
 
     fn calculate_complexity(
