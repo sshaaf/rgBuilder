@@ -59,11 +59,11 @@ impl SignatureExtractor {
         };
 
         Some(FunctionSignature {
-            name: node.name.clone(),
-            module: node.qualified_name.clone(),
+            name: node.name.to_string(),
+            module: node.qualified_name.as_ref().map(|s| s.to_string()),
             params,
             return_type: node.return_type_text().map(str::to_string),
-            file_path: node.file_path.clone(),
+            file_path: node.file_path.as_ref().map(|s| s.to_string()),
         })
     }
 

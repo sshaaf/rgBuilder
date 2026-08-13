@@ -58,7 +58,7 @@ impl PreparedGraphSnapshot {
 
         for node in &nodes {
             name_index
-                .entry(node.name.clone())
+                .entry(node.name.to_string())
                 .or_default()
                 .push(node.id);
             type_index.entry(node.node_type).or_default().push(node.id);
@@ -373,7 +373,7 @@ mod tests {
     #[test]
     fn snapshot_round_trip_columnar_v2() {
         let mut backend = MemoryBackend::new();
-        let n = Node::new(NodeType::Function, "main".into());
+        let n = Node::new(NodeType::Function, "main");
         let id = n.id;
         backend.insert_node(n).unwrap();
         backend
@@ -399,7 +399,7 @@ mod tests {
     fn hydrate_uses_prepared_indexes_without_rescan() {
         let mut backend = MemoryBackend::new();
         for name in ["alpha", "beta"] {
-            let n = Node::new(NodeType::Function, name.into());
+            let n = Node::new(NodeType::Function, name);
             backend.insert_node(n).unwrap();
         }
         let prepared = PreparedGraphSnapshot::from_backend(&backend).unwrap();

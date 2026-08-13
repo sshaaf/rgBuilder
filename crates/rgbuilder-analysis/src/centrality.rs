@@ -874,8 +874,8 @@ pub fn degree_centrality(backend: &MemoryBackend) -> Result<Vec<CentralityScore>
 
         scores.push(CentralityScore {
             node_id: node.id,
-            name: node.name.clone(),
-            file_path: node.file_path.clone(),
+            name: node.name.to_string(),
+            file_path: node.file_path.as_ref().map(|s| s.to_string()),
             degree,
             betweenness: bt,
             complexity,

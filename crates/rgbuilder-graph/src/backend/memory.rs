@@ -44,6 +44,8 @@ pub struct MemoryBackend {
     node_label_index: Arc<RwLock<HashMap<Arc<str>, Vec<Uuid>>>>,
     node_property_index: Arc<RwLock<PropertyIndex>>,
     edge_type_index: Arc<RwLock<HashMap<EdgeType, Vec<usize>>>>,
+    outgoing_adj: Arc<RwLock<HashMap<Uuid, Vec<usize>>>>,
+    incoming_adj: Arc<RwLock<HashMap<Uuid, Vec<usize>>>>,
     string_interner: Arc<StringInterner>, // CRITICAL: Must be Arc-wrapped to share pool across clones
     query_cache: Arc<RwLock<HashMap<String, Vec<Node>>>>,
 }
@@ -59,6 +61,8 @@ impl MemoryBackend {
             node_label_index: Arc::new(RwLock::new(HashMap::new())),
             node_property_index: Arc::new(RwLock::new(HashMap::new())),
             edge_type_index: Arc::new(RwLock::new(HashMap::new())),
+            outgoing_adj: Arc::new(RwLock::new(HashMap::new())),
+            incoming_adj: Arc::new(RwLock::new(HashMap::new())),
             string_interner: Arc::new(StringInterner::new()), // Wrap in Arc
             query_cache: Arc::new(RwLock::new(HashMap::new())),
         }
@@ -360,11 +364,17 @@ impl MemoryBackend {
 
         let mut store = write_lock(&self.edges)?;
         let mut type_index = write_lock(&self.edge_type_index)?;
+        let mut outgoing = write_lock(&self.outgoing_adj)?;
+        let mut incoming = write_lock(&self.incoming_adj)?;
         for edge in edges {
             let idx = store.len();
             type_index.entry(edge.edge_type).or_default().push(idx);
+            outgoing.entry(edge.from).or_default().push(idx);
+            incoming.entry(edge.to).or_default().push(idx);
             store.push(edge);
         }
+        drop(incoming);
+        drop(outgoing);
         drop(type_index);
         drop(store);
         self.invalidate_cache()?;
@@ -493,34 +503,44 @@ impl MemoryBackend {
     /// Get outgoing edges from a node
     pub fn get_outgoing_edges(&self, node_id: Uuid) -> Result<Vec<Edge>> {
         let edges = read_lock(&self.edges)?;
-        Ok(edges
-            .iter()
-            .filter(|e| e.from == node_id)
-            .cloned()
-            .collect())
+        let adj = read_lock(&self.outgoing_adj)?;
+        Ok(adj
+            .get(&node_id)
+            .map(|indices| indices.iter().filter_map(|&i| edges.get(i).cloned()).collect())
+            .unwrap_or_default())
     }
 
     /// Get incoming edges to a node
     pub fn get_incoming_edges(&self, node_id: Uuid) -> Result<Vec<Edge>> {
         let edges = read_lock(&self.edges)?;
-        Ok(edges.iter().filter(|e| e.to == node_id).cloned().collect())
+        let adj = read_lock(&self.incoming_adj)?;
+        Ok(adj
+            .get(&node_id)
+            .map(|indices| indices.iter().filter_map(|&i| edges.get(i).cloned()).collect())
+            .unwrap_or_default())
     }
 
     /// Get neighbors of a node (nodes connected by edges)
     pub fn get_neighbors(&self, node_id: Uuid) -> Result<Vec<Node>> {
         let edges = read_lock(&self.edges)?;
-        let mut neighbor_ids: Vec<Uuid> = edges
-            .iter()
-            .filter_map(|e| {
-                if e.from == node_id {
-                    Some(e.to)
-                } else if e.to == node_id {
-                    Some(e.from)
-                } else {
-                    None
+        let outgoing = read_lock(&self.outgoing_adj)?;
+        let incoming = read_lock(&self.incoming_adj)?;
+        let mut neighbor_ids: Vec<Uuid> = Vec::new();
+        if let Some(indices) = outgoing.get(&node_id) {
+            for &i in indices {
+                if let Some(edge) = edges.get(i) {
+                    neighbor_ids.push(edge.to);
                 }
-            })
-            .collect();
+            }
+        }
+        if let Some(indices) = incoming.get(&node_id) {
+            for &i in indices {
+                if let Some(edge) = edges.get(i) {
+                    neighbor_ids.push(edge.from);
+                }
+            }
+        }
+        neighbor_ids.sort_unstable();
         neighbor_ids.dedup();
 
         let nodes = read_lock(&self.nodes)?;
@@ -543,29 +563,30 @@ impl MemoryBackend {
     /// Remove all nodes associated with a file path (relative or absolute).
     pub fn remove_nodes_for_file(&mut self, file_path: &str) -> Result<usize> {
         let normalized = normalize_path_str(file_path);
-        let ids: Vec<Uuid> = read_lock(&self.nodes)?
+        let ids_to_delete: HashSet<Uuid> = read_lock(&self.nodes)?
             .values()
             .filter(|n| node_matches_file(n, &normalized))
             .map(|n| n.id)
             .collect();
 
-        let count = ids.len();
-        for id in &ids {
-            self.delete_node_without_reindex(*id)?;
+        if ids_to_delete.is_empty() {
+            return Ok(0);
         }
-        if count > 0 {
-            self.rebuild_edge_index();
-            self.invalidate_cache()?;
-        }
-        Ok(count)
-    }
 
-    fn delete_node_without_reindex(&mut self, id: Uuid) -> Result<()> {
-        if let Some(node) = write_lock(&self.nodes)?.remove(&id) {
-            self.unindex_node(&node)?;
-            write_lock(&self.edges)?.retain(|e| e.from != id && e.to != id);
+        {
+            let mut nodes = write_lock(&self.nodes)?;
+            for id in &ids_to_delete {
+                if let Some(node) = nodes.remove(id) {
+                    self.unindex_node(&node)?;
+                }
+            }
         }
-        Ok(())
+        write_lock(&self.edges)?.retain(|e| {
+            !ids_to_delete.contains(&e.from) && !ids_to_delete.contains(&e.to)
+        });
+        self.rebuild_edge_index();
+        self.invalidate_cache()?;
+        Ok(ids_to_delete.len())
     }
 
     /// Build a symbol lookup index (`file::name` -> node ID).
@@ -600,9 +621,17 @@ impl MemoryBackend {
 
     /// Check whether an edge already exists.
     pub fn has_edge(&self, from: Uuid, to: Uuid, edge_type: EdgeType) -> bool {
-        expect_read(&self.edges)
-            .iter()
-            .any(|e| e.from == from && e.to == to && e.edge_type == edge_type)
+        let edges = expect_read(&self.edges);
+        let adj = expect_read(&self.outgoing_adj);
+        adj.get(&from)
+            .map(|indices| {
+                indices.iter().any(|&i| {
+                    edges
+                        .get(i)
+                        .is_some_and(|e| e.to == to && e.edge_type == edge_type)
+                })
+            })
+            .unwrap_or(false)
     }
 
     /// Remove edges referencing deleted nodes.
@@ -659,17 +688,28 @@ impl MemoryBackend {
         write_lock(&self.node_label_index)?.clear();
         write_lock(&self.node_property_index)?.clear();
         write_lock(&self.edge_type_index)?.clear();
+        write_lock(&self.outgoing_adj)?.clear();
+        write_lock(&self.incoming_adj)?.clear();
         write_lock(&self.query_cache)?.clear();
         Ok(())
     }
 
     fn intern_node(&self, node: &mut Node) {
-        self.string_interner.intern_string(&mut node.name);
+        self.string_interner.intern_shared(&mut node.name);
         if let Some(qn) = &mut node.qualified_name {
-            self.string_interner.intern_string(qn);
+            self.string_interner.intern_shared(qn);
+        }
+        if let Some(sig) = &mut node.signature {
+            self.string_interner.intern_shared(sig);
+        }
+        if let Some(rt) = &mut node.return_type {
+            self.string_interner.intern_shared(rt);
+        }
+        if let Some(hash) = &mut node.code_hash {
+            self.string_interner.intern_shared(hash);
         }
         if let Some(fp) = &mut node.file_path {
-            self.string_interner.intern_string(fp);
+            self.string_interner.intern_shared(fp);
         }
         for label in &mut node.labels {
             self.string_interner.intern_string(label);
@@ -779,11 +819,17 @@ impl MemoryBackend {
 
     fn rebuild_edge_index(&self) {
         let edges = expect_read(&self.edges);
-        let mut index: HashMap<EdgeType, Vec<usize>> = HashMap::new();
+        let mut type_index: HashMap<EdgeType, Vec<usize>> = HashMap::new();
+        let mut outgoing: HashMap<Uuid, Vec<usize>> = HashMap::new();
+        let mut incoming: HashMap<Uuid, Vec<usize>> = HashMap::new();
         for (i, edge) in edges.iter().enumerate() {
-            index.entry(edge.edge_type).or_default().push(i);
+            type_index.entry(edge.edge_type).or_default().push(i);
+            outgoing.entry(edge.from).or_default().push(i);
+            incoming.entry(edge.to).or_default().push(i);
         }
-        *expect_write(&self.edge_type_index) = index;
+        *expect_write(&self.edge_type_index) = type_index;
+        *expect_write(&self.outgoing_adj) = outgoing;
+        *expect_write(&self.incoming_adj) = incoming;
     }
 
     fn invalidate_cache(&self) -> Result<()> {
@@ -1242,7 +1288,7 @@ mod tests {
     fn test_remove_nodes_for_file() {
         let mut backend = MemoryBackend::new();
         let mut node = Node::new(NodeType::Function, "main".to_string());
-        node.file_path = Some("src/main.rs".to_string());
+        node.file_path = Some(crate::schema::SharedStr::from("src/main.rs"));
         backend.insert_node(node).unwrap();
         backend
             .insert_node(
@@ -1320,5 +1366,47 @@ mod tests {
         let api_nodes = backend.find_nodes_by_property("repo", "api").unwrap();
         assert_eq!(api_nodes.len(), 1);
         assert_eq!(api_nodes[0].name, "main");
+    }
+
+    #[test]
+    fn get_neighbors_dedupes_bidirectional_edges() {
+        let mut backend = MemoryBackend::new();
+        let n1 = Node::new(NodeType::Function, "a");
+        let n2 = Node::new(NodeType::Function, "b");
+        let id1 = n1.id;
+        let id2 = n2.id;
+        backend.insert_nodes_batch(vec![n1, n2]).unwrap();
+        backend
+            .insert_edges_batch(vec![
+                Edge::new(id1, id2, EdgeType::Calls),
+                Edge::new(id2, id1, EdgeType::Calls),
+            ])
+            .unwrap();
+        let neighbors = backend.get_neighbors(id1).unwrap();
+        assert_eq!(neighbors.len(), 1);
+        assert_eq!(neighbors[0].id, id2);
+    }
+
+    #[test]
+    fn remove_nodes_for_file_batch_deletes() {
+        let mut backend = MemoryBackend::new();
+        let keep = Node::new(NodeType::Function, "keep").with_file_path("a.rs");
+        let drop1 = Node::new(NodeType::Function, "d1").with_file_path("b.rs");
+        let drop2 = Node::new(NodeType::Function, "d2").with_file_path("b.rs");
+        let keep_id = keep.id;
+        let drop1_id = drop1.id;
+        backend
+            .insert_nodes_batch(vec![keep, drop1, drop2])
+            .unwrap();
+        backend
+            .insert_edges_batch(vec![
+                Edge::new(keep_id, drop1_id, EdgeType::Calls),
+                Edge::new(drop1_id, keep_id, EdgeType::Calls),
+            ])
+            .unwrap();
+        let removed = backend.remove_nodes_for_file("b.rs").unwrap();
+        assert_eq!(removed, 2);
+        assert_eq!(backend.node_count(), 1);
+        assert_eq!(backend.edge_count(), 0);
     }
 }

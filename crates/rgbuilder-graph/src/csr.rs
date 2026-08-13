@@ -298,8 +298,8 @@ mod tests {
     #[test]
     fn csr_bidirectional_calls() {
         let mut backend = MemoryBackend::new();
-        let a = Node::new(NodeType::Function, "a".into());
-        let b = Node::new(NodeType::Function, "b".into());
+        let a = Node::new(NodeType::Function, "a");
+        let b = Node::new(NodeType::Function, "b");
         let a_id = a.id;
         let b_id = b.id;
         backend.insert_node(a).unwrap();
@@ -327,8 +327,8 @@ mod tests {
         use tempfile::tempdir;
 
         let mut backend = MemoryBackend::new();
-        let a = Node::new(NodeType::Function, "a".into());
-        let b = Node::new(NodeType::Function, "b".into());
+        let a = Node::new(NodeType::Function, "a");
+        let b = Node::new(NodeType::Function, "b");
         let a_id = a.id;
         let b_id = b.id;
         backend.insert_node(a).unwrap();

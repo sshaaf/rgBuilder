@@ -102,7 +102,7 @@ impl ChangeDetector {
                     max_score = max_score.max(result.score);
                     details.push(ChangeDetail {
                         file: file.clone(),
-                        symbol: node.name.clone(),
+                        symbol: node.name.to_string(),
                         blast_radius_score: result.score,
                         direct_callers: result.direct_caller_ids.len(),
                         impact_zone_size,

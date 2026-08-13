@@ -109,7 +109,7 @@ impl FieldWriteIndex {
             let file = record
                 .file_path
                 .clone()
-                .or_else(|| func.and_then(|n| n.file_path.clone()))
+                .or_else(|| func.and_then(|n| n.file_path.as_ref().map(|s| s.to_string())))
                 .unwrap_or_default();
             by_file.entry(file).or_default().push(record);
         }
@@ -132,8 +132,8 @@ impl FieldWriteIndex {
                 for record in records {
                     let func = by_id.get(&record.function_id).copied();
                     let function_name = if record.function_name.is_empty() {
-                        func.map(|n| n.name.clone())
-                            .unwrap_or_else(|| "unknown".into())
+                        func.map(|n| n.name.to_string())
+                            .unwrap_or_else(|| "unknown".to_string())
                     } else {
                         record.function_name.clone()
                     };
@@ -747,16 +747,16 @@ public class OrderProcessor {
         archive.insert(CfgPdgRecord {
             function_id: id_ctor,
             code_hash: "a".into(),
-            function_name: ctor_fn.name.clone(),
-            file_path: ctor_fn.file_path.clone(),
+            function_name: ctor_fn.name.to_string(),
+            file_path: ctor_fn.file_path.as_ref().map(|s| s.to_string()),
             cfg: cfg_ctor,
             pdg: Arc::new(pdg_ctor),
         });
         archive.insert(CfgPdgRecord {
             function_id: id_proc,
             code_hash: "b".into(),
-            function_name: process_fn.name.clone(),
-            file_path: process_fn.file_path.clone(),
+            function_name: process_fn.name.to_string(),
+            file_path: process_fn.file_path.as_ref().map(|s| s.to_string()),
             cfg: cfg_proc,
             pdg: Arc::new(pdg_proc),
         });

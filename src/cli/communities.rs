@@ -36,7 +36,7 @@ pub fn run_label(ctx: &CliContext, args: CommunitiesLabelArgs) -> Result<()> {
             .get_node(uuid)
             .ok()
             .flatten()
-            .map(|n| (n.name.clone(), n.file_path.clone()))
+            .map(|n| (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())))
     })?;
 
     if args.write {
@@ -50,7 +50,7 @@ pub fn run_label(ctx: &CliContext, args: CommunitiesLabelArgs) -> Result<()> {
             .get_node(uuid)
             .ok()
             .flatten()
-            .map(|n| (n.name.clone(), n.file_path.clone()))
+            .map(|n| (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())))
     });
 
     if ctx.format == OutputFormat::Json {

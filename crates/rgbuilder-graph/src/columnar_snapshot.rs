@@ -9,14 +9,15 @@
 use crate::backend::trait_def::GraphBackend;
 use crate::backend::MemoryBackend;
 use crate::csr::{edge_type_from_u8, edge_type_to_u8};
-use crate::schema::{Edge, EdgeType, GraphParameter, Node, NodeType};
+use crate::normalize_path_str;
+use crate::schema::{Edge, EdgeType, GraphParameter, Node, NodeType, SharedStr};
 use crate::snapshot::{PreparedGraphSnapshot, PreparedIndexes, SNAPSHOT_MAGIC};
 use memmap2::Mmap;
 use rgbuilder_error::{Error, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use uuid::Uuid;
 /// Snapshot file format version for columnar layout.
 pub const COLUMNAR_SNAPSHOT_VERSION: u32 = 2;
@@ -70,6 +71,7 @@ fn decode_node_extension(bytes: &[u8]) -> Result<NodeExtension> {
 
 /// Fixed-width node column (64 bytes).
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub(crate) struct NodeRow {
     pub(crate) id: [u8; 16],
     pub(crate) node_type: u16,
@@ -89,6 +91,7 @@ pub(crate) struct NodeRow {
 
 /// Fixed-width edge column (40 bytes).
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub(crate) struct EdgeRow {
     pub(crate) from: [u8; 16],
     pub(crate) to: [u8; 16],
@@ -113,7 +116,7 @@ pub struct ColumnarGraphMmap {
     name_index: HashMap<String, Vec<Uuid>>,
     type_index: HashMap<NodeType, Vec<Uuid>>,
     offset_extensions: u64,
-    id_to_index: HashMap<Uuid, usize>,
+    id_to_index: OnceLock<HashMap<Uuid, usize>>,
 }
 
 impl ColumnarGraphMmap {
@@ -159,13 +162,6 @@ impl ColumnarGraphMmap {
             ));
         }
 
-        let mut id_to_index = HashMap::with_capacity(node_count);
-        for idx in 0..node_count {
-            let row = read_node_row(mmap.as_ref(), offset_nodes as usize, idx)?;
-            let id = Uuid::from_bytes(row.id);
-            id_to_index.insert(id, idx);
-        }
-
         Ok(Self {
             mmap,
             schema_version,
@@ -179,7 +175,19 @@ impl ColumnarGraphMmap {
             name_index,
             type_index,
             offset_extensions,
-            id_to_index,
+            id_to_index: OnceLock::new(),
+        })
+    }
+
+    fn id_to_index_map(&self) -> &HashMap<Uuid, usize> {
+        self.id_to_index.get_or_init(|| {
+            let mut map = HashMap::with_capacity(self.node_count);
+            for idx in 0..self.node_count {
+                if let Ok(row) = read_node_row(self.mmap.as_ref(), self.offset_nodes as usize, idx) {
+                    map.insert(Uuid::from_bytes(row.id), idx);
+                }
+            }
+            map
         })
     }
 
@@ -223,7 +231,9 @@ impl ColumnarGraphMmap {
 
     /// Iterate `(column_index, node_id)` pairs without materializing nodes.
     pub fn node_ids_by_index(&self) -> impl Iterator<Item = (usize, Uuid)> + '_ {
-        self.id_to_index.iter().map(|(id, idx)| (*idx, *id))
+        self.id_to_index_map()
+            .iter()
+            .map(|(id, idx)| (*idx, *id))
     }
 
     /// Read typed edge topology directly from mmap columns.
@@ -264,14 +274,106 @@ impl ColumnarGraphMmap {
         ))
     }
 
+    /// Node id at column index (no string pool reads).
+    pub(crate) fn node_id_at(&self, idx: usize) -> Result<Uuid> {
+        if idx >= self.node_count {
+            return Err(Error::SerdeError(format!(
+                "node index {idx} out of range (count={})",
+                self.node_count
+            )));
+        }
+        let row = read_node_row(self.mmap.as_ref(), self.offset_nodes as usize, idx)?;
+        Ok(Uuid::from_bytes(row.id))
+    }
+
     /// Materialize a single node by column index.
     pub fn materialize_node_at(&self, idx: usize) -> Result<Node> {
         self.materialize_node(idx)
     }
 
+    /// Raw extension blob for a node row (no bincode decode).
+    pub(crate) fn extension_bytes_at(&self, idx: usize) -> Result<Option<&[u8]>> {
+        if idx >= self.node_count {
+            return Err(Error::SerdeError(format!(
+                "node index {idx} out of range (count={})",
+                self.node_count
+            )));
+        }
+        let row = read_node_row(self.mmap.as_ref(), self.offset_nodes as usize, idx)?;
+        if row.extension_len == 0 {
+            return Ok(None);
+        }
+        let start = self.offset_extensions as usize + row.extension_off as usize;
+        let end = start + row.extension_len as usize;
+        if end > self.mmap.len() {
+            return Err(Error::SerdeError("node extension out of range".into()));
+        }
+        Ok(Some(&self.mmap[start..end]))
+    }
+
+    /// Whether a base node should be dropped for invalidated file paths (no full materialize).
+    pub(crate) fn node_invalidated_at(
+        &self,
+        idx: usize,
+        invalidated: &std::collections::HashSet<String>,
+    ) -> Result<bool> {
+        if invalidated.is_empty() {
+            return Ok(false);
+        }
+        let row = read_node_row(self.mmap.as_ref(), self.offset_nodes as usize, idx)?;
+        let node_type = node_type_from_u16(row.node_type)?;
+        let name = read_string(
+            self.mmap.as_ref(),
+            self.offset_strings as usize,
+            self.offset_strings_len as usize,
+            row.name_off,
+            row.name_len,
+        )?;
+        let file_path = optional_string(
+            self.mmap.as_ref(),
+            self.offset_strings as usize,
+            self.offset_strings_len as usize,
+            row.file_path_off,
+            row.file_path_len,
+        )?;
+        Ok(node_matches_invalidated_path(
+            file_path.as_deref(),
+            &name,
+            node_type,
+            invalidated,
+        ))
+    }
+
+    /// Append a kept base node into a columnar build, copying extension bytes verbatim.
+    pub(crate) fn append_node_for_build(
+        &self,
+        idx: usize,
+        hasher: &mut blake3::Hasher,
+        strings: &mut StringPool,
+        extensions_blob: &mut Vec<u8>,
+        name_index: &mut HashMap<String, Vec<Uuid>>,
+        type_index: &mut HashMap<NodeType, Vec<Uuid>>,
+        node_rows: &mut Vec<NodeRow>,
+    ) -> Result<()> {
+        let node = self.materialize_node(idx)?;
+        let node_bytes = bincode::serialize(&node).map_err(bincode_err)?;
+        let extension_bytes = self.extension_bytes_at(idx)?;
+        append_node_columnar_prehashed(
+            &node,
+            &node_bytes,
+            hasher,
+            strings,
+            extensions_blob,
+            name_index,
+            type_index,
+            node_rows,
+            extension_bytes,
+        )
+    }
+
     /// Materialize a single node by id (reads cold extension blob).
     pub fn get_node(&self, id: Uuid) -> Result<Option<Node>> {
-        let Some(&idx) = self.id_to_index.get(&id) else {
+        let Some(&idx) = self.id_to_index_map().get(&id) else {
             return Ok(None);
         };
         Ok(Some(self.materialize_node(idx)?))
@@ -283,7 +385,10 @@ impl ColumnarGraphMmap {
             return Ok(Vec::new());
         };
         ids.iter()
-            .map(|id| self.materialize_node(self.id_to_index[id]))
+            .map(|id| {
+                let idx = self.id_to_index_map()[id];
+                self.materialize_node(idx)
+            })
             .collect()
     }
 
@@ -325,14 +430,14 @@ impl ColumnarGraphMmap {
         Ok(Node {
             id,
             node_type: node_type_from_u16(row.node_type)?,
-            name,
-            qualified_name: extension.qualified_name,
-            signature,
-            return_type: extension.return_type,
+            name: SharedStr::from(name),
+            qualified_name: extension.qualified_name.map(SharedStr::from),
+            signature: signature.map(SharedStr::from),
+            return_type: extension.return_type.map(SharedStr::from),
             parameters: extension.parameters,
-            code_hash: extension.code_hash,
+            code_hash: extension.code_hash.map(SharedStr::from),
             token_bloom: extension.token_bloom,
-            file_path,
+            file_path: file_path.map(SharedStr::from),
             start_line: (row.start_line > 0).then_some(row.start_line as usize),
             end_line: (row.end_line > 0).then_some(row.end_line as usize),
             properties: extension.properties,
@@ -381,9 +486,9 @@ impl PreparedGraphSnapshot {
             let file_path_off = strings.intern_opt(node.file_path.as_deref());
             let signature_off = strings.intern_opt(node.signature.as_deref());
             let extension = NodeExtension {
-                qualified_name: node.qualified_name.clone(),
-                return_type: node.return_type.clone(),
-                code_hash: node.code_hash.clone(),
+                qualified_name: node.qualified_name.as_ref().map(|s| s.to_string()),
+                return_type: node.return_type.as_ref().map(|s| s.to_string()),
+                code_hash: node.code_hash.as_ref().map(|s| s.to_string()),
                 token_bloom: node.token_bloom,
                 parameters: node.parameters.clone(),
                 properties: node.properties.clone(),
@@ -475,6 +580,7 @@ impl PreparedGraphSnapshot {
 
 pub(crate) struct StringPool {
     pub(crate) bytes: Vec<u8>,
+    offsets: HashMap<String, StrRef>,
 }
 
 #[derive(Clone, Copy)]
@@ -485,17 +591,25 @@ pub(crate) struct StrRef {
 
 impl StringPool {
     pub(crate) fn new() -> Self {
-        Self { bytes: Vec::new() }
+        Self {
+            bytes: Vec::new(),
+            offsets: HashMap::new(),
+        }
     }
 
     pub(crate) fn intern(&mut self, s: &str) -> StrRef {
+        if let Some(&existing) = self.offsets.get(s) {
+            return existing;
+        }
         let off = self.bytes.len() as u32;
         let bytes = s.as_bytes();
         self.bytes.extend_from_slice(bytes);
-        StrRef {
+        let str_ref = StrRef {
             off,
             len: bytes.len() as u32,
-        }
+        };
+        self.offsets.insert(s.to_string(), str_ref);
+        str_ref
     }
 
     pub(crate) fn intern_opt(&mut self, s: Option<&str>) -> StrRef {
@@ -512,35 +626,16 @@ fn read_node_row(mmap: &[u8], base: usize, idx: usize) -> Result<NodeRow> {
     if end > mmap.len() {
         return Err(Error::SerdeError("node row out of range".into()));
     }
-    let mut row = NodeRow {
-        id: [0; 16],
-        node_type: 0,
-        _pad: 0,
-        name_off: 0,
-        name_len: 0,
-        file_path_off: 0,
-        file_path_len: 0,
-        signature_off: 0,
-        signature_len: 0,
-        start_line: 0,
-        end_line: 0,
-        extension_off: 0,
-        extension_len: 0,
-        _pad_end: 0,
-    };
-    row.id.copy_from_slice(&mmap[start..start + 16]);
-    row.node_type = u16::from_le_bytes(mmap[start + 16..start + 18].try_into().unwrap());
-    row.name_off = u32::from_le_bytes(mmap[start + 20..start + 24].try_into().unwrap());
-    row.name_len = u32::from_le_bytes(mmap[start + 24..start + 28].try_into().unwrap());
-    row.file_path_off = u32::from_le_bytes(mmap[start + 28..start + 32].try_into().unwrap());
-    row.file_path_len = u32::from_le_bytes(mmap[start + 32..start + 36].try_into().unwrap());
-    row.signature_off = u32::from_le_bytes(mmap[start + 36..start + 40].try_into().unwrap());
-    row.signature_len = u32::from_le_bytes(mmap[start + 40..start + 44].try_into().unwrap());
-    row.start_line = u32::from_le_bytes(mmap[start + 44..start + 48].try_into().unwrap());
-    row.end_line = u32::from_le_bytes(mmap[start + 48..start + 52].try_into().unwrap());
-    row.extension_off = u32::from_le_bytes(mmap[start + 52..start + 56].try_into().unwrap());
-    row.extension_len = u32::from_le_bytes(mmap[start + 56..start + 60].try_into().unwrap());
-    Ok(row)
+    let mut row = std::mem::MaybeUninit::<NodeRow>::uninit();
+    // SAFETY: NodeRow is #[repr(C)] with fixed NODE_ROW_SIZE; bounds checked above.
+    unsafe {
+        std::ptr::copy_nonoverlapping(
+            mmap.as_ptr().add(start),
+            row.as_mut_ptr() as *mut u8,
+            NODE_ROW_SIZE,
+        );
+        Ok(row.assume_init())
+    }
 }
 
 fn read_edge_row(mmap: &[u8], base: usize, idx: usize) -> Result<EdgeRow> {
@@ -549,16 +644,16 @@ fn read_edge_row(mmap: &[u8], base: usize, idx: usize) -> Result<EdgeRow> {
     if end > mmap.len() {
         return Err(Error::SerdeError("edge row out of range".into()));
     }
-    let mut row = EdgeRow {
-        from: [0; 16],
-        to: [0; 16],
-        edge_type: 0,
-        _pad: [0; 7],
-    };
-    row.from.copy_from_slice(&mmap[start..start + 16]);
-    row.to.copy_from_slice(&mmap[start + 16..start + 32]);
-    row.edge_type = mmap[start + 32];
-    Ok(row)
+    let mut row = std::mem::MaybeUninit::<EdgeRow>::uninit();
+    // SAFETY: EdgeRow is #[repr(C)] with fixed EDGE_ROW_SIZE; bounds checked above.
+    unsafe {
+        std::ptr::copy_nonoverlapping(
+            mmap.as_ptr().add(start),
+            row.as_mut_ptr() as *mut u8,
+            EDGE_ROW_SIZE,
+        );
+        Ok(row.assume_init())
+    }
 }
 
 fn read_string(mmap: &[u8], base: usize, len_limit: usize, off: u32, len: u32) -> Result<String> {
@@ -586,6 +681,27 @@ fn optional_string(
         return Ok(None);
     }
     Ok(Some(read_string(mmap, base, len_limit, off, len)?))
+}
+
+fn node_matches_invalidated_path(
+    file_path: Option<&str>,
+    name: &str,
+    node_type: NodeType,
+    invalidated: &HashSet<String>,
+) -> bool {
+    let path = match (file_path, node_type == NodeType::File) {
+        (Some(fp), _) => fp,
+        (None, true) => name,
+        _ => return false,
+    };
+
+    let norm = normalize_path_str(path);
+    if invalidated.contains(&norm) {
+        return true;
+    }
+
+    norm.rsplit_once('/')
+        .is_some_and(|(_, basename)| invalidated.contains(basename))
 }
 
 fn read_index_section(tail: &[u8], cursor: usize) -> Result<(HashMap<String, Vec<Uuid>>, usize)> {
@@ -736,11 +852,11 @@ fn bincode_err(e: bincode::Error) -> Error {
     Error::SerdeError(format!("columnar snapshot: {e}"))
 }
 
-fn edge_digest_bytes(edge: &Edge) -> Result<Vec<u8>> {
+pub(crate) fn edge_digest_bytes(edge: &Edge) -> Result<Vec<u8>> {
     bincode::serialize(&edge.for_columnar_digest()).map_err(bincode_err)
 }
 
-fn append_node_columnar(
+pub(crate) fn append_node_columnar(
     node: &Node,
     hasher: &mut blake3::Hasher,
     strings: &mut StringPool,
@@ -759,10 +875,14 @@ fn append_node_columnar(
         name_index,
         type_index,
         node_rows,
+        None,
     )
 }
 
 /// Hash pre-serialized node bytes (must match `bincode::serialize(node)`) then encode columns.
+///
+/// When `extension_bytes` is `Some`, the cold extension blob is copied verbatim instead of
+/// re-serializing from `node` fields (compaction pass-through).
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn append_node_columnar_prehashed(
     node: &Node,
@@ -773,22 +893,28 @@ pub(crate) fn append_node_columnar_prehashed(
     name_index: &mut HashMap<String, Vec<Uuid>>,
     type_index: &mut HashMap<NodeType, Vec<Uuid>>,
     node_rows: &mut Vec<NodeRow>,
+    extension_bytes: Option<&[u8]>,
 ) -> Result<()> {
     hasher.update(node_bytes);
 
     let name_off = strings.intern(&node.name);
     let file_path_off = strings.intern_opt(node.file_path.as_deref());
     let signature_off = strings.intern_opt(node.signature.as_deref());
-    let extension = NodeExtension {
-        qualified_name: node.qualified_name.clone(),
-        return_type: node.return_type.clone(),
-        code_hash: node.code_hash.clone(),
-        token_bloom: node.token_bloom,
-        parameters: node.parameters.clone(),
-        properties: node.properties.clone(),
-        labels: node.labels.clone(),
+    let ext_bytes = match extension_bytes {
+        Some(bytes) => bytes.to_vec(),
+        None => {
+            let extension = NodeExtension {
+                qualified_name: node.qualified_name.as_ref().map(|s| s.to_string()),
+                return_type: node.return_type.as_ref().map(|s| s.to_string()),
+                code_hash: node.code_hash.as_ref().map(|s| s.to_string()),
+                token_bloom: node.token_bloom,
+                parameters: node.parameters.clone(),
+                properties: node.properties.clone(),
+                labels: node.labels.clone(),
+            };
+            bincode::serialize(&extension).map_err(bincode_err)?
+        }
     };
-    let ext_bytes = bincode::serialize(&extension).map_err(bincode_err)?;
     let extension_off = extensions_blob.len() as u32;
     extensions_blob.extend_from_slice(&ext_bytes);
 
@@ -810,7 +936,7 @@ pub(crate) fn append_node_columnar_prehashed(
     });
 
     name_index
-        .entry(node.name.clone())
+        .entry(node.name.to_string())
         .or_default()
         .push(node.id);
     type_index.entry(node.node_type).or_default().push(node.id);
@@ -842,12 +968,22 @@ pub(crate) fn write_columnar_assembled(
     let offset_strings_len = strings.bytes.len() as u64;
     let offset_extensions = offset_strings + offset_strings_len;
 
+    let total_bytes = HEADER_SIZE
+        + 8
+        + name_index_bytes.len()
+        + 8
+        + type_index_bytes.len()
+        + node_rows.len() * NODE_ROW_SIZE
+        + edge_rows.len() * EDGE_ROW_SIZE
+        + strings.bytes.len()
+        + extensions_blob.len();
+
     let mut digest_bytes = [0u8; 64];
     let digest_src = content_digest.as_bytes();
     let copy_len = digest_src.len().min(64);
     digest_bytes[..copy_len].copy_from_slice(&digest_src[..copy_len]);
 
-    let mut file = Vec::new();
+    let mut file = Vec::with_capacity(total_bytes);
     file.extend_from_slice(&SNAPSHOT_MAGIC);
     file.extend_from_slice(&COLUMNAR_SNAPSHOT_VERSION.to_le_bytes());
     file.extend_from_slice(&crate::schema::GRAPH_SCHEMA_VERSION.to_le_bytes());
@@ -975,26 +1111,16 @@ pub fn write_columnar_from_backend(backend: &MemoryBackend, path: &Path) -> Resu
         )?;
     }
 
-    let mut edge_meta: Vec<(Uuid, Uuid, EdgeType, Vec<u8>)> =
-        Vec::with_capacity(backend.edge_count());
-    let mut edge_err: Option<Error> = None;
+    let mut edge_meta: Vec<(Uuid, Uuid, EdgeType)> = Vec::with_capacity(backend.edge_count());
     backend.for_each_edge(|edge| {
-        if edge_err.is_some() {
-            return;
-        }
-        match edge_digest_bytes(edge) {
-            Ok(bytes) => edge_meta.push((edge.from, edge.to, edge.edge_type, bytes)),
-            Err(e) => edge_err = Some(e),
-        }
+        edge_meta.push((edge.from, edge.to, edge.edge_type));
     })?;
-    if let Some(err) = edge_err {
-        return Err(err);
-    }
     edge_meta.sort_by_key(|a| (a.0, a.1, edge_type_to_u8(a.2)));
 
     let mut edge_rows = Vec::with_capacity(edge_meta.len());
-    for (from, to, edge_type, bytes) in &edge_meta {
-        hasher.update(bytes);
+    for (from, to, edge_type) in &edge_meta {
+        let canonical = Edge::new(*from, *to, *edge_type);
+        hasher.update(&edge_digest_bytes(&canonical)?);
         edge_rows.push(EdgeRow {
             from: *from.as_bytes(),
             to: *to.as_bytes(),
@@ -1029,7 +1155,7 @@ mod tests {
     #[test]
     fn columnar_round_trip_and_open_without_full_materialize() {
         let mut backend = crate::backend::MemoryBackend::new();
-        let n = Node::new(NodeType::Function, "main".into()).with_file_path("main.rs".into());
+        let n = Node::new(NodeType::Function, "main").with_file_path("main.rs");
         let id = n.id;
         backend.insert_node(n).unwrap();
         backend
@@ -1058,7 +1184,7 @@ mod tests {
     #[test]
     fn columnar_name_index_lookup_without_prepared() {
         let mut backend = crate::backend::MemoryBackend::new();
-        let n = Node::new(NodeType::Function, "lookup_me".into());
+        let n = Node::new(NodeType::Function, "lookup_me");
         backend.insert_node(n).unwrap();
         let prepared = PreparedGraphSnapshot::from_backend(&backend).unwrap();
         let tmp = TempDir::new().unwrap();
@@ -1076,8 +1202,8 @@ mod tests {
     #[test]
     fn write_columnar_from_backend_stable_digest_no_prepared_clone() {
         let mut backend = crate::backend::MemoryBackend::new();
-        let a = Node::new(NodeType::Function, "a".into());
-        let b = Node::new(NodeType::Function, "b".into());
+        let a = Node::new(NodeType::Function, "a");
+        let b = Node::new(NodeType::Function, "b");
         let a_id = a.id;
         let b_id = b.id;
         backend.insert_node(a).unwrap();
@@ -1105,8 +1231,8 @@ mod tests {
 
     #[test]
     fn write_columnar_from_nodes_edges_matches_backend_digest() {
-        let a = Node::new(NodeType::Function, "a".into());
-        let b = Node::new(NodeType::Function, "b".into());
+        let a = Node::new(NodeType::Function, "a");
+        let b = Node::new(NodeType::Function, "b");
         let a_id = a.id;
         let b_id = b.id;
         let edge = Edge::new(a_id, b_id, EdgeType::Calls);
@@ -1139,8 +1265,8 @@ mod tests {
 
     #[test]
     fn edge_properties_do_not_affect_columnar_digest() {
-        let a = Node::new(NodeType::Function, "a".into());
-        let b = Node::new(NodeType::Function, "b".into());
+        let a = Node::new(NodeType::Function, "a");
+        let b = Node::new(NodeType::Function, "b");
         let a_id = a.id;
         let b_id = b.id;
         let plain = Edge::new(a_id, b_id, EdgeType::Calls);
@@ -1159,10 +1285,10 @@ mod tests {
 
     #[test]
     fn rematerialize_round_trip_matches_header_digest() {
-        let a = Node::new(NodeType::Function, "a".into())
-            .with_file_path("a.rs".into())
-            .with_qualified_name("mod::a".into());
-        let b = Node::new(NodeType::Function, "b".into()).with_file_path("b.rs".into());
+        let a = Node::new(NodeType::Function, "a")
+            .with_file_path("a.rs")
+            .with_qualified_name("mod::a");
+        let b = Node::new(NodeType::Function, "b").with_file_path("b.rs");
         let a_id = a.id;
         let b_id = b.id;
         let e1 = Edge::new(a_id, b_id, EdgeType::Calls)
@@ -1214,11 +1340,11 @@ mod tests {
         use std::sync::Arc;
         use tempfile::TempDir;
 
-        let ann = Node::new(NodeType::Annotation, "AddOnStartup".into())
-            .with_file_path("AddOnStartup.java".into());
-        let method = Node::new(NodeType::Function, "bar".into()).with_file_path("Foo.java".into());
-        let sealed = Node::new(NodeType::Class, "Shape".into()).with_file_path("Shape.java".into());
-        let circle = Node::new(NodeType::Class, "Circle".into()).with_file_path("Circle.java".into());
+        let ann = Node::new(NodeType::Annotation, "AddOnStartup")
+            .with_file_path("AddOnStartup.java");
+        let method = Node::new(NodeType::Function, "bar").with_file_path("Foo.java");
+        let sealed = Node::new(NodeType::Class, "Shape").with_file_path("Shape.java");
+        let circle = Node::new(NodeType::Class, "Circle").with_file_path("Circle.java");
         let ann_id = ann.id;
         let method_id = method.id;
         let sealed_id = sealed.id;
@@ -1289,5 +1415,21 @@ mod tests {
             col.node_count()
         );
         assert!(open_elapsed <= hydrate_elapsed);
+    }
+
+    #[test]
+    fn string_pool_deduplicates_identical_strings() {
+        let mut pool = StringPool::new();
+        let a = pool.intern("src/main.rs");
+        let b = pool.intern("src/main.rs");
+        assert_eq!(a.off, b.off);
+        assert_eq!(a.len, b.len);
+        assert!(pool.bytes.len() < "src/main.rs".len() * 2);
+    }
+
+    #[test]
+    fn read_node_row_rejects_out_of_range() {
+        let mmap = vec![0u8; 32];
+        assert!(read_node_row(&mmap, 0, 0).is_err());
     }
 }

@@ -158,7 +158,7 @@ where
     F: FnMut(Uuid) -> Option<Node>,
 {
     fill_community_labels(analysis, infrastructure_id, |uuid| {
-        get_node(uuid).map(|n| (n.name.clone(), n.file_path.clone()))
+        get_node(uuid).map(|n| (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())))
     })
 }
 

@@ -113,7 +113,7 @@ pub fn execute_semantic_query(
                 .get_node(uuid)
                 .ok()
                 .flatten()
-                .map(|n| (n.name.clone(), n.file_path.clone()))
+                .map(|n| (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())))
         });
         let labels: std::collections::HashMap<_, _> = ctx
             .communities

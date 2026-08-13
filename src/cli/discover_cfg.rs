@@ -119,7 +119,7 @@ pub fn preload_file_sources(
 ) -> FileSourceCache {
     let paths: HashSet<String> = functions
         .iter()
-        .filter_map(|n| n.file_path.clone())
+        .filter_map(|n| n.file_path.as_ref().map(|s| s.to_string()))
         .collect();
     let sources: HashMap<String, Arc<String>> = with_pool(thread_count, || {
         paths
@@ -331,7 +331,7 @@ fn flatten_work_items(functions: &[Node]) -> Vec<FunctionWorkItem> {
         }
         items.push(FunctionWorkItem {
             func_idx: idx,
-            file_path: file_path.clone(),
+            file_path: file_path.to_string(),
             language,
         });
     }
@@ -387,9 +387,9 @@ fn active_stable_keys(functions: &[Node], sources: Option<&FileSourceCache>) -> 
             continue;
         };
         let hash = if let Some(code_hash) = func.code_hash.as_ref() {
-            code_hash.clone()
+            code_hash.to_string()
         } else if let Some(cache) = sources {
-            let Some(source) = cache.sources.get(file_path) else {
+            let Some(source) = cache.sources.get(file_path.as_str()) else {
                 continue;
             };
             resolve_code_hash(func, source)
@@ -404,7 +404,8 @@ fn active_stable_keys(functions: &[Node], sources: Option<&FileSourceCache>) -> 
 fn resolve_code_hash(func_node: &Node, source: &str) -> String {
     func_node
         .code_hash
-        .clone()
+        .as_ref()
+        .map(|h| h.to_string())
         .unwrap_or_else(|| hash_code(source))
 }
 
@@ -545,7 +546,7 @@ fn compute_function_cfg(
         if let Ok(mut entries) = log.lock() {
             entries.push(CfgFunctionTiming {
                 file_path: file_path.to_string(),
-                function_name: func_node.name.clone(),
+                function_name: func_node.name.to_string(),
                 blocks: work
                     .analysis
                     .as_ref()
@@ -628,7 +629,7 @@ fn compute_from_cfg(
 
     let analysis = FunctionAnalysis {
         function_id: func_node.id,
-        function_name: func_node.name.clone(),
+        function_name: func_node.name.to_string(),
         file_path: file_path.to_string(),
         code_hash: Some(code_hash.to_string()),
         cfg: Some(cfg_data),
@@ -659,7 +660,7 @@ fn archive_record_from_analysis(
         (Some(cfg), Some(pdg)) => Some(CfgPdgRecord {
             function_id: func_node.id,
             code_hash: code_hash.to_string(),
-            function_name: func_node.name.clone(),
+            function_name: func_node.name.to_string(),
             file_path: Some(file_path.to_string()),
             cfg: cfg.clone(),
             pdg: Arc::new(pdg.clone()),
@@ -691,7 +692,7 @@ fn try_full_incremental_shortcut(
         eligible += 1;
         let key = stable_function_key(file_path, &func.name, code_hash);
         let entry = cache.index.get(&key)?;
-        if entry.code_hash != *code_hash {
+        if *code_hash != entry.code_hash {
             return None;
         }
         matched += 1;

@@ -369,7 +369,7 @@ pub(crate) fn run_full_analysis(
             cold.get_node(uuid)
                 .ok()
                 .flatten()
-                .map(|n| (n.name.clone(), n.file_path.clone()))
+                .map(|n| (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())))
         });
     }
 
@@ -700,7 +700,7 @@ pub(crate) fn run_full_analysis(
         if result.score > max_impact_score {
             max_impact_score = result.score;
             if let Ok(Some(node)) = cold.get_node(*func_id) {
-                max_impact_function = node.name.clone();
+                max_impact_function = node.name.to_string();
             }
         }
     }

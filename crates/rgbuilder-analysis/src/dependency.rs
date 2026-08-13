@@ -81,7 +81,7 @@ impl DependencyAnalyzer {
                 .collect();
             let names: Vec<String> = uuids
                 .iter()
-                .filter_map(|id| lookup.get_node(*id).ok().flatten().map(|n| n.name.clone()))
+                .filter_map(|id| lookup.get_node(*id).ok().flatten().map(|n| n.name.to_string()))
                 .collect();
 
             if uuids.len() >= 2 {
@@ -164,7 +164,7 @@ impl DependencyAnalyzer {
                 GraphBackend::get_node(backend, *id)
                     .ok()
                     .flatten()
-                    .map(|n| n.name.clone())
+                    .map(|n| n.name.to_string())
             })
             .collect();
 
@@ -198,7 +198,7 @@ impl DependencyAnalyzer {
                 GraphBackend::get_node(backend, uuid)
                     .ok()
                     .flatten()
-                    .map(|n| n.name.clone())
+                    .map(|n| n.name.to_string())
             })
             .collect();
         Ok(callers)

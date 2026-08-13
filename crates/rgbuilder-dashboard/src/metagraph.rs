@@ -272,7 +272,7 @@ pub fn write_metagraph(
                         .get_node(uuid)
                         .ok()
                         .flatten()
-                        .map(|n| (n.name.clone(), n.file_path.clone()))
+                        .map(|n| (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())))
                 });
                 map = ctx
                     .communities

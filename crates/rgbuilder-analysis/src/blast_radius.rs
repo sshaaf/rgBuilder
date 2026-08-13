@@ -22,7 +22,7 @@ pub fn resolve_unique_symbol(backend: &MemoryBackend, symbol_name: &str) -> Resu
     let nodes = backend.find_nodes_by_name(symbol_name)?;
     match nodes.len() {
         0 => Err(Error::NodeNotFound(symbol_name.to_string())),
-        1 => Ok((nodes[0].id, nodes[0].name.clone())),
+        1 => Ok((nodes[0].id, nodes[0].name.to_string())),
         count => Err(Error::QueryError(format!(
             "ambiguous symbol '{symbol_name}': {count} matches; use qualified name or node id"
         ))),
@@ -180,7 +180,7 @@ impl<'a> BlastRadiusAnalyzer<'a> {
                 .get_node(*caller_id)
                 .ok()
                 .flatten()
-                .map(|n| n.name.clone())
+                .map(|n| n.name.to_string())
                 .unwrap_or_else(|| caller_id.to_string());
             let depth = self
                 .flow_cache
@@ -240,7 +240,7 @@ fn incoming_callers(
 fn uuid_list_to_names(backend: &MemoryBackend, ids: &[Uuid]) -> Vec<String> {
     let mut names: Vec<String> = ids
         .iter()
-        .filter_map(|id| backend.get_node(*id).ok().flatten().map(|n| n.name.clone()))
+        .filter_map(|id| backend.get_node(*id).ok().flatten().map(|n| n.name.to_string()))
         .collect();
     names.sort();
     names
@@ -249,7 +249,7 @@ fn uuid_list_to_names(backend: &MemoryBackend, ids: &[Uuid]) -> Vec<String> {
 fn ids_to_names(backend: &MemoryBackend, ids: &HashSet<Uuid>) -> Vec<String> {
     let mut names: Vec<String> = ids
         .iter()
-        .filter_map(|id| backend.get_node(*id).ok().flatten().map(|n| n.name.clone()))
+        .filter_map(|id| backend.get_node(*id).ok().flatten().map(|n| n.name.to_string()))
         .collect();
     names.sort();
     names

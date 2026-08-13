@@ -64,7 +64,7 @@ fn function_meta_from_backend(backend: &MemoryBackend) -> HashMap<Uuid, Function
     let mut out = HashMap::new();
     let _ = backend.for_each_node(|n| {
         if n.node_type == NodeType::Function {
-            out.insert(n.id, (n.name.clone(), n.file_path.clone()));
+            out.insert(n.id, (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())));
         }
     });
     out

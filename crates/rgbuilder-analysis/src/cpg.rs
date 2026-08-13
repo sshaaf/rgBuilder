@@ -222,9 +222,9 @@ pub fn cpg_function(
     Ok(CpgFunctionInfo {
         schema_version: 1,
         id: node.id.to_string(),
-        name: node.name,
-        qualified_name: node.qualified_name,
-        file_path: node.file_path,
+        name: node.name.to_string(),
+        qualified_name: node.qualified_name.as_ref().map(|s| s.to_string()),
+        file_path: node.file_path.as_ref().map(|s| s.to_string()),
         start_line: node.start_line,
         has_l_proc,
         is_constructor,
@@ -253,7 +253,7 @@ pub fn cpg_calls(backend: &MemoryBackend, symbol: &str) -> Result<CpgCallsInfo> 
         if let Some(cal) = backend.get_node(edge.to)? {
             edges.push(CpgCallEdge {
                 id: cal.id.to_string(),
-                name: cal.name,
+                name: cal.name.to_string(),
                 direction: "out",
             });
         }
@@ -265,7 +265,7 @@ pub fn cpg_calls(backend: &MemoryBackend, symbol: &str) -> Result<CpgCallsInfo> 
         if let Some(caller) = backend.get_node(edge.from)? {
             edges.push(CpgCallEdge {
                 id: caller.id.to_string(),
-                name: caller.name,
+                name: caller.name.to_string(),
                 direction: "in",
             });
         }
@@ -274,7 +274,7 @@ pub fn cpg_calls(backend: &MemoryBackend, symbol: &str) -> Result<CpgCallsInfo> 
     Ok(CpgCallsInfo {
         schema_version: 1,
         function_id: node.id.to_string(),
-        function_name: node.name,
+        function_name: node.name.to_string(),
         edges,
     })
 }

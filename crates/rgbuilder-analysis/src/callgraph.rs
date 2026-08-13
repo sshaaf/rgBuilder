@@ -112,8 +112,8 @@ impl CallGraph {
             index_to_id.push(func_id);
 
             if let Ok(Some(node)) = backend.get_node(func_id) {
-                names.push(node.name.clone());
-                file_paths.push(node.file_path.clone().unwrap_or_default());
+                names.push(node.name.to_string());
+                file_paths.push(node.file_path.clone().unwrap_or_default().to_string());
                 line_numbers[index] = node.start_line.unwrap_or(0);
                 parameters.push(parameter_names_from_node(&node.parameters));
             } else {

@@ -211,10 +211,10 @@ pub fn build_index(
             functions.push((
                 SemanticEntry {
                     node_id: node.id,
-                    name: node.name.clone(),
-                    qualified_name: node.qualified_name.clone(),
-                    file_path: node.file_path.clone(),
-                    code_hash: node.code_hash.clone(),
+                    name: node.name.to_string(),
+                    qualified_name: node.qualified_name.as_ref().map(|s| s.to_string()),
+                    file_path: node.file_path.as_ref().map(|s| s.to_string()),
+                    code_hash: node.code_hash.as_ref().map(|s| s.to_string()),
                 },
                 text,
             ));
@@ -370,11 +370,11 @@ pub fn embed_text_for_function(node: &Node, repo_root: Option<&Path>) -> Option<
         return None;
     }
 
-    let mut parts = Vec::new();
+    let mut parts: Vec<String> = Vec::new();
     if let Some(qn) = &node.qualified_name {
-        parts.push(qn.clone());
+        parts.push(qn.to_string());
     } else {
-        parts.push(node.name.clone());
+        parts.push(node.name.to_string());
     }
     if let Some(sig) = node.signature_text() {
         parts.push(sig.to_string());

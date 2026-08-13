@@ -563,9 +563,9 @@ fn build_dashboard_community(
             }
 
             if let Some(path) = &node.file_path {
-                file_paths.push(path.clone());
+                file_paths.push(path.to_string());
             }
-            names.push(node.name.clone());
+            names.push(node.name.to_string());
         })?;
     }
 

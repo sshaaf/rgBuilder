@@ -274,6 +274,7 @@ pub fn write_columnar_from_spill(spill: FinishedSpill, path: &Path) -> Result<St
                 &mut name_index,
                 &mut type_index,
                 &mut node_rows,
+                None,
             )?;
         }
     }
@@ -489,8 +490,8 @@ mod tests {
 
     #[test]
     fn spill_compile_digest_matches_vec_path() {
-        let a = Node::new(NodeType::Function, "a".into());
-        let b = Node::new(NodeType::Function, "b".into());
+        let a = Node::new(NodeType::Function, "a");
+        let b = Node::new(NodeType::Function, "b");
         let a_id = a.id;
         let b_id = b.id;
         let e1 = Edge::new(a_id, b_id, EdgeType::Calls);

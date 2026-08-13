@@ -61,7 +61,7 @@ impl<'a, C: InterproceduralCfgAccess + ?Sized> InterproceduralSlicer<'a, C> {
         let mut function_names = HashMap::new();
         for &func_id in icfg.call_graph().function_ids() {
             if let Ok(Some(func_node)) = backend.get_node(func_id) {
-                function_names.insert(func_id, func_node.name.clone());
+                function_names.insert(func_id, func_node.name.to_string());
             }
         }
         Ok(Self {

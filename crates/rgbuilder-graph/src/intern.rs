@@ -3,13 +3,15 @@
 //! Task 5.2.2: Deduplicate repeated strings across nodes
 
 use rgbuilder_error::{Error, Result};
-use std::collections::HashMap;
+use crate::schema::SharedStr;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
 /// Deduplicates strings to reduce memory usage for large graphs.
 #[derive(Debug, Default, Clone)]
 pub struct StringInterner {
-    pool: Arc<RwLock<HashMap<String, Arc<str>>>>,
+    pool: Arc<RwLock<HashSet<Arc<str>>>>,
+    index: Arc<RwLock<HashMap<String, Arc<str>>>>,
 }
 
 impl StringInterner {
@@ -20,34 +22,44 @@ impl StringInterner {
 
     /// Intern a string, returning a shared handle.
     pub fn intern(&self, value: &str) -> Result<Arc<str>> {
-        // Fast path: check if already interned (read lock)
-        if let Ok(read) = self.pool.read() {
+        if let Ok(read) = self.index.read() {
             if let Some(existing) = read.get(value) {
                 return Ok(existing.clone());
             }
         }
 
-        // Slow path: insert if not present (write lock with entry API)
-        // Note: Race condition is acceptable - duplicate Arc<str> instances
-        // will be deduplicated on next read, only slight temporary memory overhead
-        Ok(self
+        let arc: Arc<str> = Arc::from(value);
+        let mut write = self
             .pool
             .write()
+            .map_err(|e| Error::GraphError(format!("StringInterner lock poisoned: {e}")))?;
+        write.insert(Arc::clone(&arc));
+        drop(write);
+
+        self.index
+            .write()
             .map_err(|e| Error::GraphError(format!("StringInterner lock poisoned: {e}")))?
-            .entry(value.to_string())
-            .or_insert_with(|| Arc::from(value))
-            .clone())
+            .insert(value.to_string(), arc.clone());
+        Ok(arc)
     }
 
-    /// Ensure a string is in the intern pool.
-    ///
-    /// NOTE: This method currently doesn't optimize the in-memory representation
-    /// since Node stores String, not Arc<str>. The real memory savings come from
-    /// the indexes using Arc<str>. Future optimization: change Node to store Arc<str>.
-    pub fn intern_string(&self, _value: &mut String) {
-        // Intentionally does nothing - the actual interning happens when building indexes
-        // This method exists to maintain API compatibility but should be reconsidered
-        // in a future refactor where Node uses Arc<str> directly
+    /// Canonicalize in-place string storage using the intern pool.
+    pub fn intern_string(&self, value: &mut String) {
+        if let Ok(arc) = self.intern(value) {
+            if value.as_str() != arc.as_ref() {
+                *value = arc.as_ref().to_string();
+            }
+        }
+    }
+
+    /// Canonicalize a shared string handle using the intern pool.
+    pub fn intern_shared(&self, value: &mut SharedStr) {
+        if let Ok(arc) = self.intern(value.as_str()) {
+            let next = SharedStr::from(arc);
+            if value != &next {
+                *value = next;
+            }
+        }
     }
 
     /// Number of unique interned strings.

@@ -233,13 +233,13 @@ fn resolve_target_uuid_impl(
         let name = if let Some(store) = store {
             store
                 .get_node(id)?
-                .map(|n| n.name.clone())
+                .map(|n| n.name.to_string())
                 .unwrap_or_else(|| parsed.target_name.clone())
         } else {
             backend
                 .expect("backend required when store absent")
                 .get_node(id)?
-                .map(|n| n.name.clone())
+                .map(|n| n.name.to_string())
                 .unwrap_or_else(|| parsed.target_name.clone())
         };
         return Ok((id, name));

@@ -107,12 +107,12 @@ fn collect_export_graph(
         .filter(|n| keep.contains(&n.id))
         .map(|n| {
             let mut props = serde_json::Map::new();
-            props.insert("name".into(), n.name.clone().into());
+            props.insert("name".into(), n.name.as_str().into());
             if let Some(qn) = n.qualified_name {
-                props.insert("qualified_name".into(), qn.into());
+                props.insert("qualified_name".into(), qn.as_str().into());
             }
             if let Some(f) = n.file_path {
-                props.insert("file_path".into(), f.into());
+                props.insert("file_path".into(), f.as_str().into());
             }
             if let Some(l) = n.start_line {
                 props.insert("start_line".into(), l.into());

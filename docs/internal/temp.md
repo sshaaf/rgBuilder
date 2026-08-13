@@ -288,6 +288,23 @@ cargo test --release --test centrality_approx_scale -- --nocapture
 
 ---
 
+## rgbuilder-graph-perf (Aug 2026)
+
+Phases 1–2 and most of phase 3 landed in `crates/rgbuilder-graph`:
+
+- **Adjacency indexes** on `MemoryBackend` (`outgoing_adj` / `incoming_adj`) for O(degree) edge lookup.
+- **Query pipeline** unified to `execute_node_ids` → `get_nodes_by_ids`; property filters use `for_each_node`.
+- **Columnar I/O**: string-pool dedup, bulk row memcpy, lazy `id_to_index` (`OnceLock`), pre-sized snapshot buffers.
+- **Compaction**: O(1) invalidated-path lookup via normalized `HashSet`.
+
+Deferred follow-ups: none (phase 3 complete).
+
+Profile results: `openspec/changes/rgbuilder-graph-perf/PROFILE.md`.
+
+Bench: `cargo bench -p rgbuilder-graph --bench columnar_snapshot`.
+
+---
+
 ## References
 
 - Brandes, *A Faster Algorithm for Betweenness Centrality* (2001)

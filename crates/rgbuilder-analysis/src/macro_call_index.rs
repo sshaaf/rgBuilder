@@ -167,7 +167,7 @@ impl MacroCallIndex {
     fn symbol_context_from_node(node: &rgbuilder_graph::schema::Node) -> SymbolContext {
         SymbolContext {
             class_name: crate::macro_call_lookup::class_name_from_node(node),
-            file_path: node.file_path.clone().unwrap_or_default(),
+            file_path: node.file_path.clone().unwrap_or_default().to_string(),
             language: crate::macro_call_lookup::language_from_node(node),
             signature: node.signature_text().map(str::to_string),
             canonical_fqn: crate::macro_call_lookup::canonical_fqn_from_node(node),
@@ -176,14 +176,14 @@ impl MacroCallIndex {
 
     #[allow(dead_code)]
     fn node_name(backend: &MemoryBackend, id: Uuid) -> Option<String> {
-        backend.get_node(id).ok().flatten().map(|n| n.name.clone())
+        backend.get_node(id).ok().flatten().map(|n| n.name.to_string())
     }
 
     fn node_name_lookup<L: crate::node_lookup::NodeLookup + ?Sized>(
         lookup: &L,
         id: Uuid,
     ) -> Option<String> {
-        lookup.get_node(id).ok().flatten().map(|n| n.name.clone())
+        lookup.get_node(id).ok().flatten().map(|n| n.name.to_string())
     }
 
     #[allow(dead_code)]
@@ -235,7 +235,7 @@ impl MacroCallIndex {
             .filter_map(|id| {
                 lookup.get_node(*id).ok().flatten().and_then(|n| {
                     if n.node_type == NodeType::Function {
-                        Some(n.name)
+                        Some(n.name.to_string())
                     } else {
                         None
                     }
@@ -284,7 +284,7 @@ impl MacroCallIndex {
             entries.insert(*id, Self::entry_from_result_lookup(lookup, result));
             if let Some(node) = lookup.get_node(*id).ok().flatten() {
                 symbol_context.insert(*id, Self::symbol_context_from_node(&node));
-                name_index.entry(node.name.clone()).or_default().push(*id);
+                name_index.entry(node.name.to_string()).or_default().push(*id);
             }
         }
 

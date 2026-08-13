@@ -146,7 +146,7 @@ pub fn canonical_fqn_from_node(node: &Node) -> String {
     if let Some(class) = class_name_from_node(node) {
         return format!("{class}::{}", node.name);
     }
-    node.name.clone()
+    node.name.to_string()
 }
 
 /// Convert language-native qualified names to canonical double-colon form.
@@ -311,7 +311,7 @@ fn node_to_candidate(
         id: node.id,
         symbol_name: symbol_name.to_string(),
         class_name: class_name_from_node(node),
-        file_path: node.file_path.clone().unwrap_or_default(),
+        file_path: node.file_path.clone().unwrap_or_default().to_string(),
         score,
         direct_caller_ids: Vec::new(),
         impact_zone_ids: Vec::new(),

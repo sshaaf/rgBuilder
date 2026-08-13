@@ -133,7 +133,7 @@ impl GraphBuilder {
         if let Some(qualified) = &node.qualified_name {
             let entry = self
                 .symbols_by_qualified
-                .entry(qualified.clone())
+                .entry(qualified.to_string())
                 .or_default();
             if !entry.contains(&node.id) {
                 entry.push(node.id);
@@ -153,7 +153,7 @@ impl GraphBuilder {
                 }
             }
         } else {
-            let entry = self.symbols_by_suffix.entry(node.name.clone()).or_default();
+            let entry = self.symbols_by_suffix.entry(node.name.to_string()).or_default();
             if !entry.contains(&node.id) {
                 entry.push(node.id);
             }

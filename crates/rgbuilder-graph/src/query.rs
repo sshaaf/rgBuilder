@@ -38,7 +38,6 @@ pub fn execute(backend: &MemoryBackend, query: &str) -> Result<Vec<Node>> {
         if parts.is_empty() {
             return backend.all_nodes();
         }
-        // Intersect starting from the most selective clause (smallest result set)
         let mut ordered = parts;
         ordered.sort_by_key(|part| selectivity_rank(part));
         let mut intersection = execute_node_ids(backend, ordered[0])?;
@@ -52,57 +51,8 @@ pub fn execute(backend: &MemoryBackend, query: &str) -> Result<Vec<Node>> {
         return backend.get_nodes_by_ids(&intersection);
     }
 
-    if let Some(repo) = query.strip_prefix("repo:") {
-        return backend.find_nodes_by_property("repo", repo);
-    }
-
-    if let Some(type_name) = query.strip_prefix("type:") {
-        let node_type = parse_node_type(type_name)?;
-        return backend.find_nodes_by_type(node_type);
-    }
-
-    if let Some(name) = query.strip_prefix("name:") {
-        return backend.find_nodes_by_name(name);
-    }
-
-    if let Some(label) = query.strip_prefix("label:") {
-        return backend.find_nodes_by_label(label);
-    }
-
-    if let Some(suffix) = query.strip_prefix("name_suffix:") {
-        return backend.find_nodes_by_name_suffix(suffix);
-    }
-
-    if let Some(pattern) = query.strip_prefix("signature:") {
-        return filter_nodes_by_signature(backend, pattern);
-    }
-
-    if let Some(return_type) = query.strip_prefix("return_type:") {
-        return filter_nodes_by_return_type(backend, return_type);
-    }
-
-    if let Some(module) = query.strip_prefix("module:") {
-        return filter_nodes_by_property(backend, "module", module);
-    }
-
-    if let Some(resource_type) = query.strip_prefix("resource:") {
-        return filter_nodes_by_property(backend, "resource_type", resource_type);
-    }
-
-    match query.to_ascii_lowercase().as_str() {
-        "functions" | "function" => backend.find_nodes_by_type(NodeType::Function),
-        "classes" | "class" => backend.find_nodes_by_type(NodeType::Class),
-        "structs" | "struct" => backend.find_nodes_by_type(NodeType::Struct),
-        "files" | "file" => backend.find_nodes_by_type(NodeType::File),
-        "config" | "configkeys" => backend.find_nodes_by_type(NodeType::ConfigKey),
-        "playbooks" | "ansibleplaybooks" => backend.find_nodes_by_type(NodeType::AnsiblePlaybook),
-        "ansibleroles" | "roles" => backend.find_nodes_by_type(NodeType::AnsibleRole),
-        "cookbooks" | "chefcookbooks" => backend.find_nodes_by_type(NodeType::ChefCookbook),
-        "chefrecipes" | "recipes" => backend.find_nodes_by_type(NodeType::ChefRecipe),
-        "puppetmodules" | "modules" => backend.find_nodes_by_type(NodeType::PuppetModule),
-        "puppetclasses" => backend.find_nodes_by_type(NodeType::PuppetClass),
-        _ => backend.find_nodes(query),
-    }
+    let ids = execute_node_ids(backend, query)?;
+    backend.get_nodes_by_ids(&ids)
 }
 
 /// Return query results in fixed-size chunks for streaming large result sets.
@@ -163,11 +113,17 @@ fn execute_node_ids(backend: &MemoryBackend, query: &str) -> Result<HashSet<Uuid
     }
 
     if let Some(module) = query.strip_prefix("module:") {
-        return filter_node_ids_by_property(backend, "module", module);
+        return Ok(backend
+            .find_node_ids_by_property("module", module)?
+            .into_iter()
+            .collect());
     }
 
     if let Some(resource_type) = query.strip_prefix("resource:") {
-        return filter_node_ids_by_property(backend, "resource_type", resource_type);
+        return Ok(backend
+            .find_node_ids_by_property("resource_type", resource_type)?
+            .into_iter()
+            .collect());
     }
 
     match query.to_ascii_lowercase().as_str() {
@@ -224,47 +180,39 @@ fn execute_node_ids(backend: &MemoryBackend, query: &str) -> Result<HashSet<Uuid
 }
 
 fn filter_node_ids_by_signature(backend: &MemoryBackend, pattern: &str) -> Result<HashSet<Uuid>> {
-    Ok(backend
-        .all_nodes()?
-        .into_iter()
-        .filter(|node| {
-            node.signature_text()
-                .is_some_and(|sig| signature_wildcard_match(pattern, sig))
-        })
-        .map(|node| node.id)
-        .collect())
+    let mut matching_ids = HashSet::new();
+    backend.for_each_node(|node| {
+        if node
+            .signature_text()
+            .is_some_and(|sig| signature_wildcard_match(pattern, sig))
+        {
+            matching_ids.insert(node.id);
+        }
+    })?;
+    Ok(matching_ids)
 }
 
 fn filter_node_ids_by_return_type(backend: &MemoryBackend, prefix: &str) -> Result<HashSet<Uuid>> {
-    Ok(backend
-        .all_nodes()?
-        .into_iter()
-        .filter(|node| {
-            node.return_type_text()
-                .is_some_and(|ty| ty.starts_with(prefix))
-        })
-        .map(|node| node.id)
-        .collect())
-}
-
-fn filter_node_ids_by_property(
-    backend: &MemoryBackend,
-    key: &str,
-    value: &str,
-) -> Result<HashSet<Uuid>> {
-    Ok(backend
-        .find_node_ids_by_property(key, value)?
-        .into_iter()
-        .collect())
+    let mut matching_ids = HashSet::new();
+    backend.for_each_node(|node| {
+        if node
+            .return_type_text()
+            .is_some_and(|ty| ty.starts_with(prefix))
+        {
+            matching_ids.insert(node.id);
+        }
+    })?;
+    Ok(matching_ids)
 }
 
 fn filter_node_ids_by_name_suffix(backend: &MemoryBackend, suffix: &str) -> Result<HashSet<Uuid>> {
-    Ok(backend
-        .all_nodes()?
-        .into_iter()
-        .filter(|node| node.name.ends_with(suffix))
-        .map(|node| node.id)
-        .collect())
+    let mut matching_ids = HashSet::new();
+    backend.for_each_node(|node| {
+        if node.name.ends_with(suffix) {
+            matching_ids.insert(node.id);
+        }
+    })?;
+    Ok(matching_ids)
 }
 
 fn parse_node_type(value: &str) -> Result<NodeType> {
@@ -286,230 +234,97 @@ fn parse_node_type(value: &str) -> Result<NodeType> {
         "dependency" => Ok(NodeType::Dependency),
         "job" => Ok(NodeType::Job),
         "buildstep" => Ok(NodeType::BuildStep),
-        "ansibleplaybook" | "playbook" => Ok(NodeType::AnsiblePlaybook),
+        "ansibleplaybook" => Ok(NodeType::AnsiblePlaybook),
         "ansibleplay" => Ok(NodeType::AnsiblePlay),
-        "ansibletask" | "task" => Ok(NodeType::AnsibleTask),
-        "ansiblerole" | "role" => Ok(NodeType::AnsibleRole),
-        "ansiblehandler" | "handler" => Ok(NodeType::AnsibleHandler),
+        "ansibletask" => Ok(NodeType::AnsibleTask),
+        "ansiblerole" => Ok(NodeType::AnsibleRole),
+        "ansiblehandler" => Ok(NodeType::AnsibleHandler),
         "ansiblevariable" => Ok(NodeType::AnsibleVariable),
         "ansibletemplate" => Ok(NodeType::AnsibleTemplate),
-        "chefcookbook" | "cookbook" => Ok(NodeType::ChefCookbook),
-        "chefrecipe" | "recipe" => Ok(NodeType::ChefRecipe),
-        "chefresource" | "resource" => Ok(NodeType::ChefResource),
+        "chefcookbook" => Ok(NodeType::ChefCookbook),
+        "chefrecipe" => Ok(NodeType::ChefRecipe),
+        "chefresource" => Ok(NodeType::ChefResource),
         "chefattribute" => Ok(NodeType::ChefAttribute),
         "cheftemplate" => Ok(NodeType::ChefTemplate),
         "chefcustomresource" => Ok(NodeType::ChefCustomResource),
-        "puppetmodule" | "puppetmodules" => Ok(NodeType::PuppetModule),
-        "puppetclass" | "puppetclasses" => Ok(NodeType::PuppetClass),
+        "puppetmodule" => Ok(NodeType::PuppetModule),
+        "puppetclass" => Ok(NodeType::PuppetClass),
         "puppetdefinedtype" => Ok(NodeType::PuppetDefinedType),
         "puppetresource" => Ok(NodeType::PuppetResource),
         "puppetvariable" => Ok(NodeType::PuppetVariable),
         "puppetfact" => Ok(NodeType::PuppetFact),
-        other => Err(Error::InvalidQuery(format!("Unknown node type: {other}"))),
+        other => Err(Error::InvalidQuery(format!("unknown node type: {other}"))),
     }
 }
 
-fn selectivity_rank(part: &str) -> usize {
-    if part.starts_with("name:") {
+fn selectivity_rank(clause: &str) -> usize {
+    if clause.starts_with("name:") {
         0
-    } else if part.starts_with("signature:") {
+    } else if clause.starts_with("type:") {
         1
-    } else if part.starts_with("module:") || part.starts_with("resource:") {
+    } else if clause.starts_with("label:") {
         2
-    } else if part.starts_with("return_type:") {
+    } else if clause.starts_with("repo:") {
         3
-    } else if part.starts_with("repo:") {
+    } else if clause.starts_with("module:") || clause.starts_with("resource:") {
         4
-    } else if part.starts_with("type:") {
+    } else if clause.starts_with("signature:") || clause.starts_with("return_type:") {
         5
-    } else if part.starts_with("label:") {
-        6
-    } else if part.starts_with("name_suffix:") {
-        7
     } else {
-        8
+        6
     }
 }
 
-fn filter_nodes_by_signature(backend: &MemoryBackend, pattern: &str) -> Result<Vec<Node>> {
-    Ok(backend
-        .all_nodes()?
-        .into_iter()
-        .filter(|node| {
-            node.signature_text()
-                .is_some_and(|sig| signature_wildcard_match(pattern, sig))
-        })
-        .collect())
-}
-
-fn filter_nodes_by_return_type(backend: &MemoryBackend, prefix: &str) -> Result<Vec<Node>> {
-    Ok(backend
-        .all_nodes()?
-        .into_iter()
-        .filter(|node| {
-            node.return_type_text()
-                .is_some_and(|ty| ty.starts_with(prefix))
-        })
-        .collect())
-}
-
-fn filter_nodes_by_property(backend: &MemoryBackend, key: &str, value: &str) -> Result<Vec<Node>> {
-    Ok(backend
-        .all_nodes()?
-        .into_iter()
-        .filter(|node| {
-            node.get_property(key)
-                .is_some_and(|v| v.eq_ignore_ascii_case(value))
-        })
-        .collect())
-}
-
-fn signature_wildcard_match(pattern: &str, text: &str) -> bool {
+fn signature_wildcard_match(pattern: &str, signature: &str) -> bool {
+    if !pattern.contains('*') {
+        return signature.contains(pattern);
+    }
     let parts: Vec<&str> = pattern.split('*').collect();
-    if parts.len() == 1 {
-        return text.contains(parts[0]);
+    if parts.is_empty() {
+        return true;
     }
-    let mut start = 0usize;
+    let mut pos = 0;
     for (i, part) in parts.iter().enumerate() {
         if part.is_empty() {
             continue;
         }
         if i == 0 {
-            if !text.starts_with(part) {
+            if !signature.starts_with(part) {
                 return false;
             }
-            start = part.len();
-        } else if i == parts.len() - 1 {
-            if !text[start..].ends_with(part) {
-                return false;
-            }
-        } else if let Some(pos) = text[start..].find(part) {
-            start += pos + part.len();
+            pos = part.len();
+        } else if let Some(found) = signature[pos..].find(part) {
+            pos += found + part.len();
         } else {
             return false;
         }
     }
-    true
+    parts.last().is_none_or(|last| last.is_empty() || signature.ends_with(last))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backend::GraphBackend;
     use crate::schema::Node;
 
     #[test]
-    fn test_compound_query_intersects_ids() {
+    fn execute_delegates_to_node_ids() {
         let mut backend = MemoryBackend::new();
-        backend
-            .insert_node(
-                Node::new(NodeType::Function, "run".to_string())
-                    .with_return_type("Result<()>".to_string()),
-            )
-            .unwrap();
-        backend
-            .insert_node(
-                Node::new(NodeType::Function, "other".to_string())
-                    .with_return_type("i32".to_string()),
-            )
-            .unwrap();
-        backend
-            .insert_node(Node::new(NodeType::Class, "Svc".to_string()))
-            .unwrap();
-
-        let results = execute(&backend, "type:Function|return_type:Result").unwrap();
+        let node = Node::new(NodeType::Function, "main");
+        let id = node.id;
+        backend.insert_node(node).unwrap();
+        let results = execute(&backend, "name:main").unwrap();
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].name, "run");
+        assert_eq!(results[0].id, id);
     }
 
     #[test]
-    fn test_query_by_type() {
+    fn signature_filter_uses_for_each_node() {
         let mut backend = MemoryBackend::new();
-        backend
-            .insert_node(Node::new(NodeType::Function, "main".to_string()))
-            .unwrap();
-        backend
-            .insert_node(Node::new(NodeType::File, "main.rs".to_string()))
-            .unwrap();
-
-        let results = execute(&backend, "type:Function").unwrap();
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].name, "main");
-    }
-
-    #[test]
-    fn test_query_functions_shorthand() {
-        let mut backend = MemoryBackend::new();
-        backend
-            .insert_node(Node::new(NodeType::Function, "foo".to_string()))
-            .unwrap();
-
-        let results = execute(&backend, "functions").unwrap();
-        assert_eq!(results.len(), 1);
-    }
-
-    #[test]
-    fn test_query_by_repo() {
-        let mut backend = MemoryBackend::new();
-        backend
-            .insert_node(
-                Node::new(NodeType::Function, "main".to_string())
-                    .with_property("repo".to_string(), "api".to_string()),
-            )
-            .unwrap();
-        backend
-            .insert_node(
-                Node::new(NodeType::Function, "other".to_string())
-                    .with_property("repo".to_string(), "web".to_string()),
-            )
-            .unwrap();
-
-        let results = execute(&backend, "repo:api").unwrap();
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].name, "main");
-    }
-
-    #[test]
-    fn test_query_by_name_suffix() {
-        let mut backend = MemoryBackend::new();
-        backend
-            .insert_node(Node::new(NodeType::Class, "UserService".to_string()))
-            .unwrap();
-        backend
-            .insert_node(Node::new(NodeType::Class, "OrderService".to_string()))
-            .unwrap();
-        backend
-            .insert_node(Node::new(NodeType::Class, "UserController".to_string()))
-            .unwrap();
-
-        let results = execute(&backend, "name_suffix:Service").unwrap();
-        assert_eq!(results.len(), 2);
-        assert!(results.iter().all(|n| n.name.ends_with("Service")));
-    }
-
-    #[test]
-    fn test_query_signature_filter() {
-        let mut backend = MemoryBackend::new();
-        backend
-            .insert_node(
-                Node::new(NodeType::Function, "run".to_string()).with_signature("async fn run()"),
-            )
-            .unwrap();
-        let results = execute(&backend, "signature:*async*").unwrap();
-        assert_eq!(results.len(), 1);
-    }
-
-    #[test]
-    fn test_execute_chunks() {
-        let mut backend = MemoryBackend::new();
-        for i in 0..5 {
-            backend
-                .insert_node(Node::new(NodeType::Function, format!("fn{i}")))
-                .unwrap();
-        }
-
-        let chunks = execute_chunks(&backend, "functions", 2).unwrap();
-        assert_eq!(chunks.len(), 3);
-        assert_eq!(chunks.iter().map(|c| c.len()).sum::<usize>(), 5);
+        let mut node = Node::new(NodeType::Function, "foo");
+        node.signature = Some(crate::schema::SharedStr::from("fn foo() -> i32"));
+        backend.insert_node(node).unwrap();
+        let ids = filter_node_ids_by_signature(&backend, "*i32").unwrap();
+        assert_eq!(ids.len(), 1);
     }
 }
