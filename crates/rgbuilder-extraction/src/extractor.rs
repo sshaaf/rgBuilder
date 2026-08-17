@@ -309,4 +309,45 @@ mod tests {
         assert!(builder.node_count() >= 2);
         assert!(builder.edge_count() >= 2);
     }
+
+    #[test]
+    fn test_extract_markdown_headings_and_relations() {
+        let temp = TempDir::new().unwrap();
+        let path = temp.path().join("docs/guide.md");
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        fs::write(
+            &path,
+            "# Checkout Flow\n\n## Cart\n\n[ADR](./adr.md)\n",
+        )
+        .unwrap();
+        let adr = temp.path().join("docs/adr.md");
+        fs::write(&adr, "# Payments\n").unwrap();
+
+        let registry = Arc::new(rgbuilder_languages::default_registry());
+        let extractor = Extractor::new(registry);
+        let extraction = extractor.extract_file(&path).unwrap();
+
+        let expected_qn = format!("{}#checkout-flow", path.to_string_lossy());
+        assert!(
+            extraction
+                .symbols
+                .iter()
+                .any(|s| s.name == "Checkout Flow" && s.qualified_name.as_deref() == Some(expected_qn.as_str())),
+            "heading symbol"
+        );
+        assert!(
+            extraction.relations.iter().any(|r| {
+                r.relation_type == rgbuilder_plugin_api::RelationType::Defines
+            }),
+            "Defines relation"
+        );
+        assert!(
+            extraction.relations.iter().any(|r| {
+                r.relation_type == rgbuilder_plugin_api::RelationType::References
+            }),
+            "References relation"
+        );
+    }
 }

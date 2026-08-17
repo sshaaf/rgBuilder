@@ -362,6 +362,7 @@ fn resolve_property(
                 .and_then(|ctx| ctx.community_id(node.id))
                 .map(|id| id.to_string())
         }
+        "file_path" => node.file_path.as_ref().map(|s| s.to_string()),
         _ => node.get_property(key).map(String::from),
     }
 }
@@ -589,6 +590,48 @@ mod tests {
             .execute(&query)
             .unwrap();
         assert_eq!(result.rows.len(), 2);
+    }
+
+    #[test]
+    fn test_file_path_property_filter() {
+        let mut backend = MemoryBackend::new();
+        let node = Node::new(NodeType::Module, "Checkout Flow".to_string())
+            .with_file_path("docs/guide.md".to_string())
+            .with_property("kind".to_string(), "heading".to_string());
+        backend.insert_node(node).unwrap();
+
+        let query =
+            parse("MATCH (n:Module) WHERE n.file_path = 'docs/guide.md' RETURN n").unwrap();
+        let result = QueryExecutor::new(&backend).execute(&query).unwrap();
+        assert_eq!(result.rows.len(), 1);
+    }
+
+    #[test]
+    fn test_file_path_like_suffix() {
+        let mut backend = MemoryBackend::new();
+        let node = Node::new(NodeType::Module, "Checkout Flow".to_string())
+            .with_file_path("repo/docs/guide.md".to_string())
+            .with_property("kind".to_string(), "heading".to_string());
+        backend.insert_node(node).unwrap();
+
+        let query = parse(
+            "MATCH (n:Module) WHERE n.file_path LIKE '*guide.md' RETURN n",
+        )
+        .unwrap();
+        let result = QueryExecutor::new(&backend).execute(&query).unwrap();
+        assert_eq!(result.rows.len(), 1);
+    }
+
+    #[test]
+    fn test_kind_property_on_heading_nodes() {
+        let mut backend = MemoryBackend::new();
+        let node = Node::new(NodeType::Module, "Payments".to_string())
+            .with_property("kind".to_string(), "heading".to_string());
+        backend.insert_node(node).unwrap();
+
+        let query = parse("MATCH (n:Module) WHERE n.kind = 'heading' AND n.name = 'Payments' RETURN n")
+            .unwrap();
+        assert_eq!(QueryExecutor::new(&backend).execute(&query).unwrap().rows.len(), 1);
     }
 
     #[test]

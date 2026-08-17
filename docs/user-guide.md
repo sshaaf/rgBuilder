@@ -195,6 +195,8 @@ All commands below assume `REPO` points at `ecommerce-java`, or that you run fro
 
 `discover` scans source files, builds the knowledge graph, runs analytics (complexity, communities, centrality, blast-radius scoring), and writes artifacts under `.rgbuilder/`.
 
+Built-in registry includes **markdown** (`rgbuilder-lang-markdown`): `.md` and `.mdx` are indexed by default (headings, links, code blocks, frontmatter). See [markdown-context.md](markdown-context.md). Use `-l markdown` or `-l markdown,java` to limit languages.
+
 ### Fast index (default)
 
 ```bash

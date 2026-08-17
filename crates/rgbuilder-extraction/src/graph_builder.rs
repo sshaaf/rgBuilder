@@ -449,8 +449,11 @@ impl GraphBuilder {
     /// external stub nodes (`is_external_stub`) so Instantiates / JPMS /
     /// AnnotatedWith / References edges survive into GQL.
     pub fn add_relation(&mut self, relation: &Relation) -> Result<()> {
-        let from_id =
+        let mut from_id =
             self.resolve_symbol_tracked(&relation.from, &relation.location.file, None, None);
+        if from_id.is_none() {
+            from_id = self.file_nodes.get(&relation.from).copied();
+        }
 
         let (to_type_hint, to_qualified_hint) =
             self.enrich_go_type_hints(relation);
@@ -465,6 +468,17 @@ impl GraphBuilder {
                 .as_deref()
                 .or(relation.to_type_hint.as_deref()),
         );
+        if to_id.is_none() {
+            if let Some(id) = self.file_nodes.get(&relation.to) {
+                to_id = Some(*id);
+            } else if relation
+                .to_type_hint
+                .as_deref()
+                .is_some_and(|hint| hint.eq_ignore_ascii_case("file"))
+            {
+                return Ok(());
+            }
+        }
 
         if relation_allows_external_stub(relation.relation_type) {
             // Only stub unresolved *targets*. Stubbing missing `from` when
@@ -1405,6 +1419,195 @@ mod tests {
     }
 
     #[test]
+    fn references_file_target_resolves_to_file_node() {
+        let mut builder = GraphBuilder::new();
+        let guide_id = builder.ensure_file_node(Path::new("docs/guide.md"));
+        let adr_id = builder.ensure_file_node(Path::new("docs/adr.md"));
+        let heading = Symbol {
+            name: "Checkout Flow".to_string(),
+            symbol_type: SymbolType::Module,
+            qualified_name: Some("docs/guide.md#checkout-flow".to_string()),
+            location: SourceLocation {
+                file: "docs/guide.md".to_string(),
+                start_line: 1,
+                end_line: 1,
+                start_column: 0,
+                end_column: 1,
+            },
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({ "kind": "heading" }),
+        };
+        builder.add_symbol(&heading, guide_id);
+        builder.build_resolution_indexes();
+        builder
+            .add_relation(&Relation {
+                from: "docs/guide.md#checkout-flow".to_string(),
+                to: "docs/adr.md".to_string(),
+                relation_type: RelationType::References,
+                location: SourceLocation {
+                    file: "docs/guide.md".to_string(),
+                    start_line: 2,
+                    end_line: 2,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "kind": "markdown_link" }),
+                to_qualified_hint: Some("docs/adr.md".to_string()),
+                to_type_hint: Some("file".to_string()),
+            })
+            .unwrap();
+
+        let heading_id = builder
+            .nodes()
+            .iter()
+            .find(|n| {
+                n.qualified_name.as_deref() == Some("docs/guide.md#checkout-flow")
+            })
+            .expect("heading node")
+            .id;
+        assert!(builder.edges.iter().any(|e| {
+            e.edge_type == EdgeType::References && e.from == heading_id && e.to == adr_id
+        }));
+        assert!(
+            !builder.nodes().iter().any(|n| {
+                n.node_type == NodeType::Class
+                    && n.properties.get("is_external_stub").map(String::as_str) == Some("true")
+                    && n.name.contains("adr")
+            }),
+            "file target must not create Class stub"
+        );
+    }
+
+    #[test]
+    fn references_from_document_path_resolves_to_file_node() {
+        let mut builder = GraphBuilder::new();
+        let guide_id = builder.ensure_file_node(Path::new("docs/guide.md"));
+        let adr_id = builder.ensure_file_node(Path::new("docs/adr.md"));
+        builder.build_resolution_indexes();
+        builder
+            .add_relation(&Relation {
+                from: "docs/guide.md".to_string(),
+                to: "docs/adr.md".to_string(),
+                relation_type: RelationType::References,
+                location: SourceLocation {
+                    file: "docs/guide.md".to_string(),
+                    start_line: 1,
+                    end_line: 1,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "kind": "markdown_link" }),
+                to_qualified_hint: Some("docs/adr.md".to_string()),
+                to_type_hint: Some("file".to_string()),
+            })
+            .unwrap();
+
+        assert!(builder.edges.iter().any(|e| {
+            e.edge_type == EdgeType::References && e.from == guide_id && e.to == adr_id
+        }));
+    }
+
+    #[test]
+    fn references_missing_file_target_skips_edge_and_stub() {
+        let mut builder = GraphBuilder::new();
+        let guide_id = builder.ensure_file_node(Path::new("docs/guide.md"));
+        builder.build_resolution_indexes();
+        builder
+            .add_relation(&Relation {
+                from: "docs/guide.md".to_string(),
+                to: "docs/missing.md".to_string(),
+                relation_type: RelationType::References,
+                location: SourceLocation {
+                    file: "docs/guide.md".to_string(),
+                    start_line: 1,
+                    end_line: 1,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "kind": "markdown_link" }),
+                to_qualified_hint: Some("docs/missing.md".to_string()),
+                to_type_hint: Some("file".to_string()),
+            })
+            .unwrap();
+
+        assert!(
+            !builder.edges.iter().any(|e| e.edge_type == EdgeType::References),
+            "missing file href must not create an edge"
+        );
+        assert_eq!(builder.node_count(), 1, "only guide file node");
+        assert!(
+            !builder
+                .nodes()
+                .iter()
+                .any(|n| n.properties.get("is_external_stub").map(String::as_str) == Some("true")),
+            "missing file href must not stub"
+        );
+        let _ = guide_id;
+    }
+
+    #[test]
+    fn references_arraylist_without_file_hint_still_stubs_class() {
+        let mut builder = GraphBuilder::new();
+        let file_id = builder.ensure_file_node(Path::new("Demo.java"));
+        let method = Symbol {
+            name: "run".to_string(),
+            symbol_type: SymbolType::Function,
+            qualified_name: Some("Demo.run".to_string()),
+            location: SourceLocation {
+                file: "Demo.java".to_string(),
+                start_line: 2,
+                end_line: 4,
+                start_column: 0,
+                end_column: 1,
+            },
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({ "language": "java" }),
+        };
+        builder.add_symbol(&method, file_id);
+        builder.build_resolution_indexes();
+        builder
+            .add_relation(&Relation {
+                from: "Demo.run".to_string(),
+                to: "ArrayList".to_string(),
+                relation_type: RelationType::References,
+                location: SourceLocation {
+                    file: "Demo.java".to_string(),
+                    start_line: 3,
+                    end_line: 3,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "language": "java" }),
+                to_qualified_hint: None,
+                to_type_hint: None,
+            })
+            .unwrap();
+
+        let stub = builder
+            .nodes()
+            .iter()
+            .find(|n| n.name == "ArrayList" && n.node_type == NodeType::Class)
+            .expect("ArrayList Class stub");
+        assert_eq!(
+            stub.properties.get("is_external_stub").map(String::as_str),
+            Some("true")
+        );
+        assert!(builder.edges.iter().any(|e| {
+            e.edge_type == EdgeType::References && e.to == stub.id
+        }));
+    }
+
+    #[test]
     fn add_symbol_with_body_sets_token_bloom() {
         let mut builder = GraphBuilder::new();
         let file_id = builder.ensure_file_node(Path::new("src/main.rs"));
@@ -1608,7 +1811,7 @@ mod tests {
     fn test_c_struct_fields_not_materialized_by_default() {
         let mut builder = GraphBuilder::new();
         let file_id = builder.ensure_file_node(Path::new("cart.c"));
-        let mut symbol = Symbol {
+        let symbol = Symbol {
             name: "Cart".to_string(),
             symbol_type: SymbolType::Class,
             location: SourceLocation {
@@ -1646,7 +1849,7 @@ mod tests {
         let mut builder = GraphBuilder::new();
         builder.set_materialize_fields(true);
         let file_id = builder.ensure_file_node(Path::new("cart.c"));
-        let mut symbol = Symbol {
+        let symbol = Symbol {
             name: "Cart".to_string(),
             symbol_type: SymbolType::Class,
             location: SourceLocation {
