@@ -60,7 +60,8 @@ graphify-out/
 .cache/
 
 # Local large fixtures (clone separately; not part of the repo)
-/example/
+/example/*
+!/example/README.md
 
 # VHS / Playwright intermediate recordings
 docs/videos/*.raw.webm

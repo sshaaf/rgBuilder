@@ -119,12 +119,15 @@ fn linux_cold_discover_within_baseline() {
     }
 
     let (output, elapsed) = run_cold_discover_timed(&repo, &[]);
+    let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         output.status.success(),
-        "discover failed:\n{stderr}"
+        "discover failed:\nstdout={stdout}\nstderr={stderr}"
     );
-    let profile = parse_profile_summary(&stderr).expect("profile summary in stderr");
+    let profile = parse_profile_summary(&stdout)
+        .or_else(|| parse_profile_summary(&stderr))
+        .expect("profile summary in discover output");
     eprintln!(
         "linux cold: wall={:.1}s nodes={} index_graph_build={:?}",
         profile.wall_secs, profile.nodes, profile.index_graph_build_secs
@@ -151,9 +154,15 @@ fn metasfresh_cold_discover_within_baseline() {
         &repo,
         &["--with-cfg", "--with-security", "--with-taint"],
     );
+    let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(output.status.success(), "discover failed:\n{stderr}");
-    let profile = parse_profile_summary(&stderr).expect("profile summary");
+    assert!(
+        output.status.success(),
+        "discover failed:\nstdout={stdout}\nstderr={stderr}"
+    );
+    let profile = parse_profile_summary(&stdout)
+        .or_else(|| parse_profile_summary(&stderr))
+        .expect("profile summary in discover output");
     eprintln!(
         "metasfresh cold: wall={:.1}s nodes={} functions={}",
         profile.wall_secs, profile.nodes, profile.functions
@@ -180,9 +189,15 @@ fn kafka_cold_discover_within_baseline() {
         .unwrap_or(KAFKA_COLD_WALL_BASELINE_SECS);
 
     let (output, elapsed) = run_cold_discover_timed(&repo, &[]);
+    let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(output.status.success(), "discover failed:\n{stderr}");
-    let profile = parse_profile_summary(&stderr).expect("profile summary");
+    assert!(
+        output.status.success(),
+        "discover failed:\nstdout={stdout}\nstderr={stderr}"
+    );
+    let profile = parse_profile_summary(&stdout)
+        .or_else(|| parse_profile_summary(&stderr))
+        .expect("profile summary in discover output");
     eprintln!(
         "kafka cold: wall={:.1}s nodes={} functions={} (baseline {:.0}s)",
         profile.wall_secs, profile.nodes, profile.functions, baseline
