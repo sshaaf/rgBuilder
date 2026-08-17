@@ -25,6 +25,20 @@ cargo build --release
 
 ---
 
+## Markdown context graph (VHS)
+
+| File | Purpose |
+|------|---------|
+| [`markdown-context-cli.tape`](markdown-context-cli.tape) | `discover -l markdown,java` + GQL on `tests/fixtures/markdown-context` |
+| [`record-markdown-context-cli.sh`](record-markdown-context-cli.sh) | Record → `markdown-context-cli-no-captions.{gif,mp4}` |
+
+```bash
+cargo build --bin rg-build
+./docs/videos/record-markdown-context-cli.sh
+```
+
+---
+
 ## Dashboard (Playwright)
 
 | File | Purpose |

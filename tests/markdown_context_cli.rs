@@ -203,3 +203,55 @@ fn cli_footprint_markdown_larger_than_java_only() {
         1
     );
 }
+
+#[test]
+fn cli_slice_rejects_markdown_file() {
+    let repo = FixtureRepo::new();
+    repo.discover_json("markdown,java");
+    let out = repo.run(&[
+        "slice",
+        "docs/guide.md",
+        "--line",
+        "1",
+        "--variable",
+        "x",
+    ]);
+    assert!(
+        !out.status.success(),
+        "slice on .md must fail:\n{}",
+        str::from_utf8(&out.stderr).unwrap_or("")
+    );
+    let combined = format!(
+        "{}{}",
+        str::from_utf8(&out.stderr).unwrap_or(""),
+        str::from_utf8(&out.stdout).unwrap_or("")
+    );
+    assert!(
+        combined.contains("slice") && combined.contains("markdown"),
+        "expected markup rejection message:\n{combined}"
+    );
+}
+
+#[test]
+fn cli_cpg_flows_rejects_markdown_file() {
+    let repo = FixtureRepo::new();
+    repo.discover_json("markdown,java");
+    let out = repo.run(&[
+        "cpg",
+        "flows",
+        "docs/guide.md",
+        "--line",
+        "1",
+        "--variable",
+        "x",
+        "--function",
+        "main",
+    ]);
+    assert!(!out.status.success());
+    let combined = format!(
+        "{}{}",
+        str::from_utf8(&out.stderr).unwrap_or(""),
+        str::from_utf8(&out.stdout).unwrap_or("")
+    );
+    assert!(combined.contains("cpg flows") || combined.contains("markdown"));
+}

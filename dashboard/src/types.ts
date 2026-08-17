@@ -442,12 +442,16 @@ export const NODE_TYPE_MASK = {
 export const DEFAULT_GRAPH_TYPE_MASK =
   NODE_TYPE_MASK.Function | NODE_TYPE_MASK.Class;
 
+/** Default code mask plus doc heading nodes (`:Module` with `kind=heading`). */
+export const GRAPH_TYPE_MASK_WITH_DOC_HEADINGS =
+  DEFAULT_GRAPH_TYPE_MASK | NODE_TYPE_MASK.Module;
+
 export const NODE_TYPE_FILTER_OPTIONS = [
   { bit: NODE_TYPE_MASK.Function, label: "Function" },
   { bit: NODE_TYPE_MASK.Class, label: "Class" },
   { bit: NODE_TYPE_MASK.Struct, label: "Struct" },
   { bit: NODE_TYPE_MASK.Interface, label: "Interface" },
-  { bit: NODE_TYPE_MASK.Module, label: "Module" },
+  { bit: NODE_TYPE_MASK.Module, label: "Module (incl. doc headings)" },
 ] as const;
 
 export type WorkerInWithoutId =

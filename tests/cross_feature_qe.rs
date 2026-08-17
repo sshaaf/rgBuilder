@@ -373,7 +373,16 @@ fn cross_feature_consistency_after_discover() {
         );
     }
 
-    let index = sandbox.run(&["-f", "json", "semantic", "index", "--dimensions", "256"]);
+    let index = sandbox.run(&[
+        "-f",
+        "json",
+        "semantic",
+        "index",
+        "--dimensions",
+        "256",
+        "--embedder",
+        "vocab",
+    ]);
     assert_success(&index, "semantic index");
     let query = sandbox.run(&[
         "-f",

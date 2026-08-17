@@ -1,10 +1,12 @@
 //! `rg-build cpg` — hybrid CPG façade (L_repo ⟷ L_proc).
 
 use super::args::{InspectLayer, OutputFormat, PdgEdgeLayer, SliceDirection, SliceView};
+use super::markup::markup_context_unsupported;
 use super::context::CliContext;
 use super::inspect::{self, InspectArgs};
 use super::slice::{self, SliceArgs};
 use anyhow::Result;
+use std::path::Path;
 use rgbuilder_analysis::{
     cpg_calls, cpg_flows, cpg_function, cpg_mutations, cpg_status, export_cpg, CpgExportFormat,
     CpgExportScope, CpgFlowsArgs, MutationQuery, SliceDirection as AnalysisSliceDirection,
@@ -228,6 +230,9 @@ fn run_flows(
     direction: SliceDirection,
     with_alias: bool,
 ) -> Result<()> {
+    if let Some(msg) = markup_context_unsupported("cpg flows", Path::new(&file)) {
+        anyhow::bail!(msg);
+    }
     let direction = match direction {
         SliceDirection::Forward => AnalysisSliceDirection::Forward,
         SliceDirection::Backward => AnalysisSliceDirection::Backward,

@@ -1,6 +1,7 @@
 //! `rg-build inspect` — raw CFG / PDG / dominance debugging.
 
 use super::args::{InspectLayer, OutputFormat, PdgEdgeLayer};
+use super::markup::markup_context_unsupported;
 use super::context::{language_from_path, CliContext};
 use super::inspect_output::{inspect_cfg_json, inspect_dom_json, inspect_pdg_json};
 use crate::analysis::{build_cfg_for_function, DominatorTree, ProgramDependenceGraph};
@@ -15,6 +16,9 @@ pub struct InspectArgs {
 pub fn run(ctx: &CliContext, args: InspectArgs) -> Result<()> {
     let (node, source) = resolve_symbol_function(ctx, &args.symbol)?;
     let file = node.file_path.as_deref().unwrap_or(".");
+    if let Some(msg) = markup_context_unsupported("inspect", Path::new(file)) {
+        anyhow::bail!(msg);
+    }
     let lang = language_from_path(Path::new(file));
     let mut cfg = build_cfg_for_function(&lang, &source, &node.name)?;
     let pdg = ProgramDependenceGraph::build(&cfg, source.as_bytes())?;

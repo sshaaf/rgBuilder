@@ -576,9 +576,16 @@ fn test_discover_cli_flags() {
         ("security", "--with-security"),
         ("cfg", "--with-cfg"),
         ("taint", "--with-taint"),
+        ("dfg-loops", "--with-dfg-loops"),
+        ("ast-skeleton", "--with-ast-skeleton"),
     ] {
         let sandbox = Sandbox::new();
-        let doc = discover_json_metrics(&sandbox, &[flag]);
+        let extra: &[&str] = if label == "dfg-loops" || label == "ast-skeleton" {
+            &[flag, "--with-cfg"]
+        } else {
+            &[flag]
+        };
+        let doc = discover_json_metrics(&sandbox, extra);
         assert_schema_version(&doc, 2);
         assert_eq!(doc["command"].as_str(), Some("discover"));
         assert!(

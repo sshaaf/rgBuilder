@@ -20,6 +20,7 @@ mod inspect;
 pub mod inspect_output;
 mod metrics;
 pub mod metrics_output;
+mod markup;
 mod policy_file;
 mod query_daemon;
 mod semantic;

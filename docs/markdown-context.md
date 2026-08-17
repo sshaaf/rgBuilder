@@ -72,3 +72,19 @@ Doc `REFERENCES` edges participate in the graph like other edges, but markdown-o
 ## `.mdx`
 
 Registered under language id `markdown` (extensions `md` + `mdx`). MDX/JSX in code fences is not executed; only tree-sitter-md structure is indexed.
+
+## Semantic search
+
+`semantic index` embeds **`:Function` nodes only**. Doc headings (`:Module` with `kind=heading`) are **not** indexed. Use GQL for doc navigation; use `semantic query` for code functions after `discover` includes your language plugins.
+
+## CFG, PDG, slice, inspect, CPG flows
+
+Markdown has **no CFG grammar**. `discover --with-cfg` skips `.md` / `.mdx` files in the CFG batch. Commands that need a function CFG (`slice`, `inspect`, `cpg flows`) **reject** markup paths with an error pointing here.
+
+## Dashboard
+
+The graph view defaults to **Function + Class**. Enable **Module (incl. doc headings)** in the sidebar filter, or click **Code + doc headings**, to see documentation nodes after drill-down. Search tab remains function-only (semantic API).
+
+## Demo video
+
+Record a short CLI walkthrough: `docs/videos/record-markdown-context-cli.sh` (VHS tape: `docs/videos/markdown-context-cli.tape`).

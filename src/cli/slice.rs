@@ -1,6 +1,7 @@
 //! `rg-build slice` — line-level slicing and taint policy checks.
 
 use super::args::{OutputFormat, SliceDirection, SliceView};
+use super::markup::markup_context_unsupported;
 use super::context::{language_from_path, CliContext};
 use super::slice_output::{
     cfg_topology_json, pdg_topology_json, taint_slice_json, text_slice_json,
@@ -26,6 +27,9 @@ pub struct SliceArgs {
 
 pub fn run(ctx: &CliContext, args: SliceArgs) -> Result<()> {
     let path = resolve_slice_path(ctx, &args.file)?;
+    if let Some(msg) = markup_context_unsupported("slice", &path) {
+        bail!(msg);
+    }
     let source = fs::read_to_string(&path).with_context(|| format!("read {}", path.display()))?;
     let lang = args
         .language

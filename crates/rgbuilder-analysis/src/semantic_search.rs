@@ -733,6 +733,15 @@ mod tests {
     }
 
     #[test]
+    fn embed_text_skips_markup_heading_modules() {
+        let heading = Node::new(NodeType::Module, "Checkout Flow")
+            .with_property("kind".to_string(), "heading".to_string())
+            .with_file_path("docs/guide.md".into());
+        assert!(embed_text_for_function(&heading, None).is_none());
+        assert!(embed_text_for_node(&heading).is_none());
+    }
+
+    #[test]
     fn build_and_query_from_backend() {
         let mut backend = MemoryBackend::new();
         let n1 = Node::new(NodeType::Function, "authenticate")

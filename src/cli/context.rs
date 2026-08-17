@@ -154,6 +154,9 @@ impl CliContext {
 }
 
 pub fn language_from_path(path: &Path) -> String {
+    if super::markup::is_markup_context_path(path) {
+        return "markdown".to_string();
+    }
     crate::analysis::language_id_from_path(path)
         .unwrap_or("rust")
         .to_string()
