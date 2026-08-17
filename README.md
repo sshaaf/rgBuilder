@@ -230,7 +230,7 @@ Quick links into **[Introduction](docs/Introduction.md)** — see [Where most to
 
 **Dashboard** — visual exploration after `discover --with-dashboard` (`.rgbuilder/dashboard/`). See **[Feature designs](docs/design/README.md)** for per-tab engineering docs.  
 **Migration export** — `discover --export-migration-hints` (alias `--export-migration-plan`; optional `--migration-preset`, `--migration-order scheduled|priority`).  
-**Languages** — nine Tier 1 languages (Rust, Python, Java, Go, TypeScript, JavaScript, C#, C, C++) plus config/IaC plugins. See [Languages](docs/languages.md).
+**Languages** — nine Tier 1 languages (Rust, Python, Java, Go, TypeScript, JavaScript, C#, C, C++) plus config/IaC plugins and **markdown** (`.md` / `.mdx` docs context). See [Languages](docs/languages.md) and [Markdown context](docs/markdown-context.md).
 
 ---
 
@@ -248,6 +248,7 @@ Quick links into **[Introduction](docs/Introduction.md)** — see [Where most to
 | **[HTTP API](docs/http-api.md)** | `rg-build serve` → `/api/query` and `/api/semantic/*` |
 | **[Policy format](docs/policy-format.md)** | `check` / blast policy JSON |
 | **[Languages](docs/languages.md)** | Supported languages and tiers |
+| **[Markdown context](docs/markdown-context.md)** | Doc graph — headings, links, doc→code GQL |
 | **[Further reading](docs/further-reading.md)** | Research implemented vs inspired |
 | **[CLI I/O sanity QE](docs/cli-io-sanity-qe.md)** | Subprocess JSON contract and release perf gates *(contributors)* |
 | **[Feature designs](docs/design/README.md)** | Engineering design docs *(contributors)* |
