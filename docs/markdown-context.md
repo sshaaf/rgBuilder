@@ -16,19 +16,24 @@ Fixture corpus: `tests/fixtures/markdown-context/` — start with its [README.md
 
 Automated integration gate: `cargo test --test markdown_context_cli` (CLI discover + GQL) and `cargo test -p rgbuilder-extraction markdown_spec_coverage` (in-memory spec matrix).
 
-## Stress test (kubernetes/website)
+## Cold profile (kubernetes/website)
 
-Large real-world markdown corpus: [kubernetes/website `content/en`](https://github.com/kubernetes/website/tree/main/content/en). Same pattern as `example/linux` — **gitignored local checkout**, manual gate only.
+Large real-world markdown corpus: [kubernetes/website `content/en`](https://github.com/kubernetes/website/tree/main/content/en). Same **cold profile** pattern as `example/linux` — gitignored local checkout, deletes `.rgbuilder/` before discover, release `rg-build` only.
+
+**Agent prompt (suggested):**
+
+> Run **cold profile** on markdown: `cargo build --release --bin rg-build`, `./scripts/fetch-k8s-website-example.sh`, then `cargo test --release --test cold_profile_gates k8s_website_markdown_cold_discover_within_baseline -- --ignored --nocapture`. Report `[profile] discover summary` wall_secs, nodes, functions, and `index_graph_build` vs baseline 3s (+10%). Compare to last known good on this machine. Do not use an existing `.rgbuilder/` cache.
 
 ```bash
 ./scripts/fetch-k8s-website-example.sh
 cargo build --release --bin rg-build
-cargo test --release --test markdown_stress_gates -- --ignored --nocapture
+cargo test --release --test cold_profile_gates k8s_website_markdown_cold_discover_within_baseline -- --ignored --nocapture
 ```
 
 - Discover root: `example/k8s-website` (override with `RGBUILDER_K8S_WEBSITE_REPO`)
-- Command: `discover . -l markdown -v` (markdown plugin only; no CFG)
-- Optional wall-time gate: set `RGBUILDER_K8S_WEBSITE_DISCOVER_BASELINE_SECS` after you establish a baseline on your machine
+- Command: cold `discover . -l markdown -v` (markdown plugin only; no CFG)
+- Baseline: **3.0s** profile wall_secs (+10% tolerance); override with `RGBUILDER_K8S_WEBSITE_DISCOVER_BASELINE_SECS` after you establish a number on your machine
+- Correctness: ≥500 heading modules, zero `:Function` nodes
 
 See [example/README.md](../example/README.md) for other large local corpora.
 

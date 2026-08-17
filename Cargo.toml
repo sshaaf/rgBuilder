@@ -361,10 +361,6 @@ path = "tests/discover_perf_baselines.rs"
 name = "cold_profile_gates"
 path = "tests/cold_profile_gates.rs"
 
-[[test]]
-name = "markdown_stress_gates"
-path = "tests/markdown_stress_gates.rs"
-
 [[bench]]
 name = "parsing"
 harness = false

@@ -26,6 +26,8 @@ struct LineSpan {
 pub struct GraphBuilder {
     symbol_index: HashMap<String, Uuid>,
     file_nodes: HashMap<String, Uuid>,
+    /// Normalized path + component-boundary suffixes → file node id (O(1) lookup).
+    file_path_lookup: HashMap<String, Uuid>,
     config_key_nodes: HashMap<String, Uuid>,
     env_nodes: HashMap<String, Uuid>,
     nodes: Vec<Node>,
@@ -194,7 +196,9 @@ impl GraphBuilder {
 
         let node = Node::new(NodeType::File, file_path.clone()).with_file_path(file_path.clone());
         let id = node.id;
+        let norm = normalize_file_key(&file_path);
         self.file_nodes.insert(file_path, id);
+        register_file_lookup_keys(&mut self.file_path_lookup, &norm, id);
         self.commit_node(node);
         id
     }
@@ -514,12 +518,8 @@ impl GraphBuilder {
     /// Resolve a file path string to a registered File node (absolute/relative tolerant).
     fn lookup_file_node(&self, path_str: &str, anchor_file: &str) -> Option<Uuid> {
         let target = normalize_file_key(path_str);
-        if target.is_empty() {
-            return None;
-        }
-        for (key, id) in &self.file_nodes {
-            let norm_key = normalize_file_key(key);
-            if norm_key == target || norm_key.ends_with(&target) {
+        if !target.is_empty() {
+            if let Some(id) = self.file_path_lookup.get(&target) {
                 return Some(*id);
             }
         }
@@ -527,12 +527,7 @@ impl GraphBuilder {
         if let Some(parent) = anchor.parent() {
             let joined = normalize_file_key(&join_path_normalized(parent, path_str));
             if !joined.is_empty() {
-                for (key, id) in &self.file_nodes {
-                    let norm_key = normalize_file_key(key);
-                    if norm_key == joined || norm_key.ends_with(&joined) {
-                        return Some(*id);
-                    }
-                }
+                return self.file_path_lookup.get(&joined).copied();
             }
         }
         None
@@ -1045,6 +1040,19 @@ fn symbol_type_to_node_type(symbol_type: SymbolType) -> NodeType {
         SymbolType::PuppetResource => NodeType::PuppetResource,
         SymbolType::PuppetVariable => NodeType::PuppetVariable,
         SymbolType::PuppetFact => NodeType::PuppetFact,
+    }
+}
+
+fn register_file_lookup_keys(index: &mut HashMap<String, Uuid>, norm_path: &str, id: Uuid) {
+    if norm_path.is_empty() {
+        return;
+    }
+    index.entry(norm_path.to_string()).or_insert(id);
+    for (i, b) in norm_path.bytes().enumerate() {
+        if b == b'/' && i + 1 < norm_path.len() {
+            let suffix = &norm_path[i + 1..];
+            index.entry(suffix.to_string()).or_insert(id);
+        }
     }
 }
 

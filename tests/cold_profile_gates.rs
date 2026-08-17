@@ -1,12 +1,17 @@
-//! Cold discover profile gates for linux, metasfresh, and kafka.
+//! Cold discover profile gates for linux, metasfresh, kafka, and markdown (k8s-website).
 //!
 //! ```text
+//! cargo build --release --bin rg-build
 //! cargo test --release --test cold_profile_gates -- --ignored --nocapture
 //! ```
+//!
+//! Markdown corpus: `./scripts/fetch-k8s-website-example.sh` then
+//! `k8s_website_markdown_cold_discover_within_baseline`.
 
 mod dashboard_harness;
 
 use dashboard_harness::{metasfresh_repo_path, rgbuilder_bin};
+use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::time::{Duration, Instant};
@@ -17,6 +22,9 @@ const LINUX_COLD_MAX_NODES: u64 = 2_800_000;
 const METASFRESH_COLD_WALL_BASELINE_SECS: f64 = 531.0;
 /// Establish on maintainer machine; override via `RGBUILDER_KAFKA_COLD_BASELINE_SECS`.
 const KAFKA_COLD_WALL_BASELINE_SECS: f64 = 600.0;
+/// kubernetes/website `content/en`, markdown-only discover (~2–3s on maintainer machine).
+const K8S_WEBSITE_MARKDOWN_COLD_WALL_BASELINE_SECS: f64 = 3.0;
+const K8S_WEBSITE_MIN_HEADING_MODULES: u64 = 500;
 const TOLERANCE: f64 = 1.10;
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -43,17 +51,37 @@ pub fn kafka_repo_path() -> PathBuf {
         .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("example/kafka"))
 }
 
-pub fn parse_profile_summary(stderr: &str) -> Option<ProfileSummary> {
+pub fn k8s_website_repo_path() -> PathBuf {
+    std::env::var("RGBUILDER_K8S_WEBSITE_REPO")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("example/k8s-website")
+        })
+}
+
+pub fn parse_profile_summary(log: &str) -> Option<ProfileSummary> {
     let mut summary = ProfileSummary::default();
-    for line in stderr.lines() {
+    for line in log.lines() {
         if line.contains("[profile] discover summary") {
-            summary.wall_secs = parse_field_f64(line, "wall_secs=")?;
-            summary.peak_rss_mb = parse_field_f64(line, "peak_rss_mb=")?;
-            summary.ingest_peak_rss_mb = parse_field_f64(line, "ingest_peak_rss_mb=")?;
-            summary.nodes = parse_field_u64(line, "nodes=")?;
-            summary.functions = parse_field_u64(line, "functions=")?;
+            if let Some(v) = parse_field_f64(line, "wall_secs=") {
+                summary.wall_secs = v;
+            }
+            if let Some(v) = parse_field_f64(line, "peak_rss_mb=") {
+                summary.peak_rss_mb = v;
+            }
+            if let Some(v) = parse_field_f64(line, "ingest_peak_rss_mb=") {
+                summary.ingest_peak_rss_mb = v;
+            }
+            if let Some(v) = parse_field_u64(line, "nodes=") {
+                summary.nodes = v;
+            }
+            if let Some(v) = parse_field_u64(line, "functions=") {
+                summary.functions = v;
+            }
         } else if line.contains("[profile] stage") && line.contains("index_graph_build") {
-            summary.index_graph_build_secs = Some(parse_field_f64(line, "secs=")?);
+            if let Some(secs) = parse_field_f64(line, "secs=") {
+                summary.index_graph_build_secs = Some(secs);
+            }
         }
     }
     if summary.wall_secs > 0.0 {
@@ -61,6 +89,77 @@ pub fn parse_profile_summary(stderr: &str) -> Option<ProfileSummary> {
     } else {
         None
     }
+}
+
+fn find_json_object_end(s: &str) -> Option<usize> {
+    let mut depth = 0;
+    for (i, ch) in s.char_indices() {
+        match ch {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(i);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn parse_discover_json(stdout: &str) -> Option<Value> {
+    for anchor in ["\"command\": \"discover\"", "\"command\":\"discover\""] {
+        if let Some(anchor_idx) = stdout.rfind(anchor) {
+            let start = stdout[..anchor_idx].rfind('{')?;
+            let slice = &stdout[start..];
+            let end = find_json_object_end(slice)?;
+            return serde_json::from_str(slice[..=end].trim()).ok();
+        }
+    }
+    None
+}
+
+fn resolve_profile_summary(stdout: &str, stderr: &str, elapsed: Duration) -> ProfileSummary {
+    let combined = format!("{stdout}\n{stderr}");
+    if let Some(summary) = parse_profile_summary(&combined) {
+        return summary;
+    }
+    if let Some(doc) = parse_discover_json(stdout) {
+        let metrics = doc.get("metrics").and_then(|m| m.as_object());
+        let nodes = metrics
+            .and_then(|m| m.get("nodes_generated"))
+            .and_then(|n| n.as_u64())
+            .unwrap_or(0);
+        let wall_secs = metrics
+            .and_then(|m| m.get("duration_ms"))
+            .and_then(|n| n.as_u64())
+            .map(|ms| ms as f64 / 1000.0)
+            .unwrap_or_else(|| elapsed.as_secs_f64());
+        return ProfileSummary {
+            wall_secs,
+            nodes,
+            ..ProfileSummary::default()
+        };
+    }
+    let stdout_tail: String = stdout
+        .chars()
+        .rev()
+        .take(1200)
+        .collect::<String>()
+        .chars()
+        .rev()
+        .collect();
+    panic!(
+        "profile summary missing (expected [profile] discover summary or JSON metrics)\n\
+         rg-build: {}\n\
+         stdout_bytes={} stderr_bytes={}\n\
+         stdout_tail:\n{stdout_tail}\n\
+         stderr:\n{stderr}",
+        rgbuilder_bin().display(),
+        stdout.len(),
+        stderr.len(),
+    );
 }
 
 fn parse_field_f64(line: &str, key: &str) -> Option<f64> {
@@ -76,11 +175,28 @@ fn parse_field_u64(line: &str, key: &str) -> Option<u64> {
 }
 
 pub fn run_cold_discover_timed(repo: &Path, extra_args: &[&str]) -> (Output, Duration) {
+    let rb = repo.join(".rgbuilder");
+    if rb.exists() {
+        std::fs::remove_dir_all(&rb).expect("remove stale .rgbuilder for cold discover");
+    }
     let bin = rgbuilder_bin();
+    assert!(
+        bin.is_file(),
+        "rg-build binary not found at {} — run cargo build --release --bin rg-build",
+        bin.display()
+    );
     let start = Instant::now();
     let output = Command::new(&bin)
         .env("RUST_LOG", "info,profile=info")
-        .args(["-r", repo.to_str().unwrap(), "discover", ".", "-v"])
+        .args([
+            "-r",
+            repo.to_str().unwrap(),
+            "-f",
+            "json",
+            "discover",
+            ".",
+            "-v",
+        ])
         .args(extra_args)
         .output()
         .expect("spawn rg-build discover");
@@ -110,6 +226,30 @@ fn profile_parser_reads_linux_log_snippet() {
 }
 
 #[test]
+fn profile_parser_tolerates_missing_optional_fields() {
+    let snippet = "INFO profile: [profile] discover summary wall_secs=1.1 peak_rss_mb=100.0 functions=0 nodes=60994 cfg=false security=false";
+    let parsed = parse_profile_summary(snippet).expect("parse");
+    assert!((parsed.wall_secs - 1.1).abs() < 0.01);
+    assert_eq!(parsed.nodes, 60994);
+    assert_eq!(parsed.ingest_peak_rss_mb, 0.0);
+}
+
+#[test]
+fn profile_resolver_falls_back_to_discover_json() {
+    let stdout = r#"{
+  "command": "discover",
+  "metrics": {
+    "duration_ms": 825,
+    "nodes_generated": 60994
+  },
+  "schema_version": 2
+}"#;
+    let summary = resolve_profile_summary(stdout, "", Duration::from_millis(900));
+    assert!((summary.wall_secs - 0.825).abs() < 0.01);
+    assert_eq!(summary.nodes, 60994);
+}
+
+#[test]
 #[ignore = "manual: cold discover profile on example/linux"]
 fn linux_cold_discover_within_baseline() {
     let repo = linux_repo_path();
@@ -125,9 +265,7 @@ fn linux_cold_discover_within_baseline() {
         output.status.success(),
         "discover failed:\nstdout={stdout}\nstderr={stderr}"
     );
-    let profile = parse_profile_summary(&stdout)
-        .or_else(|| parse_profile_summary(&stderr))
-        .expect("profile summary in discover output");
+    let profile = resolve_profile_summary(&stdout, &stderr, elapsed);
     eprintln!(
         "linux cold: wall={:.1}s nodes={} index_graph_build={:?}",
         profile.wall_secs, profile.nodes, profile.index_graph_build_secs
@@ -160,9 +298,7 @@ fn metasfresh_cold_discover_within_baseline() {
         output.status.success(),
         "discover failed:\nstdout={stdout}\nstderr={stderr}"
     );
-    let profile = parse_profile_summary(&stdout)
-        .or_else(|| parse_profile_summary(&stderr))
-        .expect("profile summary in discover output");
+    let profile = resolve_profile_summary(&stdout, &stderr, elapsed);
     eprintln!(
         "metasfresh cold: wall={:.1}s nodes={} functions={}",
         profile.wall_secs, profile.nodes, profile.functions
@@ -195,12 +331,115 @@ fn kafka_cold_discover_within_baseline() {
         output.status.success(),
         "discover failed:\nstdout={stdout}\nstderr={stderr}"
     );
-    let profile = parse_profile_summary(&stdout)
-        .or_else(|| parse_profile_summary(&stderr))
-        .expect("profile summary in discover output");
+    let profile = resolve_profile_summary(&stdout, &stderr, elapsed);
     eprintln!(
         "kafka cold: wall={:.1}s nodes={} functions={} (baseline {:.0}s)",
         profile.wall_secs, profile.nodes, profile.functions, baseline
     );
     assert_within_baseline("kafka cold discover", elapsed, baseline);
+}
+
+fn parse_gql_json(stdout: &[u8]) -> Option<Value> {
+    let text = String::from_utf8_lossy(stdout);
+    for anchor in ["\"rows\"", "\"count\""] {
+        if let Some(anchor_idx) = text.rfind(anchor) {
+            let start = text[..anchor_idx].rfind('{')?;
+            let slice = &text[start..];
+            let end = find_json_object_end(slice)?;
+            if let Ok(value) = serde_json::from_str(slice[..=end].trim()) {
+                return Some(value);
+            }
+        }
+    }
+    None
+}
+
+fn run_json_gql(repo: &Path, query: &str) -> Value {
+    let bin = rgbuilder_bin();
+    let output = Command::new(&bin)
+        .args([
+            "-r",
+            repo.to_str().unwrap(),
+            "-f",
+            "json",
+            "gql",
+            query,
+        ])
+        .output()
+        .expect("spawn gql");
+    assert!(
+        output.status.success(),
+        "gql failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    parse_gql_json(&output.stdout).expect("gql json")
+}
+
+#[test]
+#[ignore = "manual: cold markdown discover on example/k8s-website (kubernetes/website content/en)"]
+fn k8s_website_markdown_cold_discover_within_baseline() {
+    let repo = k8s_website_repo_path();
+    if !repo.is_dir() {
+        eprintln!(
+            "skip: k8s-website not at {} (run ./scripts/fetch-k8s-website-example.sh)",
+            repo.display()
+        );
+        return;
+    }
+
+    let baseline = std::env::var("RGBUILDER_K8S_WEBSITE_DISCOVER_BASELINE_SECS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(K8S_WEBSITE_MARKDOWN_COLD_WALL_BASELINE_SECS);
+
+    let (output, elapsed) = run_cold_discover_timed(&repo, &["-l", "markdown"]);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "discover failed:\nstdout={stdout}\nstderr={stderr}"
+    );
+    let profile = resolve_profile_summary(&stdout, &stderr, elapsed);
+    eprintln!(
+        "k8s-website markdown cold: wall={:.1}s elapsed={:.1}s nodes={} functions={} index_graph_build={:?} (baseline {:.1}s)",
+        profile.wall_secs,
+        elapsed.as_secs_f64(),
+        profile.nodes,
+        profile.functions,
+        profile.index_graph_build_secs,
+        baseline
+    );
+    assert_eq!(
+        profile.functions, 0,
+        "markdown-only discover should index no functions"
+    );
+    assert_within_baseline(
+        "k8s-website markdown cold discover",
+        Duration::from_secs_f64(profile.wall_secs),
+        baseline,
+    );
+
+    let headings = run_json_gql(
+        &repo,
+        "MATCH (n:Module) WHERE n.kind = 'heading' RETURN n",
+    );
+    let heading_count = headings
+        .get("count")
+        .and_then(|c| c.as_u64())
+        .unwrap_or(0);
+    eprintln!("k8s-website heading modules: {heading_count}");
+    assert!(
+        heading_count >= K8S_WEBSITE_MIN_HEADING_MODULES,
+        "expected at least {K8S_WEBSITE_MIN_HEADING_MODULES} heading modules, got {heading_count}"
+    );
+
+    let functions = run_json_gql(&repo, "MATCH (n:Function) RETURN n");
+    let function_count = functions
+        .get("count")
+        .and_then(|c| c.as_u64())
+        .unwrap_or(0);
+    assert_eq!(
+        function_count, 0,
+        "markdown-only discover should index no functions"
+    );
 }
