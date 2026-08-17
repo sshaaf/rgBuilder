@@ -226,8 +226,8 @@ name = "all_commands_sanity"
 path = "tests/cli_output/all_commands_sanity.rs"
 
 [[test]]
-name = "markdown_context_phase2"
-path = "tests/markdown_context_phase2.rs"
+name = "markdown_context_cli"
+path = "tests/markdown_context_cli.rs"
 
 [[test]]
 name = "http_serve"

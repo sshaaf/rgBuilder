@@ -1,7 +1,7 @@
-//! Phase 2 CLI integration — discover → snapshot → GQL queries 1–6 + footprint.
+//! CLI integration for markdown context graph — discover → snapshot → GQL queries 1–6.
 //!
 //! Spawns `rg-build` against a temp copy of `tests/fixtures/markdown-context`.
-//! Run: `cargo test --test markdown_context_phase2`
+//! Run: `cargo test --test markdown_context_cli`
 
 use serde_json::Value;
 use std::fs;
@@ -114,7 +114,7 @@ fn metrics_nodes(doc: &Value) -> usize {
 }
 
 #[test]
-fn phase2_cli_discover_markdown_writes_snapshot() {
+fn cli_discover_markdown_writes_snapshot() {
     let repo = FixtureRepo::new();
     let doc = repo.discover_json("markdown");
     assert!(
@@ -126,7 +126,7 @@ fn phase2_cli_discover_markdown_writes_snapshot() {
 }
 
 #[test]
-fn phase2_cli_gql_queries_1_through_6() {
+fn cli_gql_queries_1_through_6() {
     let repo = FixtureRepo::new();
     repo.discover_json("markdown,java");
 
@@ -170,7 +170,7 @@ fn phase2_cli_gql_queries_1_through_6() {
 }
 
 #[test]
-fn phase2_footprint_markdown_larger_than_java_only() {
+fn cli_footprint_markdown_larger_than_java_only() {
     let repo = FixtureRepo::new();
 
     let java_doc = repo.discover_json("java");
