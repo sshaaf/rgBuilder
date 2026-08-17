@@ -3,6 +3,7 @@
 use rgbuilder_error::{Error, Result};
 use rgbuilder_graph::code_index::{hash_code, CodeIndex};
 use rgbuilder_graph::migration::graph_parameter_from_plugin;
+use rgbuilder_graph::normalize_path_str;
 use rgbuilder_graph::schema::{Edge, EdgeType, Node, NodeType};
 use rgbuilder_graph::segmented_spill::{FinishedSpill, SegmentedSpill};
 use rgbuilder_graph::structural_sketch::build_token_bloom;
@@ -10,7 +11,7 @@ use rgbuilder_plugin_api::{
     ComplexityMetrics, ConfigKey, Relation, RelationType, Symbol, SymbolType,
 };
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy)]
@@ -452,7 +453,7 @@ impl GraphBuilder {
         let mut from_id =
             self.resolve_symbol_tracked(&relation.from, &relation.location.file, None, None);
         if from_id.is_none() {
-            from_id = self.file_nodes.get(&relation.from).copied();
+            from_id = self.lookup_file_node(&relation.from, &relation.location.file);
         }
 
         let (to_type_hint, to_qualified_hint) =
@@ -469,8 +470,8 @@ impl GraphBuilder {
                 .or(relation.to_type_hint.as_deref()),
         );
         if to_id.is_none() {
-            if let Some(id) = self.file_nodes.get(&relation.to) {
-                to_id = Some(*id);
+            if let Some(id) = self.lookup_file_node(&relation.to, &relation.location.file) {
+                to_id = Some(id);
             } else if relation
                 .to_type_hint
                 .as_deref()
@@ -508,6 +509,33 @@ impl GraphBuilder {
             self.commit_edge(edge);
         }
         Ok(())
+    }
+
+    /// Resolve a file path string to a registered File node (absolute/relative tolerant).
+    fn lookup_file_node(&self, path_str: &str, anchor_file: &str) -> Option<Uuid> {
+        let target = normalize_file_key(path_str);
+        if target.is_empty() {
+            return None;
+        }
+        for (key, id) in &self.file_nodes {
+            let norm_key = normalize_file_key(key);
+            if norm_key == target || norm_key.ends_with(&target) {
+                return Some(*id);
+            }
+        }
+        let anchor = Path::new(anchor_file);
+        if let Some(parent) = anchor.parent() {
+            let joined = normalize_file_key(&join_path_normalized(parent, path_str));
+            if !joined.is_empty() {
+                for (key, id) in &self.file_nodes {
+                    let norm_key = normalize_file_key(key);
+                    if norm_key == joined || norm_key.ends_with(&joined) {
+                        return Some(*id);
+                    }
+                }
+            }
+        }
+        None
     }
 
     /// Create or reuse a stub node for an unresolved relation endpoint.
@@ -1018,6 +1046,38 @@ fn symbol_type_to_node_type(symbol_type: SymbolType) -> NodeType {
         SymbolType::PuppetVariable => NodeType::PuppetVariable,
         SymbolType::PuppetFact => NodeType::PuppetFact,
     }
+}
+
+fn normalize_file_key(path: &str) -> String {
+    let mut out = PathBuf::new();
+    for component in Path::new(path).components() {
+        match component {
+            Component::Prefix(prefix) => out = PathBuf::from(prefix.as_os_str()),
+            Component::RootDir => out.push(std::path::MAIN_SEPARATOR_STR),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                out.pop();
+            }
+            Component::Normal(part) => out.push(part),
+        }
+    }
+    normalize_path_str(out.to_string_lossy().as_ref())
+}
+
+fn join_path_normalized(base: &Path, rel: &str) -> String {
+    let mut out = base.to_path_buf();
+    for component in Path::new(rel).components() {
+        match component {
+            Component::Prefix(prefix) => out = PathBuf::from(prefix.as_os_str()),
+            Component::RootDir => out = PathBuf::from(std::path::MAIN_SEPARATOR_STR),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                out.pop();
+            }
+            Component::Normal(part) => out.push(part),
+        }
+    }
+    normalize_file_key(out.to_string_lossy().as_ref())
 }
 
 fn relation_allows_external_stub(relation_type: RelationType) -> bool {
@@ -1548,6 +1608,60 @@ mod tests {
             "missing file href must not stub"
         );
         let _ = guide_id;
+    }
+
+    #[test]
+    fn references_file_target_resolves_with_absolute_discover_paths() {
+        let mut builder = GraphBuilder::new();
+        let guide_abs = "/tmp/fixture/./docs/guide.md";
+        let java_abs = "/tmp/fixture/src/CheckoutService.java";
+        let guide_id = builder.ensure_file_node(Path::new(guide_abs));
+        let java_id = builder.ensure_file_node(Path::new(java_abs));
+        let checkout = Symbol {
+            name: "Checkout Flow".to_string(),
+            symbol_type: SymbolType::Module,
+            qualified_name: Some(format!("{guide_abs}#checkout-flow")),
+            location: SourceLocation {
+                file: guide_abs.to_string(),
+                start_line: 1,
+                end_line: 1,
+                start_column: 0,
+                end_column: 1,
+            },
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({ "kind": "heading", "level": 1 }),
+        };
+        let checkout_id = builder.add_symbol(&checkout, guide_id);
+        builder.build_resolution_indexes();
+        builder
+            .add_relation(&Relation {
+                from: format!("{guide_abs}#checkout-flow"),
+                to: "src/CheckoutService.java".to_string(),
+                relation_type: RelationType::References,
+                location: SourceLocation {
+                    file: guide_abs.to_string(),
+                    start_line: 1,
+                    end_line: 1,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "kind": "markdown_link" }),
+                to_qualified_hint: Some("src/CheckoutService.java".to_string()),
+                to_type_hint: Some("file".to_string()),
+            })
+            .unwrap();
+
+        assert!(
+            builder.edges.iter().any(|e| {
+                e.edge_type == EdgeType::References && e.from == checkout_id && e.to == java_id
+            }),
+            "relative file href must resolve against absolute discover paths"
+        );
     }
 
     #[test]

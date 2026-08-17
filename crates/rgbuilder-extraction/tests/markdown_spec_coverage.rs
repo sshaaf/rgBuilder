@@ -169,3 +169,49 @@ fn spec_java_file_not_indexed_markdown_only_discover() {
         0
     );
 }
+
+#[test]
+fn spec_phase2_footprint_snapshot_and_node_counts() {
+    use rgbuilder_graph::write_columnar_from_backend;
+
+    let markdown_backend = populate(&["markdown"]);
+    let java_backend = populate(&["java"]);
+
+    let md_nodes = markdown_backend.node_count();
+    let java_nodes = java_backend.node_count();
+    assert!(
+        md_nodes > java_nodes,
+        "markdown fixture nodes {md_nodes} vs java-only {java_nodes}"
+    );
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    let md_path = dir.path().join("markdown.snapshot.bin");
+    let java_path = dir.path().join("java.snapshot.bin");
+    write_columnar_from_backend(&markdown_backend, &md_path).expect("write markdown snapshot");
+    write_columnar_from_backend(&java_backend, &java_path).expect("write java snapshot");
+    let md_bytes = std::fs::metadata(&md_path).expect("md meta").len();
+    let java_bytes = std::fs::metadata(&java_path).expect("java meta").len();
+    assert!(
+        md_bytes > java_bytes,
+        "markdown snapshot {md_bytes} B vs java-only {java_bytes} B"
+    );
+}
+
+#[test]
+fn spec_phase2_link_import_node_inflation() {
+    let backend = populate(&["markdown"]);
+    let link_imports = count(
+        &backend,
+        "MATCH (i:Import) WHERE i.kind = 'markdown_link' RETURN i",
+    );
+    let guide_headings = count(
+        &backend,
+        "MATCH (n:Module) WHERE n.kind = 'heading' AND n.file_path LIKE '*guide.md' RETURN n",
+    );
+    assert!(link_imports >= 3, "per-link Import symbols");
+    assert!(guide_headings >= 3, "guide.md headings");
+    assert!(
+        link_imports >= guide_headings,
+        "link-heavy docs inflate nodes (imports {link_imports} vs guide headings {guide_headings})"
+    );
+}

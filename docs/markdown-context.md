@@ -14,6 +14,8 @@ rg-build -r "$REPO" discover . -l markdown,java   # doc + code (Phase 2b)
 
 Fixture corpus: `tests/fixtures/markdown-context/` — start with its [README.md](../tests/fixtures/markdown-context/README.md) for layout, narrative, and copy-paste commands.
 
+Automated Phase 2 gate: `cargo test --test markdown_context_phase2` and `cargo test -p rgbuilder-extraction markdown_spec_coverage`.
+
 ## Node model
 
 | Source | GQL label | `kind` property | Notes |
