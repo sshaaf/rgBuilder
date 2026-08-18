@@ -86,7 +86,9 @@ mod tests {
         let plugin = MarkdownPlugin::new().expect("new");
         let path = Path::new("docs/guide.md");
         let source = "# Checkout Flow\n\n## Payment flow\n";
-        let symbols = plugin.extract_symbols(path, source.as_bytes()).expect("extract");
+        let symbols = plugin
+            .extract_symbols(path, source.as_bytes())
+            .expect("extract");
         let headings: Vec<_> = symbols
             .iter()
             .filter(|s| s.metadata.get("kind") == Some(&serde_json::json!("heading")))
@@ -115,7 +117,9 @@ mod tests {
         let path = Path::new("docs/guide.md");
         let source = "# Checkout Flow\n\n[ADR](./adr.md)\n";
         let (all_syms, all_rels) = plugin.extract_all(path, source.as_bytes()).expect("all");
-        let sym_only = plugin.extract_symbols(path, source.as_bytes()).expect("sym");
+        let sym_only = plugin
+            .extract_symbols(path, source.as_bytes())
+            .expect("sym");
         let rel_only = plugin
             .extract_relations(path, source.as_bytes(), &sym_only)
             .expect("rel");

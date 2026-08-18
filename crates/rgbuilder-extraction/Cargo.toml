@@ -24,4 +24,5 @@ uuid = { version = "1", features = ["v4", "serde"] }
 tempfile = { workspace = true }
 rgbuilder-languages = { workspace = true }
 rgbuilder-gql = { workspace = true }
+rgbuilder-pipeline = { workspace = true }
 rgbuilder-graph = { path = "../rgbuilder-graph" }

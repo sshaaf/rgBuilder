@@ -3,6 +3,7 @@
 //! Spawns `rg-build` against a temp copy of `tests/fixtures/markdown-context`.
 //! Run: `cargo test --test markdown_context_cli`
 
+use rgbuilder_graph::schema::NodeType;
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -12,11 +13,19 @@ use std::str;
 const SNAPSHOT_REL: &str = ".rgbuilder/graph.snapshot.bin";
 
 fn rgbuilder_bin() -> PathBuf {
-    option_env!("CARGO_BIN_EXE_rg_build")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug/rg-build")
-        })
+    if let Some(bin) = std::env::var_os("CARGO_BIN_EXE_rg_build") {
+        return PathBuf::from(bin);
+    }
+    if let Some(target) = std::env::var_os("CARGO_TARGET_DIR") {
+        let candidate = PathBuf::from(target).join("debug/rg-build");
+        if candidate.is_file() {
+            return candidate;
+        }
+    }
+    if let Some(bin) = option_env!("CARGO_BIN_EXE_rg_build") {
+        return PathBuf::from(bin);
+    }
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug/rg-build")
 }
 
 fn fixture_root() -> PathBuf {
@@ -114,6 +123,33 @@ fn metrics_nodes(doc: &Value) -> usize {
 }
 
 #[test]
+fn cli_discover_snapshot_has_section_body() {
+    let repo = FixtureRepo::new();
+    repo.discover_json("markdown,java");
+    let snap = repo.path.join(SNAPSHOT_REL);
+    let graph = rgbuilder_graph::CodeGraph::open_snapshot(&snap).expect("open snapshot");
+    let checkout = graph
+        .backend()
+        .all_nodes()
+        .expect("nodes")
+        .into_iter()
+        .find(|n| {
+            n.node_type == NodeType::Module
+                && n.name == "Checkout Flow"
+                && n.get_property("kind") == Some("heading")
+        })
+        .expect("Checkout Flow heading node");
+    assert!(
+        checkout
+            .get_property("body_text")
+            .is_some_and(|b| b.contains("End-to-end checkout")),
+        "snapshot body_text: {:?}, keys: {:?}",
+        checkout.get_property("body_text"),
+        checkout.properties.keys().collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn cli_discover_markdown_writes_snapshot() {
     let repo = FixtureRepo::new();
     let doc = repo.discover_json("markdown");
@@ -135,6 +171,12 @@ fn cli_gql_queries_1_through_6() {
             "MATCH (n:Module) WHERE n.kind = 'heading' AND n.name LIKE 'Checkout*' RETURN n"
         ) >= 1,
         "query 1"
+    );
+    assert!(
+        repo.gql_count(
+            "MATCH (n:Module) WHERE n.kind = 'heading' AND n.name LIKE 'Checkout*' AND n.body_text LIKE 'End-to-end*' RETURN n"
+        ) >= 1,
+        "checkout section body_text"
     );
     assert!(
         repo.gql_count(
@@ -208,14 +250,7 @@ fn cli_footprint_markdown_larger_than_java_only() {
 fn cli_slice_rejects_markdown_file() {
     let repo = FixtureRepo::new();
     repo.discover_json("markdown,java");
-    let out = repo.run(&[
-        "slice",
-        "docs/guide.md",
-        "--line",
-        "1",
-        "--variable",
-        "x",
-    ]);
+    let out = repo.run(&["slice", "docs/guide.md", "--line", "1", "--variable", "x"]);
     assert!(
         !out.status.success(),
         "slice on .md must fail:\n{}",

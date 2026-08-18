@@ -34,11 +34,13 @@ pub fn parse_markdown(source: &[u8], file_path: &Path) -> Result<ParsedMarkdown>
         .set_language(&block_language)
         .map_err(|e| Error::PluginError(format!("markdown block grammar: {e}")))?;
 
-    let block = parser.parse(source, None).ok_or_else(|| Error::ParseError {
-        file: file_path.to_path_buf(),
-        line: 0,
-        message: "Failed to parse markdown (block grammar)".to_string(),
-    })?;
+    let block = parser
+        .parse(source, None)
+        .ok_or_else(|| Error::ParseError {
+            file: file_path.to_path_buf(),
+            line: 0,
+            message: "Failed to parse markdown (block grammar)".to_string(),
+        })?;
 
     parser
         .set_language(&inline_language)
@@ -91,11 +93,13 @@ pub fn parse_markdown(source: &[u8], file_path: &Path) -> Result<ParsedMarkdown>
         parser
             .set_included_ranges(&ranges)
             .map_err(|e| Error::PluginError(format!("markdown inline ranges: {e}")))?;
-        let inline_tree = parser.parse(source, None).ok_or_else(|| Error::ParseError {
-            file: file_path.to_path_buf(),
-            line: node.start_position().row + 1,
-            message: "Failed to parse markdown (inline grammar)".to_string(),
-        })?;
+        let inline_tree = parser
+            .parse(source, None)
+            .ok_or_else(|| Error::ParseError {
+                file: file_path.to_path_buf(),
+                line: node.start_position().row + 1,
+                message: "Failed to parse markdown (inline grammar)".to_string(),
+            })?;
         inline_trees.push(inline_tree);
         inline_indices.insert(node.id(), i);
         i += 1;

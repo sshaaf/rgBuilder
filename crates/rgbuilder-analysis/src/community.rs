@@ -16,8 +16,11 @@ use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 /// Default behavioral edge types for community detection.
+///
+/// Includes [`EdgeType::References`] so markdown/doc graphs (link structure) form
+/// communities alongside code [`Calls`] / [`Uses`].
 pub fn default_community_edge_types() -> &'static [EdgeType] {
-    &[EdgeType::Calls, EdgeType::Uses]
+    &[EdgeType::Calls, EdgeType::Uses, EdgeType::References]
 }
 
 /// Default σ multiplier for statistical hub stripping (`μ + kσ`).
@@ -133,7 +136,7 @@ impl CommunityDetector {
         self
     }
 
-    /// Detect communities using behavioral edge types (Calls + Uses).
+    /// Detect communities using [`default_community_edge_types`].
     ///
     /// Accepts a pre-built PetGraphView to avoid rebuilding the topology.
     pub fn detect_with_view(&self, view: &PetGraphView) -> Result<CommunityResult> {
@@ -590,7 +593,7 @@ fn build_dashboard_community(
     };
 
     let label = {
-        use crate::community_label::{infer_community_label, CommunityLabelHints};
+        use crate::community_label::{CommunityLabelHints, infer_community_label};
         let packages: Vec<String> = file_paths
             .iter()
             .map(|p| {
@@ -866,6 +869,40 @@ mod tests {
         }
         assert_eq!(best_label_id, 1, "label-id should select the lowest label");
         assert_ne!(best_label, best_label_id);
+    }
+
+    #[test]
+    fn references_only_graph_forms_communities() {
+        let mut backend = MemoryBackend::new();
+        let a = Node::new(NodeType::Module, "doc_a")
+            .with_file_path("docs/a.md")
+            .with_property("kind".to_string(), "heading".to_string());
+        let b = Node::new(NodeType::Module, "doc_b")
+            .with_file_path("docs/b.md")
+            .with_property("kind".to_string(), "heading".to_string());
+        let c = Node::new(NodeType::Module, "doc_c")
+            .with_file_path("docs/b.md")
+            .with_property("kind".to_string(), "heading".to_string());
+        let id_a = a.id;
+        let id_b = b.id;
+        let id_c = c.id;
+        backend.insert_node(a).unwrap();
+        backend.insert_node(b).unwrap();
+        backend.insert_node(c).unwrap();
+        backend
+            .insert_edge(Edge::new(id_a, id_b, EdgeType::References))
+            .unwrap();
+        backend
+            .insert_edge(Edge::new(id_b, id_c, EdgeType::References))
+            .unwrap();
+
+        let view = PetGraphView::from_backend(&backend).unwrap();
+        let detector = CommunityDetector::new();
+        let result = detector
+            .detect_with_view_filtered(&view, default_community_edge_types())
+            .unwrap();
+        assert!(!result.communities.is_empty());
+        assert!(result.modularity >= 0.0);
     }
 
     #[test]

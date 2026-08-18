@@ -11,8 +11,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 fn fixture_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tests/fixtures/markdown-context")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/markdown-context")
 }
 
 fn populate_fixture(languages: &[&str]) -> MemoryBackend {
@@ -48,7 +47,9 @@ fn row_count(backend: &MemoryBackend, query: &str) -> usize {
 
 fn first_binding_name(backend: &MemoryBackend, query: &str, var: &str) -> Option<String> {
     let parsed = parse(query).expect("parse");
-    let result = QueryExecutor::new(backend).execute(&parsed).expect("execute");
+    let result = QueryExecutor::new(backend)
+        .execute(&parsed)
+        .expect("execute");
     result
         .rows
         .first()
@@ -73,6 +74,13 @@ fn markdown_phase2a_query1_checkout_headings() {
             "n",
         ),
         Some("Checkout Flow".to_string())
+    );
+    assert!(
+        row_count(
+            &backend,
+            "MATCH (n:Module) WHERE n.kind = 'heading' AND n.name LIKE 'Checkout*' AND n.body_text LIKE 'End-to-end*' RETURN n",
+        ) >= 1,
+        "checkout section body_text queryable via GQL"
     );
 }
 
@@ -133,7 +141,10 @@ fn markdown_phase2a_query5_checkout_subtree() {
         &backend,
         "MATCH (h:Module)-[:CONTAINS*1..3]->(n:Module) WHERE h.name = 'Checkout Flow' AND n.kind = 'heading' RETURN h, n",
     );
-    assert!(rows >= 3, "subtree includes Cart and nested sections, got {rows}");
+    assert!(
+        rows >= 3,
+        "subtree includes Cart and nested sections, got {rows}"
+    );
     assert_eq!(
         first_binding_name(
             &backend,

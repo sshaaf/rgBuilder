@@ -40,9 +40,7 @@ pub struct ProfileSummary {
 pub fn linux_repo_path() -> PathBuf {
     std::env::var("RGBUILDER_LINUX_REPO")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("example/linux")
-        })
+        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("example/linux"))
 }
 
 pub fn kafka_repo_path() -> PathBuf {
@@ -54,9 +52,7 @@ pub fn kafka_repo_path() -> PathBuf {
 pub fn k8s_website_repo_path() -> PathBuf {
     std::env::var("RGBUILDER_K8S_WEBSITE_REPO")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("example/k8s-website")
-        })
+        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("example/k8s-website"))
 }
 
 pub fn parse_profile_summary(log: &str) -> Option<ProfileSummary> {
@@ -276,7 +272,11 @@ fn linux_cold_discover_within_baseline() {
         profile.nodes,
         LINUX_COLD_MAX_NODES
     );
-    assert_within_baseline("linux cold discover", elapsed, LINUX_COLD_WALL_BASELINE_SECS);
+    assert_within_baseline(
+        "linux cold discover",
+        elapsed,
+        LINUX_COLD_WALL_BASELINE_SECS,
+    );
 }
 
 #[test]
@@ -288,10 +288,8 @@ fn metasfresh_cold_discover_within_baseline() {
         return;
     }
 
-    let (output, elapsed) = run_cold_discover_timed(
-        &repo,
-        &["--with-cfg", "--with-security", "--with-taint"],
-    );
+    let (output, elapsed) =
+        run_cold_discover_timed(&repo, &["--with-cfg", "--with-security", "--with-taint"]);
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
@@ -357,14 +355,7 @@ fn parse_gql_json(stdout: &[u8]) -> Option<Value> {
 fn run_json_gql(repo: &Path, query: &str) -> Value {
     let bin = rgbuilder_bin();
     let output = Command::new(&bin)
-        .args([
-            "-r",
-            repo.to_str().unwrap(),
-            "-f",
-            "json",
-            "gql",
-            query,
-        ])
+        .args(["-r", repo.to_str().unwrap(), "-f", "json", "gql", query])
         .output()
         .expect("spawn gql");
     assert!(
@@ -419,14 +410,8 @@ fn k8s_website_markdown_cold_discover_within_baseline() {
         baseline,
     );
 
-    let headings = run_json_gql(
-        &repo,
-        "MATCH (n:Module) WHERE n.kind = 'heading' RETURN n",
-    );
-    let heading_count = headings
-        .get("count")
-        .and_then(|c| c.as_u64())
-        .unwrap_or(0);
+    let headings = run_json_gql(&repo, "MATCH (n:Module) WHERE n.kind = 'heading' RETURN n");
+    let heading_count = headings.get("count").and_then(|c| c.as_u64()).unwrap_or(0);
     eprintln!("k8s-website heading modules: {heading_count}");
     assert!(
         heading_count >= K8S_WEBSITE_MIN_HEADING_MODULES,
@@ -434,10 +419,7 @@ fn k8s_website_markdown_cold_discover_within_baseline() {
     );
 
     let functions = run_json_gql(&repo, "MATCH (n:Function) RETURN n");
-    let function_count = functions
-        .get("count")
-        .and_then(|c| c.as_u64())
-        .unwrap_or(0);
+    let function_count = functions.get("count").and_then(|c| c.as_u64()).unwrap_or(0);
     assert_eq!(
         function_count, 0,
         "markdown-only discover should index no functions"

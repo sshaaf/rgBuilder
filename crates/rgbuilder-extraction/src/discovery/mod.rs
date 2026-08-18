@@ -2,8 +2,8 @@
 //!
 //! Task 1.6.1: Recursive directory traversal with .gitignore support
 
-use ignore::overrides::OverrideBuilder;
 use ignore::WalkBuilder;
+use ignore::overrides::OverrideBuilder;
 use rgbuilder_error::{Error, Result};
 use rgbuilder_registry::LanguageRegistry;
 use std::fs::File;
@@ -117,9 +117,10 @@ impl FileDiscoverer {
             }
 
             if let Some(ref languages) = self.config.languages
-                && !self.matches_language_filter(path, languages) {
-                    continue;
-                }
+                && !self.matches_language_filter(path, languages)
+            {
+                continue;
+            }
 
             if self.is_too_large(path)? {
                 continue;
@@ -212,15 +213,21 @@ mod tests {
 
         let files = discoverer().discover(root).unwrap();
 
-        assert!(files
-            .iter()
-            .any(|f| f.extension().is_some_and(|e| e == "rs")));
-        assert!(!files
-            .iter()
-            .any(|f| f.components().any(|c| c.as_os_str() == ".git")));
-        assert!(!files
-            .iter()
-            .any(|f| f.extension().is_some_and(|e| e == "txt")));
+        assert!(
+            files
+                .iter()
+                .any(|f| f.extension().is_some_and(|e| e == "rs"))
+        );
+        assert!(
+            !files
+                .iter()
+                .any(|f| f.components().any(|c| c.as_os_str() == ".git"))
+        );
+        assert!(
+            !files
+                .iter()
+                .any(|f| f.extension().is_some_and(|e| e == "txt"))
+        );
     }
 
     #[test]
@@ -235,9 +242,11 @@ mod tests {
         let files = discoverer().discover(root).unwrap();
 
         assert!(files.iter().any(|f| f.ends_with("src/main.rs")));
-        assert!(!files
-            .iter()
-            .any(|f| f.components().any(|c| c.as_os_str() == "target")));
+        assert!(
+            !files
+                .iter()
+                .any(|f| f.components().any(|c| c.as_os_str() == "target"))
+        );
     }
 
     #[test]
@@ -258,9 +267,11 @@ mod tests {
                 .unwrap();
 
         assert!(files.iter().any(|f| f.ends_with("src/main.rs")));
-        assert!(!files
-            .iter()
-            .any(|f| f.components().any(|c| c.as_os_str() == "vendor")));
+        assert!(
+            !files
+                .iter()
+                .any(|f| f.components().any(|c| c.as_os_str() == "vendor"))
+        );
     }
 
     #[test]

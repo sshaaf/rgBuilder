@@ -9,14 +9,81 @@ fn fixture_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/markdown-context")
 }
 
-fn extract_fixture(rel: &str) -> (Vec<rgbuilder_plugin_api::Symbol>, Vec<rgbuilder_plugin_api::Relation>) {
+fn extract_fixture(
+    rel: &str,
+) -> (
+    Vec<rgbuilder_plugin_api::Symbol>,
+    Vec<rgbuilder_plugin_api::Relation>,
+) {
     let root = fixture_root();
     let path = root.join(rel);
     let source = fs::read(&path).expect("read fixture");
     let plugin = MarkdownPlugin::new().expect("plugin");
-    plugin
-        .extract_all(&path, &source)
-        .expect("extract_all")
+    plugin.extract_all(&path, &source).expect("extract_all")
+}
+
+#[test]
+fn fixture_guide_checkout_flow_section_body() {
+    let (symbols, _) = extract_fixture("docs/guide.md");
+    let checkout = symbols
+        .iter()
+        .find(|s| s.name == "Checkout Flow")
+        .expect("Checkout Flow heading");
+    let body = checkout
+        .metadata
+        .get("body_text")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        body.contains("End-to-end checkout"),
+        "checkout intro body: {body}"
+    );
+    assert!(
+        !body.contains("## Cart"),
+        "section body must not include nested headings"
+    );
+    assert!(checkout.metadata.get("body_hash").is_some());
+}
+
+#[test]
+fn fixture_guide_fenced_block_body_text() {
+    let (symbols, _) = extract_fixture("docs/guide.md");
+    let block = symbols
+        .iter()
+        .find(|s| {
+            s.metadata.get("kind") == Some(&serde_json::json!("code_block"))
+                && s.metadata.get("language").and_then(|v| v.as_str()) == Some("java")
+        })
+        .expect("java code block");
+    assert!(
+        block
+            .metadata
+            .get("body_text")
+            .and_then(|v| v.as_str())
+            .is_some_and(|b| b.contains("cart.validate")),
+        "fence body_text: {:?}",
+        block.metadata.get("body_text")
+    );
+}
+
+#[test]
+fn fixture_readme_frontmatter_values() {
+    let (symbols, _) = extract_fixture("README.md");
+    let author = symbols
+        .iter()
+        .find(|s| s.name == "metadata.author")
+        .expect("metadata.author");
+    assert_eq!(
+        author.metadata.get("value").and_then(|v| v.as_str()),
+        Some("rgbuilder-fixture")
+    );
+    assert!(
+        author
+            .metadata
+            .get("body_text")
+            .and_then(|v| v.as_str())
+            .is_some_and(|v| v.contains("rgbuilder-fixture"))
+    );
 }
 
 #[test]
@@ -83,18 +150,18 @@ fn fixture_readme_yaml_frontmatter() {
         symbols.iter().any(|s| {
             s.name == "metadata.author"
                 && s.symbol_type == SymbolType::Variable
-                && s.qualified_name.as_ref().is_some_and(|qn| {
-                    qn.ends_with("README.md#fm.metadata.author")
-                })
+                && s.qualified_name
+                    .as_ref()
+                    .is_some_and(|qn| qn.ends_with("README.md#fm.metadata.author"))
         }),
         "README frontmatter metadata.author"
     );
     assert!(
         symbols.iter().any(|s| {
             s.name == "metadata.team"
-                && s.qualified_name.as_ref().is_some_and(|qn| {
-                    qn.ends_with("README.md#fm.metadata.team")
-                })
+                && s.qualified_name
+                    .as_ref()
+                    .is_some_and(|qn| qn.ends_with("README.md#fm.metadata.team"))
         }),
         "README frontmatter metadata.team"
     );

@@ -11,8 +11,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 fn fixture_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tests/fixtures/markdown-context")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/markdown-context")
 }
 
 fn populate(languages: &[&str]) -> MemoryBackend {
@@ -39,7 +38,11 @@ fn populate(languages: &[&str]) -> MemoryBackend {
 
 fn count(backend: &MemoryBackend, query: &str) -> usize {
     let q = parse(query).expect("parse");
-    QueryExecutor::new(backend).execute(&q).expect("execute").rows.len()
+    QueryExecutor::new(backend)
+        .execute(&q)
+        .expect("execute")
+        .rows
+        .len()
 }
 
 /// GQL queries 1–5 (Phase 2a).
@@ -128,9 +131,14 @@ fn spec_default_registry_extracts_fixture_readme() {
         "README frontmatter key"
     );
     assert!(
-        result.relations.iter().any(|r| {
-            r.relation_type == rgbuilder_plugin_api::RelationType::Defines
-        }) || result.symbols.iter().any(|s| s.name.contains("Markdown context")),
+        result
+            .relations
+            .iter()
+            .any(|r| { r.relation_type == rgbuilder_plugin_api::RelationType::Defines })
+            || result
+                .symbols
+                .iter()
+                .any(|s| s.name.contains("Markdown context")),
         "README headings or structure"
     );
 }
@@ -157,15 +165,24 @@ fn spec_full_fixture_defines_and_references_edges() {
         .flat_map(|e| e.relations.iter())
         .filter(|r| r.relation_type == rgbuilder_plugin_api::RelationType::References)
         .count();
-    assert!(defines >= 4, "nested headings across fixture, got {defines}");
-    assert!(references >= 5, "cross-doc links in fixture, got {references}");
+    assert!(
+        defines >= 4,
+        "nested headings across fixture, got {defines}"
+    );
+    assert!(
+        references >= 5,
+        "cross-doc links in fixture, got {references}"
+    );
 }
 
 #[test]
 fn spec_java_file_not_indexed_markdown_only_discover() {
     let backend = populate(&["markdown"]);
     assert_eq!(
-        count(&backend, "MATCH (c:Class) WHERE c.name = 'CheckoutService' RETURN c"),
+        count(
+            &backend,
+            "MATCH (c:Class) WHERE c.name = 'CheckoutService' RETURN c"
+        ),
         0
     );
 }

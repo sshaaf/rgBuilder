@@ -183,6 +183,7 @@ tempfile = "3"
 pretty_assertions = "1"
 insta = "1"
 reqwest = { version = "0.12", features = ["blocking", "json"] }
+rgbuilder-graph = { workspace = true }
 rgbuilder-dashboard = { workspace = true }
 rgbuilder-lang-go = { workspace = true }
 rgbuilder-lang-csharp = { workspace = true }

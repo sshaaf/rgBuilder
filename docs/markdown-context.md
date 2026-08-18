@@ -44,9 +44,33 @@ See [example/README.md](../example/README.md) for other large local corpora.
 | ATX/setext headings | `:Module` | `heading` | Filter `n.kind = 'heading'` — do not use bare `:Module` |
 | Markdown links | `:Import` | `markdown_link` | Every link is a node (node inflation on link-heavy docs) |
 | Fenced/indented code | `:Module` | `code_block` | `language` property from info string |
-| Frontmatter keys | `:Variable` | `frontmatter` | Flattened dotted keys (`metadata.author`) |
+| Frontmatter keys | `:Variable` | `frontmatter` | Flattened dotted keys (`metadata.author`); `value` holds scalar text |
 
 Qualified names: `{file_path}#{slug}` (ASCII slugify; duplicates get `-2`, `-3`, …).
+
+### Content payloads (v1)
+
+Agents can read section prose from the graph instead of opening files:
+
+| Property | On | Meaning |
+|----------|-----|---------|
+| `body_text` | `:Module` (`heading`, `code_block`), `:Variable` (`frontmatter`) | Inline UTF-8 payload when ≤ 32 KiB |
+| `body_hash` | same | Blake3 hex digest of full body (even when truncated inline) |
+| `body_truncated` | same | `"true"` when body exceeds 32 KiB inline cap |
+| `value` | `:Variable` (`frontmatter`) | Scalar frontmatter value as string |
+
+**Heading sections:** `body_text` is prose from the heading through the next heading (any level), excluding nested headings. `end_line` on the node spans that same range so `code_hash` / code index align.
+
+**Code fences:** `body_text` is fence inner content (not delimiter lines).
+
+Large corpora: bodies beyond the inline cap still get `body_hash`; full text remains in the code index when discover stores symbol bodies. A separate `content_store.bin` blob export is not implemented yet.
+
+Example:
+
+```bash
+rg-build -f json gql \
+  "MATCH (n:Module) WHERE n.kind = 'heading' AND n.name LIKE 'Checkout*' RETURN n.body_text LIMIT 1"
+```
 
 ## Author linking guide
 
@@ -86,9 +110,13 @@ Query 6 finds doc → Java **file → class** via existing `REFERENCES` and `CON
 - `WHERE n.file_path = 'docs/guide.md'` — GQL resolves `file_path` from the node (not only the properties map).
 - **Concept blast** for docs: use GQL `CONTAINS` / `REFERENCES` (queries 4–6). `blast-radius` CLI remains **Calls-only**.
 
-## PageRank honesty
+## PageRank and communities
 
-Doc `REFERENCES` edges participate in the graph like other edges, but markdown-only navigation is usually better served by heading `CONTAINS` trees and targeted GQL than by global PageRank on mixed code+doc graphs.
+Doc `REFERENCES` edges participate in discover-time centrality ([`default_behavioral_edges`](../../crates/rgbuilder-analysis/src/centrality.rs)) and community detection (`default_community_edge_types` includes `References`). The dashboard metagraph buckets `:Module` (doc headings) and `:File` nodes by directory and draws meta-edges on `references` (plus `calls` / `uses` when code is present).
+
+`rg-build -f json metrics` uses the same behavioral edge set for PageRank and betweenness, so markdown-only corpora are not empty.
+
+For navigation, heading `CONTAINS` trees and targeted GQL are still usually clearer than global PageRank on mixed code+doc graphs.
 
 ## `.mdx`
 

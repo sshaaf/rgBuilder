@@ -2,13 +2,21 @@
 
 use crate::parse::ParsedMarkdown;
 use crate::slug::{slugify, unique_slug};
-use rgbuilder_plugin_api::{
-    Relation, RelationType, SourceLocation, Symbol, SymbolType,
-};
+use rgbuilder_plugin_api::{Relation, RelationType, SourceLocation, Symbol, SymbolType};
 use serde_json::json;
 use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
 use tree_sitter::Node;
+
+/// Inline `body_text` on node properties; larger payloads use `code_hash` + code index.
+pub const INLINE_BODY_MAX_BYTES: usize = 32_768;
+
+#[derive(Clone)]
+struct HeadingRecord {
+    heading_start_byte: usize,
+    heading_end_byte: usize,
+    symbol_index: usize,
+}
 
 /// Extract symbols and relations from a parsed markdown file.
 pub fn extract(
@@ -29,10 +37,12 @@ pub fn extract(
         link_index: 0,
         heading_stack: Vec::new(),
         link_defs: HashMap::new(),
+        heading_records: Vec::new(),
     };
 
     collect_link_definitions(parsed.block.root_node(), source, &mut ctx.link_defs);
     walk_block(parsed.block.root_node(), &mut ctx)?;
+    finalize_section_bodies(&mut ctx);
     Ok((ctx.symbols, ctx.relations))
 }
 
@@ -48,6 +58,7 @@ struct ExtractCtx<'a> {
     link_index: usize,
     heading_stack: Vec<(u8, String)>,
     link_defs: HashMap<String, String>,
+    heading_records: Vec<HeadingRecord>,
 }
 
 impl ExtractCtx<'_> {
@@ -100,6 +111,7 @@ fn extract_heading(node: Node<'_>, ctx: &mut ExtractCtx<'_>) -> rgbuilder_plugin
         push_defines(ctx, parent_qn.clone(), qn.clone(), node);
     }
 
+    let symbol_index = ctx.symbols.len();
     ctx.symbols.push(symbol(
         text,
         SymbolType::Module,
@@ -107,24 +119,40 @@ fn extract_heading(node: Node<'_>, ctx: &mut ExtractCtx<'_>) -> rgbuilder_plugin
         location(node, &ctx.file),
         json!({ "kind": "heading", "level": level.to_string(), "slug": slug }),
     ));
+    ctx.heading_records.push(HeadingRecord {
+        heading_start_byte: node.start_byte(),
+        heading_end_byte: node.end_byte(),
+        symbol_index,
+    });
     ctx.heading_stack.push((level, qn.clone()));
 
     visit_inline_descendants(node, ctx)?;
     Ok(())
 }
 
-fn extract_code_block(node: Node<'_>, ctx: &mut ExtractCtx<'_>) -> rgbuilder_plugin_api::Result<()> {
+fn extract_code_block(
+    node: Node<'_>,
+    ctx: &mut ExtractCtx<'_>,
+) -> rgbuilder_plugin_api::Result<()> {
     let lang = info_string(node, ctx.source);
     let name = format!("code_block_{}", ctx.code_index);
     let qn = format!("{}#{name}", ctx.file);
     ctx.code_index += 1;
+
+    let raw_body = code_block_body(node, ctx.source);
+    let body = raw_body.trim();
+    let mut meta = serde_json::Map::from_iter([
+        ("kind".to_string(), json!("code_block")),
+        ("language".to_string(), json!(lang)),
+    ]);
+    attach_body_metadata(&mut meta, body);
 
     ctx.symbols.push(symbol(
         name,
         SymbolType::Module,
         Some(qn.clone()),
         location(node, &ctx.file),
-        json!({ "kind": "code_block", "language": lang }),
+        serde_json::Value::Object(meta),
     ));
 
     if let Some(heading_qn) = ctx.current_heading_qn() {
@@ -156,7 +184,10 @@ fn extract_toml_frontmatter(
     ctx: &mut ExtractCtx<'_>,
 ) -> rgbuilder_plugin_api::Result<()> {
     let text = node.utf8_text(ctx.source).unwrap_or("").trim();
-    let stripped = text.trim_start_matches("+++").trim_end_matches("+++").trim();
+    let stripped = text
+        .trim_start_matches("+++")
+        .trim_end_matches("+++")
+        .trim();
     if stripped.is_empty() {
         return Ok(());
     }
@@ -186,7 +217,7 @@ fn flatten_yaml(
             Ok(())
         }
         _ if !prefix.is_empty() => {
-            push_frontmatter_key(prefix, node, ctx);
+            push_frontmatter_key(prefix, value, node, ctx);
             Ok(())
         }
         _ => Ok(()),
@@ -212,21 +243,58 @@ fn flatten_toml(
             Ok(())
         }
         _ if !prefix.is_empty() => {
-            push_frontmatter_key(prefix, node, ctx);
+            push_frontmatter_key_toml(prefix, value, node, ctx);
             Ok(())
         }
         _ => Ok(()),
     }
 }
 
-fn push_frontmatter_key(key: &str, node: Node<'_>, ctx: &mut ExtractCtx<'_>) {
+fn push_frontmatter_key(
+    key: &str,
+    value: &serde_yaml::Value,
+    node: Node<'_>,
+    ctx: &mut ExtractCtx<'_>,
+) {
     let qn = format!("{}#fm.{key}", ctx.file);
+    let value_str = scalar_to_string_yaml(value);
+    let mut meta = serde_json::Map::from_iter([
+        ("kind".to_string(), json!("frontmatter")),
+        ("value".to_string(), json!(value_str)),
+    ]);
+    if !value_str.is_empty() {
+        attach_body_metadata(&mut meta, &value_str);
+    }
     ctx.symbols.push(symbol(
         key.to_string(),
         SymbolType::Variable,
         Some(qn),
         location(node, &ctx.file),
-        json!({ "kind": "frontmatter" }),
+        serde_json::Value::Object(meta),
+    ));
+}
+
+fn push_frontmatter_key_toml(
+    key: &str,
+    value: &toml::Value,
+    node: Node<'_>,
+    ctx: &mut ExtractCtx<'_>,
+) {
+    let qn = format!("{}#fm.{key}", ctx.file);
+    let value_str = scalar_to_string_toml(value);
+    let mut meta = serde_json::Map::from_iter([
+        ("kind".to_string(), json!("frontmatter")),
+        ("value".to_string(), json!(value_str)),
+    ]);
+    if !value_str.is_empty() {
+        attach_body_metadata(&mut meta, &value_str);
+    }
+    ctx.symbols.push(symbol(
+        key.to_string(),
+        SymbolType::Variable,
+        Some(qn),
+        location(node, &ctx.file),
+        serde_json::Value::Object(meta),
     ));
 }
 
@@ -458,6 +526,39 @@ fn info_string(node: Node<'_>, source: &[u8]) -> String {
         .to_string()
 }
 
+fn code_block_body(node: Node<'_>, source: &[u8]) -> String {
+    if let Some(content) = find_child_kind(node, "code_fence_content") {
+        return content
+            .utf8_text(source)
+            .unwrap_or("")
+            .trim_end_matches('\n')
+            .to_string();
+    }
+    let raw = node.utf8_text(source).unwrap_or("");
+    raw.lines()
+        .map(|line| line.strip_prefix("    ").unwrap_or(line).trim_end())
+        .collect::<Vec<_>>()
+        .join("\n")
+        .trim()
+        .to_string()
+}
+
+fn find_child_kind<'a>(node: Node<'a>, kind: &str) -> Option<Node<'a>> {
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        if child.kind() == kind {
+            return Some(child);
+        }
+        let mut child_cursor = child.walk();
+        for grandchild in child.children(&mut child_cursor) {
+            if grandchild.kind() == kind {
+                return Some(grandchild);
+            }
+        }
+    }
+    None
+}
+
 fn link_text(node: Node<'_>, source: &[u8]) -> String {
     collapse_ws(&child_text_by_kind(node, source, "link_text"))
 }
@@ -532,6 +633,77 @@ fn push_defines(ctx: &mut ExtractCtx<'_>, from: String, to: String, node: Node<'
     });
 }
 
+fn hash_body(body: &str) -> String {
+    blake3::hash(body.as_bytes()).to_hex().to_string()
+}
+
+fn attach_body_metadata(meta: &mut serde_json::Map<String, serde_json::Value>, body: &str) {
+    if body.is_empty() {
+        return;
+    }
+    meta.insert("body_hash".to_string(), json!(hash_body(body)));
+    if body.len() <= INLINE_BODY_MAX_BYTES {
+        meta.insert("body_text".to_string(), json!(body));
+    } else {
+        meta.insert("body_truncated".to_string(), json!("true"));
+    }
+}
+
+fn byte_offset_to_line(source: &[u8], byte_offset: usize) -> usize {
+    let clamped = byte_offset.min(source.len());
+    1 + source[..clamped].iter().filter(|&&b| b == b'\n').count()
+}
+
+fn finalize_section_bodies(ctx: &mut ExtractCtx<'_>) {
+    let records = ctx.heading_records.clone();
+    for (i, rec) in records.iter().enumerate() {
+        let body_start = rec.heading_end_byte;
+        let body_end = records
+            .iter()
+            .skip(i + 1)
+            .next()
+            .map(|r| r.heading_start_byte)
+            .unwrap_or(ctx.source.len());
+        if body_start >= body_end {
+            continue;
+        }
+        let body = String::from_utf8_lossy(&ctx.source[body_start..body_end])
+            .trim()
+            .to_string();
+        if body.is_empty() {
+            continue;
+        }
+        let symbol = &mut ctx.symbols[rec.symbol_index];
+        if let Some(obj) = symbol.metadata.as_object_mut() {
+            attach_body_metadata(obj, &body);
+        }
+        symbol.location.end_line = byte_offset_to_line(ctx.source, body_end);
+    }
+}
+
+fn scalar_to_string_yaml(value: &serde_yaml::Value) -> String {
+    match value {
+        serde_yaml::Value::String(s) => s.clone(),
+        serde_yaml::Value::Number(n) => n.to_string(),
+        serde_yaml::Value::Bool(b) => b.to_string(),
+        serde_yaml::Value::Null => String::new(),
+        other => serde_yaml::to_string(other)
+            .map(|s| s.trim().to_string())
+            .unwrap_or_default(),
+    }
+}
+
+fn scalar_to_string_toml(value: &toml::Value) -> String {
+    match value {
+        toml::Value::String(s) => s.clone(),
+        toml::Value::Integer(i) => i.to_string(),
+        toml::Value::Float(f) => f.to_string(),
+        toml::Value::Boolean(b) => b.to_string(),
+        toml::Value::Datetime(dt) => dt.to_string(),
+        _ => value.to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -552,6 +724,67 @@ mod tests {
                 && r.from == "docs/guide.md#parent"
                 && r.to == "docs/guide.md#child"
         }));
+    }
+
+    #[test]
+    fn heading_section_body_text_and_span() {
+        let source = "# Parent\n\nSection prose here.\n\n## Child\n\nChild body.\n";
+        let (symbols, _) = extract_guide(source);
+        let parent = symbols
+            .iter()
+            .find(|s| s.qualified_name.as_deref() == Some("docs/guide.md#parent"))
+            .expect("parent heading");
+        assert_eq!(
+            parent.metadata.get("body_text").and_then(|v| v.as_str()),
+            Some("Section prose here.")
+        );
+        assert!(parent.metadata.get("body_hash").is_some());
+        assert!(parent.location.end_line > parent.location.start_line);
+
+        let child = symbols
+            .iter()
+            .find(|s| s.qualified_name.as_deref() == Some("docs/guide.md#child"))
+            .expect("child heading");
+        assert_eq!(
+            child.metadata.get("body_text").and_then(|v| v.as_str()),
+            Some("Child body.")
+        );
+    }
+
+    #[test]
+    fn fenced_code_block_stores_body_text() {
+        let source = "```java\nclass X {}\n```\n";
+        let (symbols, _) = extract_guide(source);
+        let block = symbols
+            .iter()
+            .find(|s| s.metadata.get("kind") == Some(&serde_json::json!("code_block")))
+            .expect("code block");
+        assert_eq!(
+            block.metadata.get("body_text").and_then(|v| v.as_str()),
+            Some("class X {}")
+        );
+        assert!(block.metadata.get("body_hash").is_some());
+    }
+
+    #[test]
+    fn frontmatter_scalar_has_value_and_hash() {
+        let path = Path::new("AGENTS.md");
+        let source = "---\ntitle: Hello World\n---\n# Guide\n";
+        let parsed = crate::parse::parse_markdown(source.as_bytes(), path).expect("parse");
+        let (symbols, _) = extract(&parsed, path, source.as_bytes()).expect("extract");
+        let title = symbols
+            .iter()
+            .find(|s| s.name == "title")
+            .expect("title key");
+        assert_eq!(
+            title.metadata.get("value").and_then(|v| v.as_str()),
+            Some("Hello World")
+        );
+        assert_eq!(
+            title.metadata.get("body_text").and_then(|v| v.as_str()),
+            Some("Hello World")
+        );
+        assert!(title.metadata.get("body_hash").is_some());
     }
 
     #[test]
@@ -635,6 +868,10 @@ mod tests {
             block.metadata.get("language").and_then(|v| v.as_str()),
             Some("java")
         );
+        assert_eq!(
+            block.metadata.get("body_text").and_then(|v| v.as_str()),
+            Some("class X {}")
+        );
     }
 
     #[test]
@@ -716,7 +953,9 @@ mod tests {
         let (_, relations) = extract_guide(source);
         let rel = relations
             .iter()
-            .find(|r| r.relation_type == RelationType::References && r.to.ends_with("adr.md#overview"))
+            .find(|r| {
+                r.relation_type == RelationType::References && r.to.ends_with("adr.md#overview")
+            })
             .expect("overview link");
         assert_eq!(rel.from, "docs/guide.md#cart");
     }
@@ -726,7 +965,9 @@ mod tests {
         let source = "# Checkout Flow\n\n[Wrong](./adr.md#Checkout Flow)\n";
         let (_, relations) = extract_guide(source);
         assert!(
-            !relations.iter().any(|r| r.to == "docs/adr.md#Checkout Flow"),
+            !relations
+                .iter()
+                .any(|r| r.to == "docs/adr.md#Checkout Flow"),
             "unquoted spaced fragment must not resolve to full visible title"
         );
     }

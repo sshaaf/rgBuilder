@@ -3,15 +3,14 @@
 use super::args::OutputFormat;
 use super::context::CliContext;
 use super::metrics_output::{
-    build_metrics_response, metrics_response_to_json, MetricsCommunitiesSection,
-    MetricsPagerankSection,
+    MetricsCommunitiesSection, MetricsPagerankSection, build_metrics_response,
+    metrics_response_to_json,
 };
 use crate::analysis::{
-    default_behavioral_edges, default_community_edge_types, BetweennessCentrality,
-    CommunityDetector, FastPageRank, PetGraphView,
+    BetweennessCentrality, CommunityDetector, FastPageRank, PetGraphView, default_behavioral_edges,
+    default_community_edge_types,
 };
 use anyhow::Result;
-use rgbuilder_graph::schema::EdgeType;
 use serde_json::json;
 
 pub struct MetricsArgs {
@@ -34,11 +33,20 @@ pub fn run(ctx: &CliContext, args: MetricsArgs) -> Result<()> {
 
     if args.pagerank || run_all {
         let engine = FastPageRank::new(iterations, 0.85);
-        let (scores, stats) = engine.compute(&view, &[EdgeType::Calls]);
-        let top: Vec<_> = scores
+        let (scores, stats) = engine.compute(&view, allowed);
+        let mut top: Vec<_> = scores
+            .iter()
+            .filter(|(_, score)| **score > 0.0)
+            .map(|(id, score)| (*id, *score))
+            .collect();
+        if top.is_empty() {
+            top = scores.iter().map(|(id, score)| (*id, *score)).collect();
+        }
+        top.sort_unstable_by(|a, b| b.1.total_cmp(&a.1));
+        top.truncate(20);
+        let top = top
             .iter()
             .map(|(id, score)| json!({ "node": id.to_string(), "pagerank": score }))
-            .take(20)
             .collect();
         pagerank = Some(MetricsPagerankSection {
             top,
@@ -49,9 +57,9 @@ pub fn run(ctx: &CliContext, args: MetricsArgs) -> Result<()> {
     }
 
     if args.betweenness || run_all {
-        let bc = BetweennessCentrality::compute_unbounded(&view, &[EdgeType::Calls]);
+        let bc = BetweennessCentrality::compute_unbounded(&view, allowed);
         let mut top: Vec<_> = bc.iter().map(|(id, score)| (id, *score)).collect();
-        top.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        top.sort_unstable_by(|a, b| b.1.total_cmp(&a.1));
         top.truncate(20);
         betweenness = Some(
             top.iter()
@@ -68,7 +76,6 @@ pub fn run(ctx: &CliContext, args: MetricsArgs) -> Result<()> {
             modularity: result.modularity,
             assignments: result.assignments.len(),
         });
-        let _ = allowed;
     }
 
     let response = build_metrics_response(pagerank, betweenness, communities);

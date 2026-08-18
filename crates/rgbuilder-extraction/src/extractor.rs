@@ -285,10 +285,12 @@ mod tests {
         let extractor = Extractor::new(registry);
         let result = extractor.extract_file(&path).unwrap();
 
-        assert!(result
-            .config_keys
-            .iter()
-            .any(|k| k.key_path == "server.port"));
+        assert!(
+            result
+                .config_keys
+                .iter()
+                .any(|k| k.key_path == "server.port")
+        );
     }
 
     #[test]
@@ -317,11 +319,7 @@ mod tests {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).unwrap();
         }
-        fs::write(
-            &path,
-            "# Checkout Flow\n\n## Cart\n\n[ADR](./adr.md)\n",
-        )
-        .unwrap();
+        fs::write(&path, "# Checkout Flow\n\n## Cart\n\n[ADR](./adr.md)\n").unwrap();
         let adr = temp.path().join("docs/adr.md");
         fs::write(&adr, "# Payments\n").unwrap();
 
@@ -331,22 +329,22 @@ mod tests {
 
         let expected_qn = format!("{}#checkout-flow", path.to_string_lossy());
         assert!(
-            extraction
-                .symbols
-                .iter()
-                .any(|s| s.name == "Checkout Flow" && s.qualified_name.as_deref() == Some(expected_qn.as_str())),
+            extraction.symbols.iter().any(|s| s.name == "Checkout Flow"
+                && s.qualified_name.as_deref() == Some(expected_qn.as_str())),
             "heading symbol"
         );
         assert!(
-            extraction.relations.iter().any(|r| {
-                r.relation_type == rgbuilder_plugin_api::RelationType::Defines
-            }),
+            extraction
+                .relations
+                .iter()
+                .any(|r| { r.relation_type == rgbuilder_plugin_api::RelationType::Defines }),
             "Defines relation"
         );
         assert!(
-            extraction.relations.iter().any(|r| {
-                r.relation_type == rgbuilder_plugin_api::RelationType::References
-            }),
+            extraction
+                .relations
+                .iter()
+                .any(|r| { r.relation_type == rgbuilder_plugin_api::RelationType::References }),
             "References relation"
         );
     }

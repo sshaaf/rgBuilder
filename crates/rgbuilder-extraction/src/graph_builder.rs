@@ -1,7 +1,7 @@
 //! Maps extracted symbols and relations into graph nodes and edges.
 
 use rgbuilder_error::{Error, Result};
-use rgbuilder_graph::code_index::{hash_code, CodeIndex};
+use rgbuilder_graph::code_index::{CodeIndex, hash_code};
 use rgbuilder_graph::migration::graph_parameter_from_plugin;
 use rgbuilder_graph::normalize_path_str;
 use rgbuilder_graph::schema::{Edge, EdgeType, Node, NodeType};
@@ -146,7 +146,10 @@ impl GraphBuilder {
             if !is_field_member && parts.len() >= 3 {
                 for i in 0..parts.len() {
                     let suffix = parts[i..].join(".");
-                    self.symbols_by_suffix.entry(suffix).or_default().push(node.id);
+                    self.symbols_by_suffix
+                        .entry(suffix)
+                        .or_default()
+                        .push(node.id);
                 }
             }
         } else {
@@ -158,7 +161,10 @@ impl GraphBuilder {
         let parts: Vec<&str> = key.split("::").collect();
         for i in 1..parts.len() {
             let suffix = parts[i..].join("::");
-            self.symbols_by_suffix.entry(suffix).or_default().push(node.id);
+            self.symbols_by_suffix
+                .entry(suffix)
+                .or_default()
+                .push(node.id);
         }
     }
 
@@ -325,11 +331,7 @@ impl GraphBuilder {
             .unwrap_or_else(|| symbol.name.clone());
         for field in &symbol.fields {
             let field_qn = format!("{owner_qn}.{}", field.name);
-            let key = symbol_key(
-                &symbol.location.file,
-                &field.name,
-                Some(field_qn.as_str()),
-            );
+            let key = symbol_key(&symbol.location.file, &field.name, Some(field_qn.as_str()));
             if self.symbol_index.contains_key(&key) {
                 continue;
             }
@@ -377,16 +379,16 @@ impl GraphBuilder {
         if let Some(id) = self.symbol_index.get(&key)
             && let Some(node) = self.nodes.iter_mut().find(|n| n.id == *id)
         {
-                node.properties
-                    .insert("cyclomatic".to_string(), metrics.cyclomatic.to_string());
-                node.properties
-                    .insert("cognitive".to_string(), metrics.cognitive.to_string());
-                node.properties
-                    .insert("loc".to_string(), metrics.loc.to_string());
-                node.properties.insert(
-                    "nesting_depth".to_string(),
-                    metrics.nesting_depth.to_string(),
-                );
+            node.properties
+                .insert("cyclomatic".to_string(), metrics.cyclomatic.to_string());
+            node.properties
+                .insert("cognitive".to_string(), metrics.cognitive.to_string());
+            node.properties
+                .insert("loc".to_string(), metrics.loc.to_string());
+            node.properties.insert(
+                "nesting_depth".to_string(),
+                metrics.nesting_depth.to_string(),
+            );
         }
     }
 
@@ -460,8 +462,7 @@ impl GraphBuilder {
             from_id = self.lookup_file_node(&relation.from, &relation.location.file);
         }
 
-        let (to_type_hint, to_qualified_hint) =
-            self.enrich_go_type_hints(relation);
+        let (to_type_hint, to_qualified_hint) = self.enrich_go_type_hints(relation);
 
         let mut to_id = self.resolve_symbol_tracked(
             &relation.to,
@@ -469,9 +470,7 @@ impl GraphBuilder {
             to_qualified_hint
                 .as_deref()
                 .or(relation.to_qualified_hint.as_deref()),
-            to_type_hint
-                .as_deref()
-                .or(relation.to_type_hint.as_deref()),
+            to_type_hint.as_deref().or(relation.to_type_hint.as_deref()),
         );
         if to_id.is_none() {
             if let Some(id) = self.lookup_file_node(&relation.to, &relation.location.file) {
@@ -570,9 +569,9 @@ impl GraphBuilder {
                 .symbols_by_suffix
                 .get(simple)
                 .and_then(|ids| unique_resolved(ids))
-            {
-                return id;
-            }
+        {
+            return id;
+        }
 
         const STUB_FILE: &str = "<external>";
         let key = symbol_key(STUB_FILE, simple, Some(qn.as_str()));
@@ -601,17 +600,11 @@ impl GraphBuilder {
     }
 
     /// Late-bind Go `recv.field.Method` using field Variable nodes from Pass 1.
-    fn enrich_go_type_hints(
-        &self,
-        relation: &Relation,
-    ) -> (Option<String>, Option<String>) {
+    fn enrich_go_type_hints(&self, relation: &Relation) -> (Option<String>, Option<String>) {
         if relation.to_type_hint.is_some() {
             return (None, None);
         }
-        let lang = relation
-            .metadata
-            .get("language")
-            .and_then(|v| v.as_str());
+        let lang = relation.metadata.get("language").and_then(|v| v.as_str());
         if lang != Some("go") {
             return (None, None);
         }
@@ -622,11 +615,7 @@ impl GraphBuilder {
         else {
             return (None, None);
         };
-        let Some(field) = relation
-            .metadata
-            .get("go_field")
-            .and_then(|v| v.as_str())
-        else {
+        let Some(field) = relation.metadata.get("go_field").and_then(|v| v.as_str()) else {
             return (None, None);
         };
         let callee = relation
@@ -713,15 +702,13 @@ impl GraphBuilder {
         self.resolution_stats.line_lookups += 1;
 
         let result = if self.spill.is_some() {
-            self.file_line_spans
-                .get(file_path)
-                .and_then(|spans| {
-                    spans
-                        .iter()
-                        .filter(|s| s.start <= line && s.end >= line)
-                        .max_by_key(|s| s.start)
-                        .map(|s| s.id)
-                })
+            self.file_line_spans.get(file_path).and_then(|spans| {
+                spans
+                    .iter()
+                    .filter(|s| s.start <= line && s.end >= line)
+                    .max_by_key(|s| s.start)
+                    .map(|s| s.id)
+            })
         } else {
             self.nodes
                 .iter()
@@ -1312,12 +1299,18 @@ mod tests {
         let stub = builder
             .nodes()
             .iter()
-            .find(|n| n.name == "String" && n.properties.get("is_external_stub").map(String::as_str) == Some("true"))
+            .find(|n| {
+                n.name == "String"
+                    && n.properties.get("is_external_stub").map(String::as_str) == Some("true")
+            })
             .expect("String stub");
         assert_eq!(stub.node_type, NodeType::Class);
-        assert!(builder.edges.iter().any(|e| {
-            e.edge_type == EdgeType::Instantiates && e.to == stub.id
-        }));
+        assert!(
+            builder
+                .edges
+                .iter()
+                .any(|e| { e.edge_type == EdgeType::Instantiates && e.to == stub.id })
+        );
     }
 
     #[test]
@@ -1371,9 +1364,12 @@ mod tests {
             })
             .expect("java.base stub");
         assert_eq!(stub.node_type, NodeType::Module);
-        assert!(builder.edges.iter().any(|e| {
-            e.edge_type == EdgeType::DependsOn && e.to == stub.id
-        }));
+        assert!(
+            builder
+                .edges
+                .iter()
+                .any(|e| { e.edge_type == EdgeType::DependsOn && e.to == stub.id })
+        );
     }
 
     #[test]
@@ -1427,9 +1423,12 @@ mod tests {
             stub.properties.get("is_external_stub").map(String::as_str),
             Some("true")
         );
-        assert!(builder.edges.iter().any(|e| {
-            e.edge_type == EdgeType::AnnotatedWith && e.to == stub.id
-        }));
+        assert!(
+            builder
+                .edges
+                .iter()
+                .any(|e| { e.edge_type == EdgeType::AnnotatedWith && e.to == stub.id })
+        );
     }
 
     #[test]
@@ -1533,9 +1532,7 @@ mod tests {
         let heading_id = builder
             .nodes()
             .iter()
-            .find(|n| {
-                n.qualified_name.as_deref() == Some("docs/guide.md#checkout-flow")
-            })
+            .find(|n| n.qualified_name.as_deref() == Some("docs/guide.md#checkout-flow"))
             .expect("heading node")
             .id;
         assert!(builder.edges.iter().any(|e| {
@@ -1604,15 +1601,19 @@ mod tests {
             .unwrap();
 
         assert!(
-            !builder.edges.iter().any(|e| e.edge_type == EdgeType::References),
+            !builder
+                .edges
+                .iter()
+                .any(|e| e.edge_type == EdgeType::References),
             "missing file href must not create an edge"
         );
         assert_eq!(builder.node_count(), 1, "only guide file node");
         assert!(
-            !builder
-                .nodes()
-                .iter()
-                .any(|n| n.properties.get("is_external_stub").map(String::as_str) == Some("true")),
+            !builder.nodes().iter().any(|n| n
+                .properties
+                .get("is_external_stub")
+                .map(String::as_str)
+                == Some("true")),
             "missing file href must not stub"
         );
         let _ = guide_id;
@@ -1724,9 +1725,12 @@ mod tests {
             stub.properties.get("is_external_stub").map(String::as_str),
             Some("true")
         );
-        assert!(builder.edges.iter().any(|e| {
-            e.edge_type == EdgeType::References && e.to == stub.id
-        }));
+        assert!(
+            builder
+                .edges
+                .iter()
+                .any(|e| { e.edge_type == EdgeType::References && e.to == stub.id })
+        );
     }
 
     #[test]
@@ -1823,10 +1827,12 @@ mod tests {
         builder.link_config_usage("src/main.rs", 1, "DB_HOST", ConfigUsageKind::EnvVar);
 
         assert!(builder.node_count() >= 3);
-        assert!(builder
-            .edges
-            .iter()
-            .any(|e| e.edge_type == EdgeType::UsesConfig));
+        assert!(
+            builder
+                .edges
+                .iter()
+                .any(|e| e.edge_type == EdgeType::UsesConfig)
+        );
     }
 
     fn function_symbol(file: &str, name: &str, qualified: &str) -> Symbol {
