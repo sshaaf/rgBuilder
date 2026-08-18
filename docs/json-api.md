@@ -763,15 +763,18 @@ Opt-in embedding index + query. Types: `src/cli/semantic_output.rs`.
 
 ```bash
 rg-build -r "$REPO" -f json semantic index
+rg-build -r "$REPO" -f json semantic index --scope docs --embedder hash
 # offline: --embedder vocab|hash
 ```
+
+`--scope` on **index**: `function` (default), `docs` (`:Module` `kind=heading` + `kind=code_block`), or `all`. Doc embeddings read `body_text` or `content_store.bin` via `body_ref`.
 
 ```typescript
 type SemanticIndexJsonResponse = {
   schema_version: 2;
   model_id: string;
   dimensions: number;          // default 256
-  functions_indexed: number;
+  functions_indexed: number;   // entry count (doc sections when --scope docs; field name is legacy)
   path: string;                // .rgbuilder/semantic_index.bin
   graph_digest?: string;
   build_stats?: {
@@ -783,6 +786,8 @@ type SemanticIndexJsonResponse = {
 };
 ```
 
+Text mode prints `Indexed N functions` — same count as `functions_indexed` (not always functions when `--scope docs`).
+
 ```bash
 rg-build -r "$REPO" -f json semantic index | jq '{model_id, dimensions, functions_indexed}'
 ```
@@ -791,7 +796,10 @@ rg-build -r "$REPO" -f json semantic index | jq '{model_id, dimensions, function
 
 ```bash
 rg-build -r "$REPO" -f json semantic query "checkout flow" --limit 10
+rg-build -r "$REPO" -f json semantic query "checkout flow" --scope docs --limit 10
 ```
+
+No `--embedder` on query — uses the model saved in `semantic_index.bin`. `--scope docs` on query does **not** filter hits (except `--scope community`); build the index with matching `--scope` first.
 
 ```typescript
 type SemanticHitJson = {

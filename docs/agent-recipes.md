@@ -194,14 +194,14 @@ rg-build -r "$REPO" export \
 
 Open `$REPO/vault` in Obsidian. One note per heading section; wikilinks from doc cross-references; `qualified_name` in frontmatter for GQL correlation.
 
-Optional NL search on sections:
+Optional NL search on sections (build doc index first; query has no `--embedder`):
 
 ```bash
 rg-build -r "$REPO" semantic index --scope docs --embedder hash
 rg-build -r "$REPO" -f json semantic query "checkout flow" --scope docs --limit 10
 ```
 
-**Use when:** browsing or editing docs in Obsidian while keeping rgBuilder as the structural index. Large corpora: `./scripts/fetch-k8s-website-example.sh` + `example/k8s-website` (~17k notes). See [markdown-context.md](markdown-context.md#obsidian-vault-export).
+**Use when:** browsing or editing docs in Obsidian while keeping rgBuilder as the structural index. Large corpora: `./scripts/fetch-k8s-website-example.sh` + `example/k8s-website` (~17k Obsidian notes). Doc semantic index includes heading + `code_block` modules; re-run index after doc changes. See [markdown-context.md](markdown-context.md#semantic-search-doc-sections).
 
 ---
 

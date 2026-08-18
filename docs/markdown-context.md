@@ -171,14 +171,43 @@ Entity bundle for Open Knowledge Foundation tooling (heading modules + bodies).
 
 ## Semantic search (doc sections)
 
-Default `semantic index` embeds **`:Function` nodes only**. For doc headings:
+Default `semantic index` embeds **`:Function` nodes only**. For documentation:
 
 ```bash
+rg-build -r "$REPO" discover . -l markdown   # or full discover
+
+# Index doc sections (offline embedder — no ONNX)
 rg-build -r "$REPO" semantic index --scope docs --embedder hash
-rg-build -r "$REPO" -f json semantic query "checkout flow" --scope docs --embedder hash --limit 10
+
+# Query (embedder comes from the saved index — no --embedder on query)
+rg-build -r "$REPO" -f json semantic query "checkout flow" --scope docs --limit 10
 ```
 
-Use `--scope all` to index functions + docs. Doc embeddings resolve full section text from `content_store.bin` when `body_ref` is set.
+### Index scope vs query scope
+
+| Step | Flag | What it does |
+|------|------|----------------|
+| **`semantic index --scope`** | `function` (default) | Embeds `:Function` only |
+| | `docs` | Embeds `:Module` with `kind=heading` **and** `kind=code_block` |
+| | `all` | Functions + doc modules above |
+| **`semantic query --scope`** | `community` | Pooled community search (needs `analysis_results.bin`) |
+| | `docs` / `function` / `all` | **Does not filter hits today** — results come from whatever was built into `semantic_index.bin` |
+
+**Rule:** build the index with the scope you need (`--scope docs` for NL doc search). Re-run `semantic index` when switching scope or after large doc edits. On a markdown-only repo, default function index is empty.
+
+**Bodies:** embeddings use `body_text` inline, or full UTF-8 from `.rgbuilder/content_store.bin` when `body_ref` is set (same store as Obsidian export).
+
+**CLI note:** success text still says `Indexed N functions` — the count is **index entries** (doc sections when `--scope docs`).
+
+### Scope summary
+
+| Index `--scope` | Nodes embedded |
+|-----------------|----------------|
+| `function` (default) | `:Function` |
+| `docs` | `:Module` `kind=heading` + `kind=code_block` |
+| `all` | Functions + doc modules above |
+
+GQL remains the low-token default for structural navigation; semantic `--scope docs` helps natural-language section search after a doc-scoped index build.
 
 ## GQL body text (agents)
 
@@ -229,25 +258,21 @@ Query 6 finds doc → Java **file → class** via existing `REFERENCES` and `CON
 
 ## PageRank and communities
 
-Doc `REFERENCES` edges participate in discover-time centrality ([`default_behavioral_edges`](../../crates/rgbuilder-analysis/src/centrality.rs)) and community detection (`default_community_edge_types` includes `References`). The dashboard metagraph buckets `:Module` (doc headings) and `:File` nodes by directory and draws meta-edges on `references` (plus `calls` / `uses` when code is present).
+Doc `REFERENCES` edges participate in discover-time centrality ([`default_behavioral_edges`](../../crates/rgbuilder-analysis/src/centrality.rs)) and community detection (`default_community_edge_types` includes `References`).
 
-`rg-build -f json metrics` uses the same behavioral edge set for PageRank and betweenness, so markdown-only corpora are not empty.
+**Communities at discover:** `detect_with_view_defaults` projects neighbors via `build_community_neighbor_lists`:
+
+- Always: `Calls`, `Uses`, `References` (when present).
+- **Markdown-only** graph (zero functions): all `Contains` edges (heading trees + file structure).
+- **Mixed code + docs:** `Contains` only for **heading → heading** (nested doc sections), not file→class/code containment.
+
+`rg-build -f json metrics --pagerank` uses the same behavioral edge set — markdown-only corpora converge with **non-zero** PageRank (fixture top ~0.04; k8s smaller per-node scores at ~17k headings).
 
 For navigation, heading `CONTAINS` trees and targeted GQL are still usually clearer than global PageRank on mixed code+doc graphs.
 
 ## `.mdx`
 
 Registered under language id `markdown` (extensions `md` + `mdx`). MDX/JSX in code fences is not executed; only tree-sitter-md structure is indexed.
-
-## Semantic search (summary)
-
-| Scope | Command | Indexes |
-|-------|---------|---------|
-| Functions (default) | `semantic index` | `:Function` |
-| Docs | `semantic index --scope docs` | `:Module` where `kind=heading` |
-| Both | `semantic index --scope all` | Functions + doc headings |
-
-GQL remains the low-token default for structural doc navigation; semantic `--scope docs` helps natural-language section search.
 
 ## CFG, PDG, slice, inspect, CPG flows
 

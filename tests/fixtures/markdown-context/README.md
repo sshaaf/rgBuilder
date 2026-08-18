@@ -76,7 +76,7 @@ RGB="$(pwd)/target/debug/rg-build"
 # Obsidian vault (one note per heading; open vault/ in Obsidian)
 "$RGB" -r "$REPO" export --export-format obsidian --export-output "$REPO/vault" --query all
 
-# Doc semantic search (optional)
+# Doc semantic search (optional — index scope docs first; no --embedder on query)
 "$RGB" -r "$REPO" semantic index --scope docs --embedder hash
 "$RGB" -r "$REPO" -f json semantic query "checkout flow" --scope docs --limit 5
 ```

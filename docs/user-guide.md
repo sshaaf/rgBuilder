@@ -941,9 +941,12 @@ rg-build -r "$REPO" semantic index --embedder vocab --diffuse \
 
 Passing `--diffuse` recomputes dense vectors and mixes call-graph neighbors **before** sign quantization (even when `--incremental` would otherwise reuse bits). Query does not re-diffuse — restart is not required for CLI query; for the dashboard, restart `serve` after rebuilding the index.
 
+**Doc semantic index:** `--scope docs` on `semantic index` embeds `:Module` sections (`kind=heading` and `kind=code_block`). Query `--scope docs` does **not** filter hits — only `semantic index --scope community` changes query behavior. Build a doc-scoped index before querying doc sections. Large bodies use `content_store.bin` when `body_ref` is set. CLI success text may still say `Indexed N functions` (entry count, not always functions).
+
 | Flag | Purpose |
 |------|---------|
-| `--scope function\|community\|docs\|all` | Query scope: functions (default), communities, doc headings, or both functions + docs (index with matching `--scope` on `semantic index`) |
+| **`semantic index --scope`** `function\|docs\|all` | Which symbols to embed (default: functions only) |
+| **`semantic query --scope`** `function\|community\|docs\|all` | `community` = pooled community search; other scopes do not filter hits (index content determines results) |
 | `--no-fusion` | Disable late fusion (default is fusion **on**: blast, PageRank, name, token-bloom) |
 | `--keyword-and` | Every query token must match metadata or body sketch |
 | `--candidate-pool <N>` | Hamming pool size before fusion [default: 256] |
