@@ -7,6 +7,8 @@ pub mod backend;
 pub mod code_graph;
 /// Code location hashing and lookup helpers.
 pub mod code_index;
+/// Hash-keyed blob vault for truncated document bodies.
+pub mod content_store;
 /// Columnar mmap snapshot format (v2).
 pub mod columnar_snapshot;
 /// Typed bidirectional CSR topology.
@@ -33,6 +35,9 @@ pub mod paths;
 
 pub use code_graph::CodeGraph;
 pub use code_index::{hash_code, CodeIndex, CodeLocation};
+pub use content_store::{
+    hash_bytes, hash_text, ContentStore, CONTENT_STORE_FILE, INLINE_BODY_MAX_BYTES,
+};
 pub use columnar_snapshot::{
     write_columnar_from_backend, write_columnar_from_nodes_edges, ColumnarGraphMmap,
     COLUMNAR_SNAPSHOT_VERSION,

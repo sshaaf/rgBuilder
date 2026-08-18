@@ -2,6 +2,7 @@
 
 use rgbuilder_error::{Error, Result};
 use rgbuilder_graph::code_index::{CodeIndex, hash_code};
+use rgbuilder_graph::content_store::{hash_bytes, ContentStore, INLINE_BODY_MAX_BYTES};
 use rgbuilder_graph::migration::graph_parameter_from_plugin;
 use rgbuilder_graph::normalize_path_str;
 use rgbuilder_graph::schema::{Edge, EdgeType, Node, NodeType};
@@ -40,6 +41,7 @@ pub struct GraphBuilder {
     /// Line ranges for config-usage resolution when nodes are spilled.
     file_line_spans: HashMap<String, Vec<LineSpan>>,
     code_index: Option<CodeIndex>,
+    content_store: Option<ContentStore>,
     // Resolution performance tracking
     resolution_stats: ResolutionStats,
     // Fast resolution indexes (built on demand)
@@ -195,12 +197,27 @@ impl GraphBuilder {
 
     /// Ensure a file node exists and return its ID.
     pub fn ensure_file_node(&mut self, path: &Path) -> Uuid {
+        self.ensure_file_node_with_source(path, None)
+    }
+
+    /// Ensure a file node exists, optionally recording full-file content hash / blob ref.
+    pub fn ensure_file_node_with_source(&mut self, path: &Path, source: Option<&[u8]>) -> Uuid {
         let file_path = path.to_string_lossy().to_string();
         if let Some(id) = self.file_nodes.get(&file_path) {
             return *id;
         }
 
-        let node = Node::new(NodeType::File, file_path.clone()).with_file_path(file_path.clone());
+        let mut node = Node::new(NodeType::File, file_path.clone()).with_file_path(file_path.clone());
+        if let Some(bytes) = source {
+            let content_hash = hash_bytes(bytes);
+            node = node.with_property("content_hash".to_string(), content_hash.clone());
+            if bytes.len() > INLINE_BODY_MAX_BYTES {
+                if let Some(store) = self.content_store.as_mut() {
+                    store.insert_bytes(&content_hash, bytes.to_vec());
+                    node = node.with_property("blob_ref".to_string(), content_hash);
+                }
+            }
+        }
         let id = node.id;
         let norm = normalize_file_key(&file_path);
         self.file_nodes.insert(file_path, id);
@@ -217,6 +234,33 @@ impl GraphBuilder {
     /// Mutable access to the optional code index.
     pub fn code_index_mut(&mut self) -> Option<&mut CodeIndex> {
         self.code_index.as_mut()
+    }
+
+    /// Attach a content blob store for truncated markdown bodies and large files.
+    pub fn set_content_store(&mut self, store: ContentStore) {
+        self.content_store = Some(store);
+    }
+
+    /// Mutable access to the optional content store.
+    pub fn content_store_mut(&mut self) -> Option<&mut ContentStore> {
+        self.content_store.as_mut()
+    }
+
+    /// Merge out-of-line content blobs from extraction.
+    pub fn merge_content_blobs(&mut self, blobs: &std::collections::HashMap<String, String>) {
+        if let Some(store) = self.content_store.as_mut() {
+            store.merge_text_blobs(blobs);
+        }
+    }
+
+    /// Take the accumulated content store after graph build.
+    pub fn take_content_store(&mut self) -> Option<ContentStore> {
+        self.content_store.take()
+    }
+
+    /// Take the accumulated code index after graph build.
+    pub fn take_code_index(&mut self) -> Option<CodeIndex> {
+        self.code_index.take()
     }
 
     /// Add a symbol node linked to its file.

@@ -8,6 +8,8 @@ use rgbuilder_error::Result;
 use rgbuilder_extraction::discovery::{DiscoveryConfig, FileDiscoverer};
 use rgbuilder_extraction::{Extractor, GraphBuilder};
 use rgbuilder_graph::code_graph::CodeGraph;
+use rgbuilder_graph::code_index::CodeIndex;
+use rgbuilder_graph::content_store::ContentStore;
 use rgbuilder_graph::schema::{Edge, Node};
 use rgbuilder_graph::write_columnar_from_spill;
 use rgbuilder_registry::LanguageRegistry;
@@ -124,6 +126,8 @@ impl ProcessingPipeline {
         std::fs::create_dir_all(&spill_dir)?;
         let mut builder = GraphBuilder::with_spill(&spill_dir)?;
         builder.set_materialize_fields(self.config.materialize_fields);
+        builder.set_code_index(CodeIndex::load(CodeIndex::default_cache_path(root))?);
+        builder.set_content_store(ContentStore::load(ContentStore::default_path(root))?);
 
         let progress_for_stream = progress.clone();
         let (files_processed, tails) = stream_into_graph(
@@ -152,8 +156,16 @@ impl ProcessingPipeline {
         extractor.populate_pass2(&tails, &mut builder)?;
         let nodes_created = builder.node_count();
         let edges_created = builder.edge_count();
+        let content_store = builder.take_content_store();
+        let code_index = builder.take_code_index();
         let finished = builder.finish_spill()?;
         let digest = write_columnar_from_spill(finished, snapshot_path)?;
+        if let Some(store) = content_store {
+            store.save()?;
+        }
+        if let Some(index) = code_index {
+            index.save()?;
+        }
         let graph_build_duration = graph_start.elapsed();
 
         Ok((
@@ -200,6 +212,8 @@ impl ProcessingPipeline {
         let extract_start = Instant::now();
         let mut builder = GraphBuilder::new();
         builder.set_materialize_fields(self.config.materialize_fields);
+        builder.set_code_index(CodeIndex::load(CodeIndex::default_cache_path(root))?);
+        builder.set_content_store(ContentStore::load(ContentStore::default_path(root))?);
         let progress_for_stream = progress.clone();
         let (files_processed, tails) = stream_into_graph(
             self.config.thread_count,
@@ -225,6 +239,12 @@ impl ProcessingPipeline {
         let graph_start = Instant::now();
         builder.build_resolution_indexes();
         extractor.populate_pass2(&tails, &mut builder)?;
+        if let Some(store) = builder.take_content_store() {
+            store.save()?;
+        }
+        if let Some(index) = builder.take_code_index() {
+            index.save()?;
+        }
         let (nodes, edges): (Vec<Node>, Vec<Edge>) = builder.into_graph();
         let graph_build_duration = graph_start.elapsed();
 

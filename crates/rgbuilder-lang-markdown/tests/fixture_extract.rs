@@ -9,12 +9,7 @@ fn fixture_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/markdown-context")
 }
 
-fn extract_fixture(
-    rel: &str,
-) -> (
-    Vec<rgbuilder_plugin_api::Symbol>,
-    Vec<rgbuilder_plugin_api::Relation>,
-) {
+fn extract_fixture(rel: &str) -> rgbuilder_plugin_api::ExtractAllResult {
     let root = fixture_root();
     let path = root.join(rel);
     let source = fs::read(&path).expect("read fixture");
@@ -24,7 +19,7 @@ fn extract_fixture(
 
 #[test]
 fn fixture_guide_checkout_flow_section_body() {
-    let (symbols, _) = extract_fixture("docs/guide.md");
+    let symbols = extract_fixture("docs/guide.md").symbols;
     let checkout = symbols
         .iter()
         .find(|s| s.name == "Checkout Flow")
@@ -47,7 +42,7 @@ fn fixture_guide_checkout_flow_section_body() {
 
 #[test]
 fn fixture_guide_fenced_block_body_text() {
-    let (symbols, _) = extract_fixture("docs/guide.md");
+    let symbols = extract_fixture("docs/guide.md").symbols;
     let block = symbols
         .iter()
         .find(|s| {
@@ -68,7 +63,7 @@ fn fixture_guide_fenced_block_body_text() {
 
 #[test]
 fn fixture_readme_frontmatter_values() {
-    let (symbols, _) = extract_fixture("README.md");
+    let symbols = extract_fixture("README.md").symbols;
     let author = symbols
         .iter()
         .find(|s| s.name == "metadata.author")
@@ -88,7 +83,9 @@ fn fixture_readme_frontmatter_values() {
 
 #[test]
 fn fixture_guide_checkout_flow_heading() {
-    let (symbols, relations) = extract_fixture("docs/guide.md");
+    let out = extract_fixture("docs/guide.md");
+    let symbols = &out.symbols;
+    let relations = &out.relations;
     let checkout = symbols
         .iter()
         .find(|s| s.name == "Checkout Flow")
@@ -132,7 +129,7 @@ fn fixture_guide_checkout_flow_heading() {
 
 #[test]
 fn fixture_guide_nested_cart_contains() {
-    let (_, relations) = extract_fixture("docs/guide.md");
+    let relations = extract_fixture("docs/guide.md").relations;
     assert!(
         relations.iter().any(|r| {
             r.relation_type == RelationType::Defines
@@ -145,7 +142,7 @@ fn fixture_guide_nested_cart_contains() {
 
 #[test]
 fn fixture_readme_yaml_frontmatter() {
-    let (symbols, _) = extract_fixture("README.md");
+    let symbols = extract_fixture("README.md").symbols;
     assert!(
         symbols.iter().any(|s| {
             s.name == "metadata.author"
@@ -169,7 +166,7 @@ fn fixture_readme_yaml_frontmatter() {
 
 #[test]
 fn fixture_validation_rules_section_links_use_child_heading_as_from() {
-    let (_, relations) = extract_fixture("docs/guide.md");
+    let relations = extract_fixture("docs/guide.md").relations;
     let overview = relations
         .iter()
         .find(|r| r.to.ends_with("adr.md#overview"))
@@ -183,7 +180,7 @@ fn fixture_validation_rules_section_links_use_child_heading_as_from() {
 
 #[test]
 fn fixture_guide_has_fenced_code_block_symbol() {
-    let (symbols, _) = extract_fixture("docs/guide.md");
+    let symbols = extract_fixture("docs/guide.md").symbols;
     assert!(
         symbols.iter().any(|s| {
             s.metadata.get("kind") == Some(&serde_json::json!("code_block"))
@@ -195,7 +192,9 @@ fn fixture_guide_has_fenced_code_block_symbol() {
 
 #[test]
 fn fixture_guide_external_link_has_no_reference_edge() {
-    let (symbols, relations) = extract_fixture("docs/guide.md");
+    let out = extract_fixture("docs/guide.md");
+    let symbols = &out.symbols;
+    let relations = &out.relations;
     assert!(
         symbols.iter().any(|s| {
             s.metadata.get("url").and_then(|v| v.as_str()) == Some("https://stripe.com/docs/api")
@@ -210,7 +209,7 @@ fn fixture_guide_external_link_has_no_reference_edge() {
 
 #[test]
 fn fixture_adr_nested_headings_define_tree() {
-    let (_, relations) = extract_fixture("docs/adr.md");
+    let relations = extract_fixture("docs/adr.md").relations;
     assert!(
         relations.iter().any(|r| {
             r.relation_type == RelationType::Defines
@@ -223,7 +222,7 @@ fn fixture_adr_nested_headings_define_tree() {
 
 #[test]
 fn fixture_adr_links_back_to_guide() {
-    let (_, relations) = extract_fixture("docs/adr.md");
+    let relations = extract_fixture("docs/adr.md").relations;
     assert!(
         relations.iter().any(|r| {
             r.relation_type == RelationType::References
@@ -236,7 +235,7 @@ fn fixture_adr_links_back_to_guide() {
 
 #[test]
 fn fixture_mdx_indexed_with_same_plugin() {
-    let (symbols, _) = extract_fixture("docs/overview.mdx");
+    let symbols = extract_fixture("docs/overview.mdx").symbols;
     assert!(
         symbols.iter().any(|s| s.name == "MDX overview"),
         "mdx heading extracted"

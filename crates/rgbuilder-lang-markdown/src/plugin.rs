@@ -44,8 +44,7 @@ impl LanguagePlugin for MarkdownPlugin {
     }
 
     fn extract_symbols(&self, file_path: &Path, source: &[u8]) -> Result<Vec<Symbol>> {
-        let (symbols, _) = self.extract_all(file_path, source)?;
-        Ok(symbols)
+        Ok(self.extract_all(file_path, source)?.symbols)
     }
 
     fn extract_relations(
@@ -54,15 +53,14 @@ impl LanguagePlugin for MarkdownPlugin {
         source: &[u8],
         _symbols: &[Symbol],
     ) -> Result<Vec<rgbuilder_plugin_api::Relation>> {
-        let (_, relations) = self.extract_all(file_path, source)?;
-        Ok(relations)
+        Ok(self.extract_all(file_path, source)?.relations)
     }
 
     fn extract_all(
         &self,
         file_path: &Path,
         source: &[u8],
-    ) -> Result<(Vec<Symbol>, Vec<rgbuilder_plugin_api::Relation>)> {
+    ) -> Result<rgbuilder_plugin_api::ExtractAllResult> {
         let parsed = parse_markdown(source, file_path)?;
         extract(&parsed, file_path, source)
     }
@@ -116,15 +114,15 @@ mod tests {
         let plugin = MarkdownPlugin::new().expect("new");
         let path = Path::new("docs/guide.md");
         let source = "# Checkout Flow\n\n[ADR](./adr.md)\n";
-        let (all_syms, all_rels) = plugin.extract_all(path, source.as_bytes()).expect("all");
+        let all = plugin.extract_all(path, source.as_bytes()).expect("all");
         let sym_only = plugin
             .extract_symbols(path, source.as_bytes())
             .expect("sym");
         let rel_only = plugin
             .extract_relations(path, source.as_bytes(), &sym_only)
             .expect("rel");
-        assert_eq!(all_syms.len(), sym_only.len());
-        assert_eq!(all_rels.len(), rel_only.len());
+        assert_eq!(all.symbols.len(), sym_only.len());
+        assert_eq!(all.relations.len(), rel_only.len());
     }
 
     #[test]

@@ -2,11 +2,16 @@
 
 use super::args::ExportFormat;
 use super::context::CliContext;
-use crate::export::{export_graphml, generate_dot, generate_mermaid, select_subgraph};
+use crate::export::{
+    export_graphml, export_obsidian_vault, export_okf_json, generate_dot, generate_mermaid,
+    select_subgraph,
+};
 use crate::export::{GraphvizOptions, MermaidOptions};
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
+use rgbuilder_graph::content_store::ContentStore;
 use rgbuilder_graph::export::GraphSnapshot;
 use rgbuilder_graph::schema::GRAPH_SCHEMA_VERSION;
+use std::path::Path;
 
 pub struct ExportArgs {
     pub export_format: ExportFormat,
@@ -65,6 +70,37 @@ pub fn run(ctx: &CliContext, args: ExportArgs) -> Result<()> {
             let counts = filtered_counts(backend, query)?;
             std::fs::write(&args.export_output, mmd)?;
             counts
+        }
+        ExportFormat::Obsidian => {
+            let store = ContentStore::load(ContentStore::default_path(&ctx.repo))
+                .with_context(|| "load content store")?;
+            let stats = export_obsidian_vault(backend, &store, Path::new(&args.export_output), &ctx.repo)?;
+            if ctx.output.is_none() {
+                println!(
+                    "Exported {} notes ({} wikilinks) -> {}",
+                    stats.notes_written,
+                    stats.links_written,
+                    args.export_output
+                );
+            }
+            return Ok(());
+        }
+        ExportFormat::Okf => {
+            let store = ContentStore::load(ContentStore::default_path(&ctx.repo))
+                .with_context(|| "load content store")?;
+            let (doc, stats) = export_okf_json(backend, &store)?;
+            std::fs::write(
+                &args.export_output,
+                serde_json::to_string_pretty(&doc)?,
+            )?;
+            if ctx.output.is_none() {
+                println!(
+                    "Exported {} OKF entities -> {}",
+                    stats.entities,
+                    args.export_output
+                );
+            }
+            return Ok(());
         }
     };
 

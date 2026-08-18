@@ -43,6 +43,8 @@ rg-build -r "$REPO" -f json gql 'MATCH (n:Function) RETURN n LIMIT 20'
 | Architectural hotspots | `rg-build -f json metrics --pagerank` |
 | Call neighborhood | `rg-build -f json gql "MATCH (a:Function)-[:CALLS*1..3]->(b:Function) RETURN a,b LIMIT 50"` |
 | Doc headings / cross-links | `discover` indexes `.md` / `.mdx` by default; GQL on `:Module` with `kind=heading` and `REFERENCES` — see [markdown-context.md](docs/markdown-context.md) |
+| Obsidian vault from docs | `rg-build -r "$REPO" discover . -l markdown` then `export --export-format obsidian --export-output "$REPO/vault" --query all` — see [markdown-context.md](docs/markdown-context.md#obsidian-vault-export) |
+| Doc section semantic search | `rg-build semantic index --scope docs --embedder hash` then `rg-build -f json semantic query "checkout flow" --scope docs --limit 10` |
 | Hybrid CPG status / CALL / PDG / slice | `rg-build -f json cpg status` then `cpg function\|calls\|pdg\|slice` (needs `discover --with-cfg` for PDG/slice) |
 | Field mutations (cart / DTO safety) | `rg-build -f json cpg mutations --type ShoppingCart --exclude-ctors` (ecommerce CoolStore; or any type name; needs `--with-cfg`) |
 | Data flows / slice (CPG) | `rg-build -f json cpg flows FILE --line N --variable V --function F [--direction forward\|backward] [--with-alias]` |
@@ -80,12 +82,12 @@ rg-build -r "$REPO" serve --daemon
 2. **Use `-f json`** — stable `schema_version` fields; see [json-api.md](docs/json-api.md).
 3. **`inspect` takes a symbol only** — no `--class` (use `blast-radius` for disambiguation).
 4. **`slice --function`** is the **method/function name**, not the class name.
-5. **`export --query`** uses filter syntax (`name:Foo`, `type:Function`, `all`) — not full GQL `MATCH`.
+5. **`export --query`** uses filter syntax (`name:Foo`, `type:Function`, `all`) — not full GQL `MATCH`. Obsidian/OKF export use `--query all` (full heading set).
 6. **Deep analysis** needs `discover --with-cfg` (and `--with-taint` for discover-time taint) (slice, inspect, taint).
-7. **Semantic search** needs `semantic index` (separate from discover). Default **code-daemon** needs LFS ONNX weights from source; offline use `--embedder vocab` or `--embedder hash`. Fusion is on by default (`--no-fusion` to disable).
+7. **Semantic search** needs `semantic index` (separate from discover). Default **code-daemon** needs LFS ONNX weights from source; offline use `--embedder vocab` or `--embedder hash`. Doc headings: `semantic index --scope docs`. Fusion is on by default (`--no-fusion` to disable).
 8. **Profile discover** — `discover -v` with `RUST_LOG=profile=info` for `[profile] stage` and centrality sub-phase timings (see [analysis-architecture.md](docs/analysis-architecture.md)). **Cold profile** (accurate perf): delete `.rgbuilder/`, build release `rg-build`, then run ignored gates — warm/partial caches skew timings. `cargo build --release --bin rg-build` then `cargo test --release --test cold_profile_gates -- --ignored --nocapture`. Linux: `linux_cold_discover_within_baseline` on `example/linux` (baseline ~170s). Markdown: `./scripts/fetch-k8s-website-example.sh` then `k8s_website_markdown_cold_discover_within_baseline` on `example/k8s-website` (baseline ~3s, `-l markdown`). See `example/README.md`.
 9. **Dashboard is optional** — only with `--with-dashboard` / `serve` when a human wants a UI; never required for structural answers.
-10. **Markdown docs** — `.md` / `.mdx` are indexed on `discover` (headings, links, frontmatter). Use GQL for doc navigation; semantic index is functions-only; `slice` / `inspect` / `cpg flows` reject markup paths. See [markdown-context.md](docs/markdown-context.md).
+10. **Markdown docs** — `.md` / `.mdx` are indexed on `discover` (headings, links, frontmatter). Use GQL for doc navigation; `semantic index --scope docs` for NL section search; Obsidian export for human vault browsing; `slice` / `inspect` / `cpg flows` reject markup paths. See [markdown-context.md](docs/markdown-context.md).
 ---
 
 ## On-disk artifacts for agents
@@ -95,6 +97,7 @@ After `discover`:
 | Path | Content |
 |------|---------|
 | `.rgbuilder/graph.snapshot.bin` | Graph snapshot |
+| `.rgbuilder/content_store.bin` | Large markdown bodies / files (Blake3-keyed; used by Obsidian export + doc semantic index) |
 | `.rgbuilder/dashboard/manifest.json` | Counts, feature flags |
 | `.rgbuilder/dashboard/migration_plan.json` | Migration export (with `--with-dashboard` and/or `--export-migration-hints`) |
 | `.rgbuilder/dashboard/graph_payload.bin` | Columnar graph for dashboard WASM |

@@ -1246,7 +1246,7 @@ impl LanguagePlugin for JavaPlugin {
         &self,
         file_path: &Path,
         source: &[u8],
-    ) -> Result<(Vec<Symbol>, Vec<Relation>)> {
+    ) -> Result<ExtractAllResult> {
         let mut parser = Parser::new();
         parser
             .set_language(&tree_sitter_java::LANGUAGE.into())
@@ -1263,7 +1263,7 @@ impl LanguagePlugin for JavaPlugin {
         let root = tree.root_node();
         let symbols = self.symbols_from_tree(root, source, file_path)?;
         let relations = self.relations_from_tree(root, source, file_path, &symbols)?;
-        Ok((symbols, relations))
+        Ok(ExtractAllResult::from_parts(symbols, relations))
     }
 
     fn calculate_complexity(&self, symbol: &Symbol, source: &[u8]) -> Result<Option<ComplexityMetrics>> {

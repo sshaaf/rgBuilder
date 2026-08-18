@@ -258,12 +258,12 @@ impl LanguagePlugin for CPlugin {
         &self,
         file_path: &Path,
         source: &[u8],
-    ) -> Result<(Vec<Symbol>, Vec<Relation>)> {
+    ) -> Result<ExtractAllResult> {
         let tree = self.parse(file_path, source)?;
         let root = tree.root_node();
         let symbols = self.symbols_from_tree(root, source, file_path)?;
         let relations = self.relations_from_tree(root, source, file_path, &symbols)?;
-        Ok((symbols, relations))
+        Ok(ExtractAllResult::from_parts(symbols, relations))
     }
 
     fn calculate_complexity(

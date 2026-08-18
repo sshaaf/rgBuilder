@@ -180,6 +180,31 @@ rg-build -r "$REPO" export --export-format mermaid \
 
 ---
 
+## Recipe 12 — Obsidian vault from markdown graph
+
+```bash
+export REPO=/path/to/repo
+rg-build -r "$REPO" discover . -l markdown
+
+rg-build -r "$REPO" export \
+  --export-format obsidian \
+  --export-output "$REPO/vault" \
+  --query all
+```
+
+Open `$REPO/vault` in Obsidian. One note per heading section; wikilinks from doc cross-references; `qualified_name` in frontmatter for GQL correlation.
+
+Optional NL search on sections:
+
+```bash
+rg-build -r "$REPO" semantic index --scope docs --embedder hash
+rg-build -r "$REPO" -f json semantic query "checkout flow" --scope docs --limit 10
+```
+
+**Use when:** browsing or editing docs in Obsidian while keeping rgBuilder as the structural index. Large corpora: `./scripts/fetch-k8s-website-example.sh` + `example/k8s-website` (~17k notes). See [markdown-context.md](markdown-context.md#obsidian-vault-export).
+
+---
+
 ## Recipe 11 — DTO / cart mutation safety (hybrid CPG)
 
 ```bash

@@ -303,7 +303,8 @@ pub(crate) fn run_full_analysis(
 
     // Community detection - write to columnar table
     let community_start = Instant::now();
-    let community_result = CommunityDetector::new().detect_with_view(&petgraph_view)?;
+    let community_result = CommunityDetector::new()
+        .detect_with_view_defaults(&petgraph_view, cold.store())?;
     analysis_results.fill_community(&community_result);
     profile.community.secs = secs(community_start.elapsed());
     if human_output {

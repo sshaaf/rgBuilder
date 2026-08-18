@@ -5,6 +5,7 @@ use crate::graph_builder::GraphBuilder;
 use crate::usage_detector::{ConfigUsage, ConfigUsageDetector};
 use rgbuilder_error::{Error, Result};
 use rgbuilder_plugin_api::{ConfigKey, Relation, Symbol};
+use std::collections::HashMap;
 use rgbuilder_registry::LanguageRegistry;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -29,6 +30,8 @@ pub struct FileExtraction {
     pub config_usages: Vec<ConfigUsage>,
     /// Cached source bytes (avoids re-reading file during graph population)
     pub source: Vec<u8>,
+    /// Out-of-line content blobs keyed by Blake3 hex (`body_ref`).
+    pub content_blobs: HashMap<String, String>,
 }
 
 /// Lightweight remainder after pass-1 graph population (symbols committed; source dropped).
@@ -71,15 +74,16 @@ impl Extractor {
         let source = std::fs::read(path)?;
 
         if let Ok(plugin) = self.registry.get_plugin_for_file(path) {
-            let (symbols, relations) = plugin.extract_all(path, &source)?;
+            let extracted = plugin.extract_all(path, &source)?;
             let config_usages = ConfigUsageDetector::detect(plugin.language_id(), &source, path);
             return Ok(FileExtraction {
                 path: path.to_path_buf(),
-                symbols,
-                relations,
+                symbols: extracted.symbols,
+                relations: extracted.relations,
                 config_keys: Vec::new(),
                 config_usages,
                 source,
+                content_blobs: extracted.content_blobs,
             });
         }
 
@@ -92,6 +96,7 @@ impl Extractor {
                 config_keys,
                 config_usages: Vec::new(),
                 source,
+                content_blobs: HashMap::new(),
             });
         }
 
@@ -106,8 +111,11 @@ impl Extractor {
         extraction: &mut FileExtraction,
         builder: &mut GraphBuilder,
     ) -> Result<ExtractionTail> {
-        let file_id = builder.ensure_file_node(&extraction.path);
-
+        let file_id = builder.ensure_file_node_with_source(
+            &extraction.path,
+            (!extraction.source.is_empty()).then_some(extraction.source.as_slice()),
+        );
+        builder.merge_content_blobs(&extraction.content_blobs);
         let source = (!extraction.source.is_empty()).then_some(extraction.source.as_slice());
         let line_offsets = source.map(line_start_offsets);
 
@@ -127,6 +135,7 @@ impl Extractor {
             builder.add_config_key(key, file_id);
         }
 
+        extraction.content_blobs.clear();
         extraction.source.clear();
         extraction.symbols.clear();
         extraction.config_keys.clear();

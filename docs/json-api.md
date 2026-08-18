@@ -586,8 +586,12 @@ rg-build export --export-format mermaid --export-output clearCart.mmd --query 'n
 | `graphml` | GraphML XML |
 | `graphviz` | DOT |
 | `mermaid` | Mermaid flowchart |
+| `obsidian` | Obsidian vault directory (one markdown note per doc heading; needs markdown `discover` + `content_store.bin`) |
+| `okf` | Open Knowledge Foundation JSON entity bundle (doc headings + bodies) |
 
-`--query` uses **filter syntax** (`all`, `name:Foo`, `type:Function`, `functions`) — not GQL `MATCH`. The summary line reports the filtered node/edge counts.
+`obsidian` and `okf` export **doc heading modules** from the graph; use `--query all`. Output for `obsidian` is a **directory** (`--export-output "$REPO/vault"`), not a single file.
+
+`--query` uses **filter syntax** (`all`, `name:Foo`, `type:Function`, `functions`) — not GQL `MATCH`. The summary line reports the filtered node/edge counts (or note count for Obsidian).
 
 ---
 
@@ -607,6 +611,7 @@ These files are written under `.rgbuilder/` (and copied into `.rgbuilder/dashboa
 | `dashboard/slice/{uuid}.json` | 1 | Per-function source + PDG bundle |
 | `dashboard/cfg/{uuid}.json` | 1 | Per-function CFG preview |
 | `file_hashes.json` | — | Incremental discover state |
+| `content_store.bin` | — | Blake3-keyed blob store for truncated markdown bodies / large files (`body_ref`, `blob_ref`) |
 
 ### `manifest.json` (excerpt)
 

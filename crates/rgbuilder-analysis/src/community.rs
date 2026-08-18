@@ -11,6 +11,7 @@ use petgraph::graph::NodeIndex;
 use rgbuilder_error::Result;
 use rgbuilder_graph::backend::MemoryBackend;
 use rgbuilder_graph::schema::{EdgeType, NodeType};
+use rgbuilder_graph::snapshot::SnapshotNodeStore;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -21,6 +22,21 @@ use uuid::Uuid;
 /// communities alongside code [`Calls`] / [`Uses`].
 pub fn default_community_edge_types() -> &'static [EdgeType] {
     &[EdgeType::Calls, EdgeType::Uses, EdgeType::References]
+}
+
+/// Edge types for community detection on a loaded graph (adds `Contains` when no functions).
+pub fn community_edge_types_for_backend(backend: &MemoryBackend) -> Vec<EdgeType> {
+    let mut types = default_community_edge_types().to_vec();
+    let mut functions = 0usize;
+    let _ = backend.for_each_node(|node| {
+        if node.node_type == NodeType::Function {
+            functions += 1;
+        }
+    });
+    if functions == 0 {
+        types.push(EdgeType::Contains);
+    }
+    types
 }
 
 /// Default σ multiplier for statistical hub stripping (`μ + kσ`).
@@ -136,6 +152,17 @@ impl CommunityDetector {
         self
     }
 
+    /// Detect communities using doc-aware edge projection ([`build_community_neighbor_lists`]).
+    pub fn detect_with_view_defaults(
+        &self,
+        view: &PetGraphView,
+        store: &SnapshotNodeStore,
+    ) -> Result<CommunityResult> {
+        let neighbors = build_community_neighbor_lists(view, store)?;
+        let allowed = default_community_edge_types();
+        self.detect_with_neighbor_lists(view, neighbors, allowed, None)
+    }
+
     /// Detect communities using [`default_community_edge_types`].
     ///
     /// Accepts a pre-built PetGraphView to avoid rebuilding the topology.
@@ -159,12 +186,27 @@ impl CommunityDetector {
         allowed_types: &[EdgeType],
         importance: Option<&HashMap<Uuid, f64>>,
     ) -> Result<CommunityResult> {
+        self.detect_with_neighbor_lists(
+            view,
+            build_filtered_neighbor_lists(view, allowed_types),
+            allowed_types,
+            importance,
+        )
+    }
+
+    /// Detect communities with pre-built undirected neighbor lists.
+    pub fn detect_with_neighbor_lists(
+        &self,
+        view: &PetGraphView,
+        neighbors: Vec<Vec<usize>>,
+        allowed_types: &[EdgeType],
+        importance: Option<&HashMap<Uuid, f64>>,
+    ) -> Result<CommunityResult> {
         let node_count = view.node_count();
         if node_count == 0 {
             return Ok(empty_community_result());
         }
 
-        let neighbors = build_filtered_neighbor_lists(view, allowed_types);
         let degrees: Vec<usize> = neighbors.iter().map(|n| n.len()).collect();
         let is_hub = select_hubs(
             &degrees,
@@ -496,6 +538,64 @@ fn build_filtered_neighbor_lists(
     allowed_types: &[EdgeType],
 ) -> Vec<Vec<usize>> {
     view.topo.undirected_filtered_neighbors(allowed_types)
+}
+
+/// Community neighbor projection: behavioral edges plus scoped `Contains`.
+pub fn build_community_neighbor_lists(
+    view: &PetGraphView,
+    store: &SnapshotNodeStore,
+) -> Result<Vec<Vec<usize>>> {
+    let base = default_community_edge_types();
+    let mut neighbors = build_filtered_neighbor_lists(view, base);
+    let mut function_count = 0usize;
+    for id in store.all_node_ids() {
+        if let Some(node) = store.get_node(id)? {
+            if node.node_type == NodeType::Function {
+                function_count += 1;
+            }
+        }
+    }
+    store.for_each_edge(|from, to, ty| {
+        if ty != EdgeType::Contains {
+            return Ok(());
+        }
+        let Some(from_idx) = view.uuid_to_index.get(&from) else {
+            return Ok(());
+        };
+        let Some(to_idx) = view.uuid_to_index.get(&to) else {
+            return Ok(());
+        };
+        let u = from_idx.index();
+        let v = to_idx.index();
+        if function_count == 0 {
+            push_undirected_neighbor(&mut neighbors, u, v);
+            return Ok(());
+        }
+        let from_node = store.get_node(from)?;
+        let to_node = store.get_node(to)?;
+        let heading_contains = from_node.is_some_and(|n| {
+            n.node_type == NodeType::Module && n.get_property("kind") == Some("heading")
+        }) && to_node.is_some_and(|n| {
+            n.node_type == NodeType::Module && n.get_property("kind") == Some("heading")
+        });
+        if heading_contains {
+            push_undirected_neighbor(&mut neighbors, u, v);
+        }
+        Ok(())
+    })?;
+    Ok(neighbors)
+}
+
+fn push_undirected_neighbor(neighbors: &mut [Vec<usize>], u: usize, v: usize) {
+    if u == v {
+        return;
+    }
+    if !neighbors[u].contains(&v) {
+        neighbors[u].push(v);
+    }
+    if !neighbors[v].contains(&u) {
+        neighbors[v].push(u);
+    }
 }
 
 /// Dashboard community with inferred metadata (Phase 14 A+).

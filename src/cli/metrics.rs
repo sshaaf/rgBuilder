@@ -7,8 +7,8 @@ use super::metrics_output::{
     metrics_response_to_json,
 };
 use crate::analysis::{
-    BetweennessCentrality, CommunityDetector, FastPageRank, PetGraphView, default_behavioral_edges,
-    default_community_edge_types,
+    BetweennessCentrality, CommunityDetector, FastPageRank, PetGraphView,
+    community_edge_types_for_backend, default_behavioral_edges,
 };
 use anyhow::Result;
 use serde_json::json;
@@ -70,7 +70,8 @@ pub fn run(ctx: &CliContext, args: MetricsArgs) -> Result<()> {
 
     if args.communities || run_all {
         let detector = CommunityDetector::new();
-        let result = detector.detect_with_view_filtered(&view, default_community_edge_types())?;
+        let allowed_comm = community_edge_types_for_backend(graph.backend());
+        let result = detector.detect_with_view_filtered(&view, &allowed_comm)?;
         communities = Some(MetricsCommunitiesSection {
             count: result.communities.len(),
             modularity: result.modularity,

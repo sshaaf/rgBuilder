@@ -72,9 +72,16 @@ RGB="$(pwd)/target/debug/rg-build"
 # Example: doc → Java class (needs markdown,java discover)
 "$RGB" -r "$REPO" -f json gql \
   "MATCH (h:Module)-[:REFERENCES]->(f:File)-[:CONTAINS]->(c:Class) WHERE h.name LIKE 'Checkout*' AND f.name LIKE '*CheckoutService.java' RETURN h, f, c"
+
+# Obsidian vault (one note per heading; open vault/ in Obsidian)
+"$RGB" -r "$REPO" export --export-format obsidian --export-output "$REPO/vault" --query all
+
+# Doc semantic search (optional)
+"$RGB" -r "$REPO" semantic index --scope docs --embedder hash
+"$RGB" -r "$REPO" -f json semantic query "checkout flow" --scope docs --limit 5
 ```
 
-Artifacts appear under `$REPO/.rgbuilder/` after discover.
+Artifacts appear under `$REPO/.rgbuilder/` after discover (`graph.snapshot.bin`, `content_store.bin` when bodies are large). Vault export writes `$REPO/vault/`.
 
 ## Narrative (what the graph encodes)
 

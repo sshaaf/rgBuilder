@@ -100,7 +100,7 @@ pub use cfg_builder::{
 pub use cfg_pdg_archive::{CfgPdgArchive, CfgPdgRecord, CFG_PDG_ARCHIVE_FILE};
 pub use cold_metadata::ColdMetadataDb;
 pub use community::{
-    default_community_edge_types, detect_communities, Community, CommunityDetector,
+    community_edge_types_for_backend, default_community_edge_types, detect_communities, Community, CommunityDetector,
     CommunityResult, DashboardCommunity, HubStripPolicy, TieBreakStrategy, DEFAULT_HUB_SIGMA_K,
     DEFAULT_MAX_FROZEN_FRACTION, DEFAULT_MIN_NODES_FOR_HUB_STRIP,
 };
@@ -190,11 +190,12 @@ pub use semantic_hybrid::{
     SemanticExpansion,
 };
 pub use semantic_search::{
-    build_from_backend, build_index, embed_text_for_function, embed_text_for_node,
-    hamming_distance, hamming_top_k, quantize_binary, query_communities, query_index,
-    query_index_with_embedder, sign_hash_embed, CommunitySemanticHit, SemanticBuildOptions,
-    SemanticBuildStats, SemanticEntry, SemanticHit, SemanticIndex, DEFAULT_EMBEDDING_DIMENSIONS,
-    SEMANTIC_INDEX_FILE, SEMANTIC_INDEX_SCHEMA_VERSION, SIGN_HASH_MODEL_ID,
+    build_from_backend, build_index, embed_text_for_doc_node, embed_text_for_function,
+    embed_text_for_node, embed_text_for_scope, hamming_distance, hamming_top_k, quantize_binary,
+    query_communities, query_index, query_index_with_embedder, sign_hash_embed,
+    CommunitySemanticHit, SemanticBuildOptions, SemanticBuildStats, SemanticEntry, SemanticHit,
+    SemanticIndex, SemanticIndexScope, DEFAULT_EMBEDDING_DIMENSIONS, SEMANTIC_INDEX_FILE,
+    SEMANTIC_INDEX_SCHEMA_VERSION, SIGN_HASH_MODEL_ID,
 };
 pub use semantic_vocab::{
     TokenSpaceAccumulator, VocabAccumulateEmbedder, VOCAB_ACCUMULATE_MODEL_ID,

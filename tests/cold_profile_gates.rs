@@ -6,7 +6,8 @@
 //! ```
 //!
 //! Markdown corpus: `./scripts/fetch-k8s-website-example.sh` then
-//! `k8s_website_markdown_cold_discover_within_baseline`.
+//! `k8s_website_markdown_cold_discover_within_baseline` or
+//! `k8s_website_obsidian_export_to_vault` (warm index).
 
 mod dashboard_harness;
 
@@ -25,6 +26,8 @@ const KAFKA_COLD_WALL_BASELINE_SECS: f64 = 600.0;
 /// kubernetes/website `content/en`, markdown-only discover (~2–3s on maintainer machine).
 const K8S_WEBSITE_MARKDOWN_COLD_WALL_BASELINE_SECS: f64 = 3.0;
 const K8S_WEBSITE_MIN_HEADING_MODULES: u64 = 500;
+/// Obsidian vault export on warm k8s index (~15–25s on maintainer machine).
+const K8S_WEBSITE_OBSIDIAN_EXPORT_BASELINE_SECS: f64 = 30.0;
 const TOLERANCE: f64 = 1.10;
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -208,6 +211,21 @@ fn assert_within_baseline(label: &str, elapsed: Duration, baseline_secs: f64) {
         baseline_secs,
         limit
     );
+}
+
+fn count_files_recursive(dir: &Path) -> usize {
+    let mut count = 0;
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                count += count_files_recursive(&path);
+            } else if path.is_file() {
+                count += 1;
+            }
+        }
+    }
+    count
 }
 
 #[test]
@@ -424,4 +442,85 @@ fn k8s_website_markdown_cold_discover_within_baseline() {
         function_count, 0,
         "markdown-only discover should index no functions"
     );
+}
+
+#[test]
+#[ignore = "manual: obsidian export on example/k8s-website (requires discover index)"]
+fn k8s_website_obsidian_export_to_vault() {
+    let repo = k8s_website_repo_path();
+    if !repo.is_dir() {
+        eprintln!(
+            "skip: k8s-website not at {} (run ./scripts/fetch-k8s-website-example.sh)",
+            repo.display()
+        );
+        return;
+    }
+    if !repo.join(".rgbuilder/graph.snapshot.bin").is_file() {
+        eprintln!(
+            "skip: no graph at {} (run rg-build -r \"{}\" discover . -l markdown)",
+            repo.join(".rgbuilder").display(),
+            repo.display()
+        );
+        return;
+    }
+
+    let baseline = std::env::var("RGBUILDER_K8S_WEBSITE_OBSIDIAN_EXPORT_BASELINE_SECS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(K8S_WEBSITE_OBSIDIAN_EXPORT_BASELINE_SECS);
+
+    let vault = repo.join("vault");
+    if vault.exists() {
+        std::fs::remove_dir_all(&vault).expect("remove stale vault");
+    }
+
+    let bin = rgbuilder_bin();
+    let start = Instant::now();
+    let output = Command::new(&bin)
+        .args([
+            "-r",
+            repo.to_str().unwrap(),
+            "export",
+            "--export-format",
+            "obsidian",
+            "--export-output",
+            vault.to_str().unwrap(),
+            "--query",
+            "all",
+        ])
+        .output()
+        .expect("spawn obsidian export");
+    let elapsed = start.elapsed();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "obsidian export failed:\nstdout={stdout}\nstderr={stderr}"
+    );
+
+    let note_count = count_files_recursive(&vault);
+
+    let headings = run_json_gql(
+        &repo,
+        "MATCH (n:Module) WHERE n.kind = 'heading' RETURN n",
+    );
+    let heading_count = headings.get("count").and_then(|c| c.as_u64()).unwrap_or(0);
+
+    eprintln!(
+        "k8s-website obsidian export: wall={:.1}s notes={} headings={} (baseline {:.1}s)",
+        elapsed.as_secs_f64(),
+        note_count,
+        heading_count,
+        baseline
+    );
+    assert_eq!(
+        note_count as u64,
+        heading_count,
+        "vault note count should match heading modules"
+    );
+    assert!(
+        heading_count >= K8S_WEBSITE_MIN_HEADING_MODULES,
+        "expected at least {K8S_WEBSITE_MIN_HEADING_MODULES} heading modules, got {heading_count}"
+    );
+    assert_within_baseline("k8s-website obsidian export", elapsed, baseline);
 }

@@ -2,7 +2,7 @@
 
 use crate::parse::ParsedMarkdown;
 use crate::slug::{slugify, unique_slug};
-use rgbuilder_plugin_api::{Relation, RelationType, SourceLocation, Symbol, SymbolType};
+use rgbuilder_plugin_api::{ExtractAllResult, Relation, RelationType, SourceLocation, Symbol, SymbolType};
 use serde_json::json;
 use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
@@ -23,7 +23,7 @@ pub fn extract(
     parsed: &ParsedMarkdown,
     file_path: &Path,
     source: &[u8],
-) -> rgbuilder_plugin_api::Result<(Vec<Symbol>, Vec<Relation>)> {
+) -> rgbuilder_plugin_api::Result<ExtractAllResult> {
     let file = file_path.to_string_lossy().to_string();
     let mut ctx = ExtractCtx {
         file: file.clone(),
@@ -38,12 +38,17 @@ pub fn extract(
         heading_stack: Vec::new(),
         link_defs: HashMap::new(),
         heading_records: Vec::new(),
+        content_blobs: HashMap::new(),
     };
 
     collect_link_definitions(parsed.block.root_node(), source, &mut ctx.link_defs);
     walk_block(parsed.block.root_node(), &mut ctx)?;
     finalize_section_bodies(&mut ctx);
-    Ok((ctx.symbols, ctx.relations))
+    Ok(ExtractAllResult {
+        symbols: ctx.symbols,
+        relations: ctx.relations,
+        content_blobs: ctx.content_blobs,
+    })
 }
 
 struct ExtractCtx<'a> {
@@ -59,6 +64,7 @@ struct ExtractCtx<'a> {
     heading_stack: Vec<(u8, String)>,
     link_defs: HashMap<String, String>,
     heading_records: Vec<HeadingRecord>,
+    content_blobs: HashMap<String, String>,
 }
 
 impl ExtractCtx<'_> {
@@ -145,7 +151,7 @@ fn extract_code_block(
         ("kind".to_string(), json!("code_block")),
         ("language".to_string(), json!(lang)),
     ]);
-    attach_body_metadata(&mut meta, body);
+    attach_body_metadata(&mut meta, body, &mut ctx.content_blobs);
 
     ctx.symbols.push(symbol(
         name,
@@ -263,7 +269,7 @@ fn push_frontmatter_key(
         ("value".to_string(), json!(value_str)),
     ]);
     if !value_str.is_empty() {
-        attach_body_metadata(&mut meta, &value_str);
+        attach_body_metadata(&mut meta, &value_str, &mut ctx.content_blobs);
     }
     ctx.symbols.push(symbol(
         key.to_string(),
@@ -287,7 +293,7 @@ fn push_frontmatter_key_toml(
         ("value".to_string(), json!(value_str)),
     ]);
     if !value_str.is_empty() {
-        attach_body_metadata(&mut meta, &value_str);
+        attach_body_metadata(&mut meta, &value_str, &mut ctx.content_blobs);
     }
     ctx.symbols.push(symbol(
         key.to_string(),
@@ -637,15 +643,22 @@ fn hash_body(body: &str) -> String {
     blake3::hash(body.as_bytes()).to_hex().to_string()
 }
 
-fn attach_body_metadata(meta: &mut serde_json::Map<String, serde_json::Value>, body: &str) {
+fn attach_body_metadata(
+    meta: &mut serde_json::Map<String, serde_json::Value>,
+    body: &str,
+    content_blobs: &mut HashMap<String, String>,
+) {
     if body.is_empty() {
         return;
     }
-    meta.insert("body_hash".to_string(), json!(hash_body(body)));
+    let hash = hash_body(body);
+    meta.insert("body_hash".to_string(), json!(hash));
     if body.len() <= INLINE_BODY_MAX_BYTES {
         meta.insert("body_text".to_string(), json!(body));
     } else {
         meta.insert("body_truncated".to_string(), json!("true"));
+        meta.insert("body_ref".to_string(), json!(hash));
+        content_blobs.insert(hash, body.to_string());
     }
 }
 
@@ -675,7 +688,7 @@ fn finalize_section_bodies(ctx: &mut ExtractCtx<'_>) {
         }
         let symbol = &mut ctx.symbols[rec.symbol_index];
         if let Some(obj) = symbol.metadata.as_object_mut() {
-            attach_body_metadata(obj, &body);
+            attach_body_metadata(obj, &body, &mut ctx.content_blobs);
         }
         symbol.location.end_line = byte_offset_to_line(ctx.source, body_end);
     }
@@ -709,7 +722,7 @@ mod tests {
     use super::*;
     use std::path::Path;
 
-    fn extract_guide(source: &str) -> (Vec<Symbol>, Vec<Relation>) {
+    fn extract_guide(source: &str) -> ExtractAllResult {
         let path = Path::new("docs/guide.md");
         let parsed = crate::parse::parse_markdown(source.as_bytes(), path).expect("parse");
         extract(&parsed, path, source.as_bytes()).expect("extract")
@@ -718,7 +731,7 @@ mod tests {
     #[test]
     fn nested_headings_define_contains() {
         let source = "# Parent\n\n## Child\n";
-        let (_, relations) = extract_guide(source);
+        let relations = extract_guide(source).relations;
         assert!(relations.iter().any(|r| {
             r.relation_type == RelationType::Defines
                 && r.from == "docs/guide.md#parent"
@@ -729,7 +742,7 @@ mod tests {
     #[test]
     fn heading_section_body_text_and_span() {
         let source = "# Parent\n\nSection prose here.\n\n## Child\n\nChild body.\n";
-        let (symbols, _) = extract_guide(source);
+        let symbols = extract_guide(source).symbols;
         let parent = symbols
             .iter()
             .find(|s| s.qualified_name.as_deref() == Some("docs/guide.md#parent"))
@@ -754,7 +767,7 @@ mod tests {
     #[test]
     fn fenced_code_block_stores_body_text() {
         let source = "```java\nclass X {}\n```\n";
-        let (symbols, _) = extract_guide(source);
+        let symbols = extract_guide(source).symbols;
         let block = symbols
             .iter()
             .find(|s| s.metadata.get("kind") == Some(&serde_json::json!("code_block")))
@@ -771,7 +784,7 @@ mod tests {
         let path = Path::new("AGENTS.md");
         let source = "---\ntitle: Hello World\n---\n# Guide\n";
         let parsed = crate::parse::parse_markdown(source.as_bytes(), path).expect("parse");
-        let (symbols, _) = extract(&parsed, path, source.as_bytes()).expect("extract");
+        let symbols = extract(&parsed, path, source.as_bytes()).expect("extract").symbols;
         let title = symbols
             .iter()
             .find(|s| s.name == "title")
@@ -790,7 +803,7 @@ mod tests {
     #[test]
     fn duplicate_slugs_get_suffixes() {
         let source = "# Overview\n\n# Overview\n";
-        let (symbols, _) = extract_guide(source);
+        let symbols = extract_guide(source).symbols;
         let slugs: Vec<_> = symbols
             .iter()
             .filter(|s| s.metadata.get("kind") == Some(&serde_json::json!("heading")))
@@ -803,7 +816,7 @@ mod tests {
     #[test]
     fn file_link_targets_file_with_hint() {
         let source = "[ADR](./adr.md)\n";
-        let (_, relations) = extract_guide(source);
+        let relations = extract_guide(source).relations;
         let rel = relations
             .iter()
             .find(|r| r.relation_type == RelationType::References)
@@ -816,7 +829,7 @@ mod tests {
     #[test]
     fn heading_fragment_link_uses_module_hint() {
         let source = "# Checkout Flow\n\n[Payments](./adr.md#payments)\n";
-        let (_, relations) = extract_guide(source);
+        let relations = extract_guide(source).relations;
         let rel = relations
             .iter()
             .find(|r| r.relation_type == RelationType::References)
@@ -829,7 +842,7 @@ mod tests {
     #[test]
     fn literal_fragment_not_slugified() {
         let source = "# Checkout Flow\n\n[Flow](./adr.md#checkout-flow)\n";
-        let (_, relations) = extract_guide(source);
+        let relations = extract_guide(source).relations;
         let rel = relations
             .iter()
             .find(|r| r.relation_type == RelationType::References)
@@ -840,7 +853,7 @@ mod tests {
     #[test]
     fn java_file_link_resolves_relative_path() {
         let source = "[API](../src/CheckoutService.java)\n";
-        let (_, relations) = extract_guide(source);
+        let relations = extract_guide(source).relations;
         let rel = relations
             .iter()
             .find(|r| r.relation_type == RelationType::References)
@@ -852,14 +865,14 @@ mod tests {
     #[test]
     fn external_url_has_no_reference_edge() {
         let source = "[Site](https://example.com)\n";
-        let (_, relations) = extract_guide(source);
+        let relations = extract_guide(source).relations;
         assert!(relations.is_empty());
     }
 
     #[test]
     fn fenced_code_block_with_info_string() {
         let source = "```java\nclass X {}\n```\n";
-        let (symbols, _) = extract_guide(source);
+        let symbols = extract_guide(source).symbols;
         let block = symbols
             .iter()
             .find(|s| s.metadata.get("kind") == Some(&serde_json::json!("code_block")))
@@ -879,7 +892,7 @@ mod tests {
         let path = Path::new("AGENTS.md");
         let source = "---\nmetadata:\n  author: bot\n---\n# Guide\n";
         let parsed = crate::parse::parse_markdown(source.as_bytes(), path).expect("parse");
-        let (symbols, _) = extract(&parsed, path, source.as_bytes()).expect("extract");
+        let symbols = extract(&parsed, path, source.as_bytes()).expect("extract").symbols;
         assert!(symbols.iter().any(|s| {
             s.name == "metadata.author"
                 && s.symbol_type == SymbolType::Variable
@@ -890,14 +903,14 @@ mod tests {
     #[test]
     fn images_and_wiki_links_emit_no_symbols() {
         let source = "![alt](img.png)\n[[Wiki]]\n";
-        let (symbols, _) = extract_guide(source);
+        let symbols = extract_guide(source).symbols;
         assert!(symbols.is_empty());
     }
 
     #[test]
     fn angle_bracket_link_preserves_spaced_fragment() {
         let source = "# Checkout Flow\n\n[Wrong](<./adr.md#Checkout Flow>)\n";
-        let (_, relations) = extract_guide(source);
+        let relations = extract_guide(source).relations;
         let rel = relations
             .iter()
             .find(|r| r.relation_type == RelationType::References)
@@ -909,7 +922,9 @@ mod tests {
     #[test]
     fn external_url_creates_link_symbol_without_reference_edge() {
         let source = "[Stripe](https://stripe.com/docs)\n";
-        let (symbols, relations) = extract_guide(source);
+        let out = extract_guide(source);
+        let symbols = out.symbols;
+        let relations = out.relations;
         assert_eq!(relations.len(), 0);
         let link = symbols
             .iter()
@@ -924,7 +939,7 @@ mod tests {
     #[test]
     fn indented_code_block_extracted() {
         let source = "    fn main() {}\n";
-        let (symbols, _) = extract_guide(source);
+        let symbols = extract_guide(source).symbols;
         let block = symbols
             .iter()
             .find(|s| s.metadata.get("kind") == Some(&serde_json::json!("code_block")))
@@ -939,7 +954,7 @@ mod tests {
 
 [pay]: ./adr.md#payments
 "#;
-        let (_, relations) = extract_guide(source);
+        let relations = extract_guide(source).relations;
         let rel = relations
             .iter()
             .find(|r| r.relation_type == RelationType::References)
@@ -950,7 +965,7 @@ mod tests {
     #[test]
     fn link_under_child_heading_uses_child_qualified_name() {
         let source = "# Checkout Flow\n\n## Cart\n\n[Overview](./adr.md#overview)\n";
-        let (_, relations) = extract_guide(source);
+        let relations = extract_guide(source).relations;
         let rel = relations
             .iter()
             .find(|r| {
@@ -963,7 +978,7 @@ mod tests {
     #[test]
     fn unquoted_spaced_fragment_does_not_resolve_full_title() {
         let source = "# Checkout Flow\n\n[Wrong](./adr.md#Checkout Flow)\n";
-        let (_, relations) = extract_guide(source);
+        let relations = extract_guide(source).relations;
         assert!(
             !relations
                 .iter()
@@ -975,7 +990,7 @@ mod tests {
     #[test]
     fn same_file_fragment_link() {
         let source = "# Overview\n\n[Jump](#overview)\n";
-        let (_, relations) = extract_guide(source);
+        let relations = extract_guide(source).relations;
         let rel = relations
             .iter()
             .find(|r| r.relation_type == RelationType::References)
@@ -989,7 +1004,7 @@ mod tests {
         let path = Path::new("config.md");
         let source = "+++\ntitle = \"Demo\"\n+++\n# Title\n";
         let parsed = crate::parse::parse_markdown(source.as_bytes(), path).expect("parse");
-        let (symbols, _) = extract(&parsed, path, source.as_bytes()).expect("extract");
+        let symbols = extract(&parsed, path, source.as_bytes()).expect("extract").symbols;
         assert!(symbols.iter().any(|s| {
             s.name == "title"
                 && s.symbol_type == SymbolType::Variable
@@ -1004,7 +1019,7 @@ mod tests {
 
 [pay]: ./adr.md#payments
 "#;
-        let (_, relations) = extract_guide(source);
+        let relations = extract_guide(source).relations;
         let rel = relations
             .iter()
             .find(|r| r.relation_type == RelationType::References)
@@ -1020,7 +1035,7 @@ mod tests {
 
 [ADR]: ./adr.md
 "#;
-        let (_, relations) = extract_guide(source);
+        let relations = extract_guide(source).relations;
         let rel = relations
             .iter()
             .find(|r| r.relation_type == RelationType::References)

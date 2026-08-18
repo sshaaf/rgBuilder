@@ -294,6 +294,8 @@ mod tests {
             qualified_name: Some(qname.into()),
             file_path: None,
             code_hash: None,
+            node_type: None,
+            kind: None,
         }
     }
 
@@ -327,6 +329,8 @@ mod tests {
                     qualified_name: Some("svc.cryptic".into()),
                     file_path: None,
                     code_hash: None,
+                    node_type: None,
+                    kind: None,
                 },
             },
             FusionCandidate {
@@ -339,6 +343,8 @@ mod tests {
                     qualified_name: Some("InvoiceService.processInvoice".into()),
                     file_path: None,
                     code_hash: None,
+                    node_type: None,
+                    kind: None,
                 },
             },
         ];
@@ -383,6 +389,8 @@ mod tests {
                 qualified_name: None,
                 file_path: None,
                 code_hash: None,
+                node_type: None,
+                kind: None,
             },
         }];
 

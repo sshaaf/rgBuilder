@@ -34,6 +34,7 @@ cargo test --release --test cold_profile_gates k8s_website_markdown_cold_discove
 - Command: cold `discover . -l markdown -v` (markdown plugin only; no CFG)
 - Baseline: **3.0s** profile wall_secs (+10% tolerance); override with `RGBUILDER_K8S_WEBSITE_DISCOVER_BASELINE_SECS` after you establish a number on your machine
 - Correctness: ≥500 heading modules, zero `:Function` nodes
+- **Obsidian export gate** (warm index, does not re-run discover): `cargo test --release --test cold_profile_gates k8s_website_obsidian_export_to_vault -- --ignored --nocapture` — baseline **30s** wall (+10%); override with `RGBUILDER_K8S_WEBSITE_OBSIDIAN_EXPORT_BASELINE_SECS`. Expect ~17k notes, note count = heading count.
 
 See [example/README.md](../example/README.md) for other large local corpora.
 
@@ -56,21 +57,137 @@ Agents can read section prose from the graph instead of opening files:
 |----------|-----|---------|
 | `body_text` | `:Module` (`heading`, `code_block`), `:Variable` (`frontmatter`) | Inline UTF-8 payload when ≤ 32 KiB |
 | `body_hash` | same | Blake3 hex digest of full body (even when truncated inline) |
-| `body_truncated` | same | `"true"` when body exceeds 32 KiB inline cap |
+| `body_ref` | same | Blake3 hex pointer into `content_store.bin` when truncated |
+| `content_hash` | `:File` | Blake3 hex of full file bytes |
+| `blob_ref` | `:File` | Points into `content_store.bin` for large files |
 | `value` | `:Variable` (`frontmatter`) | Scalar frontmatter value as string |
 
 **Heading sections:** `body_text` is prose from the heading through the next heading (any level), excluding nested headings. `end_line` on the node spans that same range so `code_hash` / code index align.
 
 **Code fences:** `body_text` is fence inner content (not delimiter lines).
 
-Large corpora: bodies beyond the inline cap still get `body_hash`; full text remains in the code index when discover stores symbol bodies. A separate `content_store.bin` blob export is not implemented yet.
+Large corpora: bodies beyond the inline cap get `body_truncated`, `body_ref` (same Blake3 hex as `body_hash`), and full UTF-8 in `.rgbuilder/content_store.bin`. `:File` nodes carry `content_hash` (Blake3 of raw file bytes) and `blob_ref` when the file exceeds the inline cap.
 
-Example:
+## Obsidian vault export
+
+Turn the markdown context graph into an **Obsidian vault** — one note per heading section, folder layout mirroring doc paths, wikilinks from `REFERENCES` edges. Export reads the graph + `content_store.bin` (no re-parse of source files).
+
+### 1. Index markdown
 
 ```bash
-rg-build -f json gql \
+export REPO=/path/to/repo
+cargo build --release --bin rg-build   # release is faster for large exports
+export PATH="$PWD/target/release:$PATH"
+
+rg-build -r "$REPO" discover . -l markdown
+# or docs + code: rg-build -r "$REPO" discover .
+```
+
+### 2. Export vault
+
+```bash
+rg-build -r "$REPO" export \
+  --export-format obsidian \
+  --export-output "$REPO/vault" \
+  --query all
+```
+
+```text
+Exported 17244 notes (2971 wikilinks) -> /path/to/repo/vault
+```
+
+| Flag | Meaning |
+|------|---------|
+| `--export-format obsidian` | Write Obsidian-compatible markdown notes |
+| `--export-output` | Vault root (any folder; use `"$REPO/vault"` to keep it inside the repo) |
+| `--query all` | Export every heading module (Obsidian does not use filter queries yet) |
+
+### 3. Open in Obsidian
+
+Obsidian → **Open folder as vault** → select `$REPO/vault`.
+
+### Vault layout
+
+| Graph | Vault path |
+|-------|------------|
+| `docs/guide.md#checkout-flow` | `docs/guide/checkout-flow.md` |
+| `blog/_posts/2024/release.md#feature-x` | `blog/_posts/2024/release/feature-x.md` |
+
+Long heading slugs (e.g. k8s blog posts) are truncated with a stable hash suffix so filenames stay within OS limits.
+
+### Note shape
+
+```markdown
+---
+qualified_name: "docs/guide.md#checkout-flow"
+level: "2"
+---
+
+Section prose (from `body_text` or `content_store.bin` via `body_ref`).
+
+[[docs/adr/payments]]
+[[docs/adr]]
+```
+
+- **Frontmatter** — `qualified_name` ties back to GQL (`WHERE n.qualified_name = '…'`).
+- **Body** — heading section text; large bodies resolved from `content_store.bin`.
+- **Wikilinks** — outgoing `REFERENCES` edges as `[[vault-relative/path]]` (no `.md` suffix).
+
+### Re-export after doc edits
+
+```bash
+rg-build -r "$REPO" discover . -l markdown
+rg-build -r "$REPO" export --export-format obsidian --export-output "$REPO/vault" --query all
+```
+
+Obsidian export is **read-only** — edits in Obsidian are not synced back to the graph.
+
+### Quick examples
+
+**Fixture** (~16 notes):
+
+```bash
+export REPO="$(pwd)/tests/fixtures/markdown-context"
+rg-build -r "$REPO" discover . -l markdown
+rg-build -r "$REPO" export --export-format obsidian --export-output "$REPO/vault" --query all
+```
+
+**kubernetes/website** (~17k notes, ~5–20s release export after fetch + discover):
+
+```bash
+./scripts/fetch-k8s-website-example.sh
+export REPO="$(pwd)/example/k8s-website"
+rg-build -r "$REPO" discover . -l markdown
+rg-build -r "$REPO" export --export-format obsidian --export-output "$REPO/vault" --query all
+```
+
+### OKF JSON export
+
+```bash
+rg-build -r "$REPO" export --export-format okf --export-output "$REPO/okf.json" --query all
+```
+
+Entity bundle for Open Knowledge Foundation tooling (heading modules + bodies).
+
+## Semantic search (doc sections)
+
+Default `semantic index` embeds **`:Function` nodes only**. For doc headings:
+
+```bash
+rg-build -r "$REPO" semantic index --scope docs --embedder hash
+rg-build -r "$REPO" -f json semantic query "checkout flow" --scope docs --embedder hash --limit 10
+```
+
+Use `--scope all` to index functions + docs. Doc embeddings resolve full section text from `content_store.bin` when `body_ref` is set.
+
+## GQL body text (agents)
+
+```bash
+rg-build -r "$REPO" -f json gql \
   "MATCH (n:Module) WHERE n.kind = 'heading' AND n.name LIKE 'Checkout*' RETURN n.body_text LIMIT 1"
 ```
+
+When truncated inline, query `body_ref` / read `content_store.bin`, or use Obsidian export for human browsing.
 
 ## Author linking guide
 
@@ -122,9 +239,15 @@ For navigation, heading `CONTAINS` trees and targeted GQL are still usually clea
 
 Registered under language id `markdown` (extensions `md` + `mdx`). MDX/JSX in code fences is not executed; only tree-sitter-md structure is indexed.
 
-## Semantic search
+## Semantic search (summary)
 
-`semantic index` embeds **`:Function` nodes only**. Doc headings (`:Module` with `kind=heading`) are **not** indexed. Use GQL for doc navigation; use `semantic query` for code functions after `discover` includes your language plugins.
+| Scope | Command | Indexes |
+|-------|---------|---------|
+| Functions (default) | `semantic index` | `:Function` |
+| Docs | `semantic index --scope docs` | `:Module` where `kind=heading` |
+| Both | `semantic index --scope all` | Functions + doc headings |
+
+GQL remains the low-token default for structural doc navigation; semantic `--scope docs` helps natural-language section search.
 
 ## CFG, PDG, slice, inspect, CPG flows
 

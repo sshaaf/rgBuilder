@@ -32,8 +32,21 @@ pub enum CliEmbedderKind {
 pub enum CliSemanticScope {
     /// Rank function symbols (default).
     Function,
+    /// Rank documentation headings (`:Module` with `kind=heading`).
+    Docs,
+    /// Rank functions and documentation sections.
+    All,
     /// Rank communities via pooled member embeddings.
     Community,
+}
+
+fn cli_scope_to_build(scope: CliSemanticScope) -> crate::analysis::SemanticIndexScope {
+    match scope {
+        CliSemanticScope::Function => crate::analysis::SemanticIndexScope::Functions,
+        CliSemanticScope::Docs => crate::analysis::SemanticIndexScope::Docs,
+        CliSemanticScope::All => crate::analysis::SemanticIndexScope::All,
+        CliSemanticScope::Community => crate::analysis::SemanticIndexScope::Functions,
+    }
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
@@ -54,6 +67,7 @@ pub struct SemanticIndexArgs {
     pub diffuse_alpha: f64,
     pub diffuse_iters: usize,
     pub diffuse_bidirectional: bool,
+    pub scope: CliSemanticScope,
 }
 
 pub struct SemanticQueryArgs {
@@ -126,6 +140,7 @@ pub fn run_index(ctx: &CliContext, args: SemanticIndexArgs) -> Result<()> {
             } else {
                 None
             },
+            scope: cli_scope_to_build(args.scope),
         },
     )?;
 
@@ -315,6 +330,8 @@ impl BlastSummaryProvider for EngineBlastProvider<'_> {
                 qualified_name: node.qualified_name.as_ref().map(|s| s.to_string()),
                 file_path: node.file_path.as_ref().map(|s| s.to_string()),
                 code_hash: node.code_hash.as_ref().map(|s| s.to_string()),
+                node_type: None,
+                kind: None,
             },
             result.direct_caller_ids.len(),
             result.impact_zone_ids.len(),

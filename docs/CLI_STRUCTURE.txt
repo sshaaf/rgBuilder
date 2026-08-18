@@ -94,9 +94,9 @@ Active Commands:
 │   └── --policy-file <PATH>
 │
 └── export
-    ├── --export-format json|graphml|graphviz|mermaid
-    ├── --export-output <FILE>
-    └── --query <QUERY>
+    ├── --export-format json|graphml|graphviz|mermaid|obsidian|okf
+    ├── --export-output <FILE_OR_DIR>   # obsidian: vault directory
+    └── --query <QUERY>                 # obsidian/okf: use all
 
 
 Blast-radius JSON (schema v2, -f json):

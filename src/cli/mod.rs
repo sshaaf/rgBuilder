@@ -350,6 +350,10 @@ pub enum SemanticCommands {
         /// Include callers as well as callees in diffusion neighbors
         #[arg(long, default_value_t = false)]
         diffuse_bidirectional: bool,
+
+        /// Index scope: functions (default), docs (headings), or all
+        #[arg(long, value_enum, default_value = "function")]
+        scope: semantic::CliSemanticScope,
     },
 
     /// Hamming nearest-neighbor search over the semantic index
@@ -648,6 +652,7 @@ impl Cli {
                     diffuse_alpha,
                     diffuse_iters,
                     diffuse_bidirectional,
+                    scope,
                 } => semantic::run_index(
                     &ctx,
                     semantic::SemanticIndexArgs {
@@ -660,6 +665,7 @@ impl Cli {
                         diffuse_alpha,
                         diffuse_iters,
                         diffuse_bidirectional,
+                        scope,
                     },
                 ),
                 SemanticCommands::Query {

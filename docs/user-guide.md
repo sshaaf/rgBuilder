@@ -342,6 +342,7 @@ After a successful run:
 ```
 ecommerce-java/.rgbuilder/
 ├── graph.snapshot.bin          # Columnar mmap graph (primary cache for queries)
+├── content_store.bin           # Large markdown bodies / files (body_ref / blob_ref; Obsidian + doc semantic)
 ├── blast_engine.snapshot.bin   # Pre-built blast-radius engine
 ├── macro_call_index.db         # Blast-radius lookup cache (SQLite; not the graph)
 ├── macro_call_index.bin        # Same index in bincode (companion to .db)
@@ -903,7 +904,9 @@ rg-build -r "$REPO" -f json metrics --pagerank --iterations 50 | jq .
 
 ## 12. Semantic search
 
-Semantic search is **opt-in** — it does not run during `discover`. Build a separate Hamming index over function symbols, then query by natural language or keywords.
+Semantic search is **opt-in** — it does not run during `discover`. Build a separate Hamming index, then query by natural language or keywords.
+
+**Default index scope:** `:Function` symbols. **Doc headings:** `semantic index --scope docs` (or `--scope all` for functions + docs). See [markdown-context.md](markdown-context.md#semantic-search-doc-sections).
 
 **Prerequisites:** `discover` completed. Default embedder is **code-daemon** (needs `git lfs pull` for bundled ONNX when building from source). Offline / CI: prefer `--embedder vocab` or `--embedder hash` (no ONNX).
 
@@ -923,6 +926,10 @@ rg-build -r "$REPO" -f json semantic query "OrderService" --no-fusion --limit 10
 # Community-scoped search — pool member embeddings (needs discover analysis + semantic index)
 rg-build -r "$REPO" -f json semantic query "shopping cart" --scope community --limit 5
 
+# Doc section search (markdown headings; needs discover -l markdown)
+rg-build -r "$REPO" semantic index --scope docs --embedder hash
+rg-build -r "$REPO" -f json semantic query "checkout flow" --scope docs --limit 10
+
 # Hash embedder (no ONNX) — e.g. CI
 rg-build -r "$REPO" semantic index --embedder hash
 
@@ -936,7 +943,7 @@ Passing `--diffuse` recomputes dense vectors and mixes call-graph neighbors **be
 
 | Flag | Purpose |
 |------|---------|
-| `--scope function\|community` | Rank functions (default) or pooled communities |
+| `--scope function\|community\|docs\|all` | Query scope: functions (default), communities, doc headings, or both functions + docs (index with matching `--scope` on `semantic index`) |
 | `--no-fusion` | Disable late fusion (default is fusion **on**: blast, PageRank, name, token-bloom) |
 | `--keyword-and` | Every query token must match metadata or body sketch |
 | `--candidate-pool <N>` | Hamming pool size before fusion [default: 256] |
@@ -957,7 +964,16 @@ Design → **[Semantic search design](design/semantic-search-design.md)** · tim
 
 ## 13. Export graph projections
 
-`export` writes the graph or a **filter-selected** subgraph to a file. The `--query` flag uses **filter syntax**, not GQL `MATCH` (all formats honor the filter, including JSON):
+`export` writes the graph or a **filter-selected** subgraph to a file or directory. The `--query` flag uses **filter syntax**, not GQL `MATCH` (JSON/graph formats honor the filter; Obsidian/OKF use `--query all`):
+
+| `--export-format` | Output | `--query` |
+|-------------------|--------|-----------|
+| `json` | Graph snapshot JSON | Filter or `all` |
+| `graphml` | GraphML XML | Filter or `all` |
+| `graphviz` | DOT | Filter or `all` |
+| `mermaid` | Mermaid flowchart | Filter or `all` |
+| `obsidian` | Obsidian vault **directory** | `all` (heading modules) |
+| `okf` | OKF JSON entity bundle | `all` |
 
 | Query | Meaning |
 |-------|---------|
@@ -983,6 +999,23 @@ rg-build -r "$REPO" export --export-format json --export-output ecommerce-graph.
 rg-build -r "$REPO" export --export-format graphml --export-output ecommerce.graphml --query all
 rg-build -r "$REPO" export --export-format graphviz --export-output calls.dot --query all
 ```
+
+### Markdown → Obsidian vault
+
+For documentation repos (or `-l markdown` discover), export heading sections as an Obsidian vault. Requires prior `discover` (creates `.rgbuilder/` and `content_store.bin` for large bodies).
+
+```bash
+export REPO=/path/to/docs-repo
+rg-build -r "$REPO" discover . -l markdown
+rg-build -r "$REPO" export \
+  --export-format obsidian \
+  --export-output "$REPO/vault" \
+  --query all
+```
+
+Open `$REPO/vault` in Obsidian (**Open folder as vault**). Each note is one heading section; YAML `qualified_name` maps back to GQL. Re-run `discover` + `export` after doc changes.
+
+Other doc export formats: `--export-format okf` (JSON entity bundle). Full walkthrough: [markdown-context.md](markdown-context.md#obsidian-vault-export).
 
 For GQL pattern matching, use `rg-build gql` — or `rg-build serve` + [HTTP API](http-api.md).
 
@@ -1107,9 +1140,9 @@ Migration hints (with `--export-migration-hints`) land under `.rgbuilder/migrati
 | `inspect` | CFG / PDG / dominance for a function |
 | `cpg` | Hybrid CPG: status, mutations, flows, calls, export (needs `--with-cfg`) |
 | `metrics` | PageRank, betweenness, communities summary |
-| `export` | Serialize graph (json, graphml, dot, mermaid) |
+| `export` | Serialize graph (json, graphml, dot, mermaid, obsidian vault, okf) |
 | `check` | CI policy gateway |
-| `semantic` | Opt-in function semantic index + query (`--scope community`) |
+| `semantic` | Opt-in semantic index + query (`--scope community`, `docs`, `all`) |
 | `serve` | HTTP dashboard + `/api/query` + `/api/semantic/*` (default); `serve --daemon` for blast socket |
 
 ### `discover` flags

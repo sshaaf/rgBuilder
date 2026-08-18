@@ -292,6 +292,8 @@ mod tests {
                 qualified_name: None,
                 file_path: None,
                 code_hash: None,
+                node_type: None,
+                kind: None,
             },
             fused_score: None,
         };
