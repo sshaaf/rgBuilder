@@ -4,15 +4,23 @@ use rgbuilder_error::Result;
 use rgbuilder_graph::backend::MemoryBackend;
 use rgbuilder_graph::content_store::ContentStore;
 use rgbuilder_graph::schema::{EdgeType, Node, NodeType};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::fs;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 /// Max length for a directory path segment (macOS filename limit is 255 bytes).
 const MAX_PATH_SEGMENT_LEN: usize = 200;
 /// Max stem length before `.md` on note files.
 const MAX_NOTE_STEM_LEN: usize = 252;
+/// Max buffered note jobs between producer and writer workers.
+const NOTE_JOB_CHANNEL_CAPACITY: usize = 256;
+/// Cap parallel filesystem writers to avoid over-saturating IO.
+const MAX_WRITER_THREADS: usize = 8;
 
 /// Stats from an Obsidian vault export.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -47,9 +55,40 @@ pub fn export_obsidian_vault(
         }
     })?;
 
-    let mut stats = ObsidianExportStats::default();
+    let references_by_heading = build_reference_index(backend)?;
+    let notes_written = Arc::new(AtomicUsize::new(0));
+    let links_written = Arc::new(AtomicUsize::new(0));
+    let first_error: Arc<Mutex<Option<rgbuilder_error::Error>>> = Arc::new(Mutex::new(None));
+    let worker_count = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1)
+        .min(MAX_WRITER_THREADS)
+        .max(1);
+    let (job_tx, job_rx) = crossbeam_channel::bounded::<NoteJob>(NOTE_JOB_CHANNEL_CAPACITY);
+    let mut workers = Vec::with_capacity(worker_count);
+    for _ in 0..worker_count {
+        let rx = job_rx.clone();
+        let notes = Arc::clone(&notes_written);
+        let links = Arc::clone(&links_written);
+        let err = Arc::clone(&first_error);
+        workers.push(thread::spawn(move || {
+            for job in rx.iter() {
+                if let Err(e) = write_note_job(job, &notes, &links) {
+                    let mut guard = err.lock().expect("lock error slot");
+                    if guard.is_none() {
+                        *guard = Some(e);
+                    }
+                    break;
+                }
+            }
+        }));
+    }
+    drop(job_rx);
 
     for (id, qn) in headings {
+        if first_error.lock().expect("lock error slot").is_some() {
+            break;
+        }
         let body = backend
             .with_node(id, |node| resolve_body(node, content_store))?
             .flatten()
@@ -61,30 +100,18 @@ pub fn export_obsidian_vault(
             .unwrap_or_else(|| note_relpath(&qn, &repo_prefix));
 
         let mut wikilinks: Vec<String> = Vec::new();
-        backend.for_each_edge(|edge| {
-            if edge.from != id || edge.edge_type != EdgeType::References {
-                return;
+        if let Some(targets) = references_by_heading.get(&id) {
+            for &target in targets {
+                if let Ok(label) = backend
+                    .with_node(target, |n| obsidian_wikilink_for_node(n, &repo_prefix))
+                    .map(|inner| inner.flatten())
+                && let Some(label) = label
+                {
+                    wikilinks.push(format!("[[{label}]]"));
+                }
             }
-            if let Ok(label) = backend
-                .with_node(edge.to, |n| obsidian_wikilink_for_node(n, &repo_prefix))
-                .map(|inner| inner.flatten())
-            && let Some(label) = label
-            {
-                wikilinks.push(format!("[[{label}]]"));
-            }
-        })?;
-        stats.links_written += wikilinks.len();
-
-        let note_path = output_dir.join(&note_rel);
-        if let Some(parent) = note_path.parent() {
-            fs::create_dir_all(parent).map_err(|e| {
-                rgbuilder_error::Error::GraphError(format!(
-                    "create_dir {}: {e}",
-                    parent.display()
-                ))
-            })?;
         }
-
+        let note_path = output_dir.join(&note_rel);
         let level = backend
             .with_node(id, |n| n.get_property("level").map(|s| s.to_string()))?
             .flatten()
@@ -101,17 +128,66 @@ pub fn export_obsidian_vault(
             out.push_str(&body);
             out.push('\n');
         }
+        let link_count = wikilinks.len();
         for link in wikilinks {
             out.push_str(&link);
             out.push('\n');
         }
-        fs::write(&note_path, out).map_err(|e| {
-            rgbuilder_error::Error::GraphError(format!("write note {}: {e}", note_path.display()))
-        })?;
-        stats.notes_written += 1;
+        job_tx
+            .send(NoteJob {
+                note_path,
+                content: out,
+                links_written: link_count,
+            })
+            .map_err(|e| rgbuilder_error::Error::GraphError(format!("queue note job: {e}")))?;
+    }
+    drop(job_tx);
+    for worker in workers {
+        let _ = worker.join();
+    }
+    if let Some(err) = first_error.lock().expect("lock error slot").take() {
+        return Err(err);
     }
 
-    Ok(stats)
+    Ok(ObsidianExportStats {
+        notes_written: notes_written.load(Ordering::Relaxed),
+        links_written: links_written.load(Ordering::Relaxed),
+    })
+}
+
+fn build_reference_index(backend: &MemoryBackend) -> Result<HashMap<uuid::Uuid, Vec<uuid::Uuid>>> {
+    let mut refs = HashMap::new();
+    backend.for_each_edge(|edge| {
+        if edge.edge_type == EdgeType::References {
+            refs.entry(edge.from).or_insert_with(Vec::new).push(edge.to);
+        }
+    })?;
+    Ok(refs)
+}
+
+#[derive(Debug)]
+struct NoteJob {
+    note_path: std::path::PathBuf,
+    content: String,
+    links_written: usize,
+}
+
+fn write_note_job(
+    job: NoteJob,
+    notes_written: &AtomicUsize,
+    links_written: &AtomicUsize,
+) -> Result<()> {
+    if let Some(parent) = job.note_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| {
+            rgbuilder_error::Error::GraphError(format!("create_dir {}: {e}", parent.display()))
+        })?;
+    }
+    fs::write(&job.note_path, job.content).map_err(|e| {
+        rgbuilder_error::Error::GraphError(format!("write note {}: {e}", job.note_path.display()))
+    })?;
+    notes_written.fetch_add(1, Ordering::Relaxed);
+    links_written.fetch_add(job.links_written, Ordering::Relaxed);
+    Ok(())
 }
 
 fn obsidian_wikilink_for_node(node: &Node, repo_prefix: &str) -> Option<String> {

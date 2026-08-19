@@ -20,12 +20,20 @@ Automated integration gate: `cargo test --test markdown_context_cli` (CLI discov
 
 Large real-world markdown corpus: [kubernetes/website `content/en`](https://github.com/kubernetes/website/tree/main/content/en). Same **cold profile** pattern as `example/linux` — gitignored local checkout, deletes `.rgbuilder/` before discover, release `rg-build` only.
 
-**Agent prompt (suggested):**
-
-> Run **cold profile** on markdown: `cargo build --release --bin rg-build`, `./scripts/fetch-k8s-website-example.sh`, then `cargo test --release --test cold_profile_gates k8s_website_markdown_cold_discover_within_baseline -- --ignored --nocapture`. Report `[profile] discover summary` wall_secs, nodes, functions, and `index_graph_build` vs baseline 3s (+10%). Compare to last known good on this machine. Do not use an existing `.rgbuilder/` cache.
+**Cold profile definition:** run a **fresh** release build right before profiling:
 
 ```bash
-./scripts/fetch-k8s-website-example.sh
+cargo build --release --bin rg-build
+```
+
+Use that newly built `target/release/rg-build`; do not use debug or stale release binaries for cold profile comparisons.
+
+**Agent prompt (suggested):**
+
+> Run **cold profile** on markdown: `cargo build --release --bin rg-build`, `./scripts/fetch-profile-repos.sh`, then `cargo test --release --test cold_profile_gates k8s_website_markdown_cold_discover_within_baseline -- --ignored --nocapture`. Report `[profile] discover summary` wall_secs, nodes, functions, and `index_graph_build` vs baseline 3s (+10%). Compare to last known good on this machine. Do not use an existing `.rgbuilder/` cache.
+
+```bash
+./scripts/fetch-profile-repos.sh
 cargo build --release --bin rg-build
 cargo test --release --test cold_profile_gates k8s_website_markdown_cold_discover_within_baseline -- --ignored --nocapture
 ```
@@ -155,7 +163,7 @@ rg-build -r "$REPO" export --export-format obsidian --export-output "$REPO/vault
 **kubernetes/website** (~17k notes, ~5–20s release export after fetch + discover):
 
 ```bash
-./scripts/fetch-k8s-website-example.sh
+./scripts/fetch-profile-repos.sh
 export REPO="$(pwd)/example/k8s-website"
 rg-build -r "$REPO" discover . -l markdown
 rg-build -r "$REPO" export --export-format obsidian --export-output "$REPO/vault" --query all

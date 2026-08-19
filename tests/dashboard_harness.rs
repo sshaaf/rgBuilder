@@ -116,10 +116,14 @@ pub fn ecommerce_typescript_repo_path() -> PathBuf {
 }
 
 pub fn rgbuilder_bin() -> PathBuf {
-    if let Ok(p) = std::env::var("CARGO_BIN_EXE_rg_build") {
+    if let Ok(p) = std::env::var("CARGO_BIN_EXE_rg_build")
+        .or_else(|_| std::env::var("CARGO_BIN_EXE_rg-build"))
+    {
         return PathBuf::from(p);
     }
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/release/rg-build")
+    panic!(
+        "CARGO_BIN_EXE_rg_build is not set for dashboard tests; run via `cargo test` so the test harness uses the current binary"
+    );
 }
 
 pub fn run_discover(repo: &Path, languages: &str) -> Output {

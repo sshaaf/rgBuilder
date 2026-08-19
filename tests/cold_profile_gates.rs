@@ -5,7 +5,10 @@
 //! cargo test --release --test cold_profile_gates -- --ignored --nocapture
 //! ```
 //!
-//! Markdown corpus: `./scripts/fetch-k8s-website-example.sh` then
+//! Cold profile policy: run a fresh release build immediately before profiling and
+//! use that `target/release/rg-build` binary only (no debug/stale binaries).
+//!
+//! Markdown corpus: `./scripts/fetch-profile-repos.sh` then
 //! `k8s_website_markdown_cold_discover_within_baseline` or
 //! `k8s_website_obsidian_export_to_vault` (warm index).
 
@@ -390,7 +393,7 @@ fn k8s_website_markdown_cold_discover_within_baseline() {
     let repo = k8s_website_repo_path();
     if !repo.is_dir() {
         eprintln!(
-            "skip: k8s-website not at {} (run ./scripts/fetch-k8s-website-example.sh)",
+            "skip: k8s-website not at {} (run ./scripts/fetch-profile-repos.sh)",
             repo.display()
         );
         return;
@@ -450,7 +453,7 @@ fn k8s_website_obsidian_export_to_vault() {
     let repo = k8s_website_repo_path();
     if !repo.is_dir() {
         eprintln!(
-            "skip: k8s-website not at {} (run ./scripts/fetch-k8s-website-example.sh)",
+            "skip: k8s-website not at {} (run ./scripts/fetch-profile-repos.sh)",
             repo.display()
         );
         return;

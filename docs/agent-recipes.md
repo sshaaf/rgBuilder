@@ -201,7 +201,7 @@ rg-build -r "$REPO" semantic index --scope docs --embedder hash
 rg-build -r "$REPO" -f json semantic query "checkout flow" --scope docs --limit 10
 ```
 
-**Use when:** browsing or editing docs in Obsidian while keeping rgBuilder as the structural index. Large corpora: `./scripts/fetch-k8s-website-example.sh` + `example/k8s-website` (~17k Obsidian notes). Doc semantic index includes heading + `code_block` modules; re-run index after doc changes. See [markdown-context.md](markdown-context.md#semantic-search-doc-sections).
+**Use when:** browsing or editing docs in Obsidian while keeping rgBuilder as the structural index. Large corpora: `./scripts/fetch-profile-repos.sh` + `example/k8s-website` (~17k Obsidian notes). Doc semantic index includes heading + `code_block` modules; re-run index after doc changes. See [markdown-context.md](markdown-context.md#semantic-search-doc-sections).
 
 ---
 

@@ -11,7 +11,7 @@ use crate::analysis::{
     BlastSummaryProvider, CommunityQueryContext, OnnxReloadOptions, SemanticExpandConfig,
     SemanticExpandMode, SemanticFusionConfig, SemanticIndex,
 };
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use rgbuilder_graph::backend::GraphBackend;
 use rgbuilder_graph::CodeGraph;
 use serde::Serialize;
@@ -79,6 +79,8 @@ pub fn execute_semantic_query(
     index: &SemanticIndex,
     args: &SemanticQueryArgs,
 ) -> Result<SemanticQueryJsonResponse> {
+    validate_index_scope(index, args.scope)?;
+
     let reload = OnnxReloadOptions {
         model_path: args.model.clone(),
         tokenizer_path: args.tokenizer.clone(),
@@ -150,7 +152,7 @@ pub fn execute_semantic_query(
         ));
     }
 
-    let hits = query_index_with_fusion(
+    let mut hits = query_index_with_fusion(
         index,
         &args.query,
         args.limit,
@@ -159,6 +161,15 @@ pub fn execute_semantic_query(
         analysis.as_ref(),
         Some(repo),
     )?;
+    let unfiltered_hit_count = hits.len();
+    apply_scope_filter(&mut hits, args.scope);
+    if hits.is_empty() && unfiltered_hit_count > 0 {
+        bail!(
+            "semantic query scope {:?} produced no matching entries; rebuild index with `rg-build semantic index --scope {}`",
+            args.scope,
+            scope_flag(args.scope)
+        );
+    }
 
     let backend = graph.backend();
     let graph_digest = index.graph_digest.clone();
@@ -223,4 +234,62 @@ pub fn execute_semantic_query(
         hit_json,
         expansion,
     ))
+}
+
+fn apply_scope_filter(hits: &mut Vec<crate::analysis::SemanticHit>, scope: CliSemanticScope) {
+    match scope {
+        CliSemanticScope::Function => hits.retain(|hit| {
+            hit.entry
+                .node_type
+                .as_deref()
+                .is_some_and(|node_type| node_type == "Function")
+        }),
+        CliSemanticScope::Docs => hits.retain(|hit| {
+            hit.entry
+                .node_type
+                .as_deref()
+                .is_some_and(|node_type| node_type == "Module")
+                && hit
+                    .entry
+                    .kind
+                    .as_deref()
+                    .is_some_and(|kind| kind == "heading" || kind == "code_block")
+        }),
+        CliSemanticScope::All | CliSemanticScope::Community => {}
+    }
+}
+
+fn scope_flag(scope: CliSemanticScope) -> &'static str {
+    match scope {
+        CliSemanticScope::Function => "function",
+        CliSemanticScope::Docs => "docs",
+        CliSemanticScope::All => "all",
+        CliSemanticScope::Community => "community",
+    }
+}
+
+fn validate_index_scope(index: &SemanticIndex, requested: CliSemanticScope) -> Result<()> {
+    let has_functions = index
+        .entries
+        .iter()
+        .any(|e| e.node_type.as_deref() == Some("Function"));
+    let has_docs = index.entries.iter().any(|e| {
+        e.node_type.as_deref() == Some("Module")
+            && e
+                .kind
+                .as_deref()
+                .is_some_and(|kind| kind == "heading" || kind == "code_block")
+    });
+
+    match requested {
+        CliSemanticScope::Function if !has_functions && has_docs => bail!(
+            "semantic query scope {:?} is incompatible with current index contents; rebuild index with `rg-build semantic index --scope function`",
+            requested
+        ),
+        CliSemanticScope::Docs if !has_docs && has_functions => bail!(
+            "semantic query scope {:?} is incompatible with current index contents; rebuild index with `rg-build semantic index --scope docs`",
+            requested
+        ),
+        _ => Ok(()),
+    }
 }

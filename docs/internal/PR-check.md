@@ -17,6 +17,9 @@ Use this template to run a consistent, merge-readiness review for rgBuilder PRs.
 - [ ] Confirm no unintended local changes will pollute results.
 - [ ] Identify comparison baseline (e.g. `v0.4.4`, `main`, prior PR run).
 - [ ] Define target datasets/fixtures (linux, markdown corpus, mixed fixture, etc.).
+- [ ] If large example repos are missing under `example/`, run:
+  - `./scripts/fetch-profile-repos.sh`
+  - This fetches: `linux`, `kafka`, `metasfresh-4.9.8b`, `coolstore-weblogic`, `kubernetes`, `k8s-website`.
 
 Evidence:
 
@@ -95,6 +98,9 @@ Evidence:
 
 ## 7) Performance profiling (cold + A/B)
 
+- [ ] **Cold profile definition:** rebuild the release binary immediately before profiling:
+  - `cargo build --release --bin rg-build`
+  - Use the freshly built `target/release/rg-build` only; do not use debug/stale binaries.
 - [ ] Run cold profiles with clean `.rgbuilder` per run.
 - [ ] Use at least 3 runs and compare **median**.
 - [ ] Capture:

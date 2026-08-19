@@ -160,9 +160,15 @@ pub fn run_index(ctx: &CliContext, args: SemanticIndexArgs) -> Result<()> {
     if ctx.format == OutputFormat::Json {
         ctx.emit_json_value(&index_response_to_json(&response))?;
     } else {
+        let scope_label = match args.scope {
+            CliSemanticScope::Function => "functions",
+            CliSemanticScope::Docs => "doc sections",
+            CliSemanticScope::All => "entries",
+            CliSemanticScope::Community => "functions",
+        };
         println!(
-            "Indexed {} functions ({}, {} dims) → {}",
-            response.functions_indexed, response.model_id, response.dimensions, response.path
+            "Indexed {} {} ({}, {} dims) → {}",
+            response.functions_indexed, scope_label, response.model_id, response.dimensions, response.path
         );
         if let Some(build_stats) = &response.build_stats {
             println!(
