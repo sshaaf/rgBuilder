@@ -176,14 +176,22 @@ impl MacroCallIndex {
 
     #[allow(dead_code)]
     fn node_name(backend: &MemoryBackend, id: Uuid) -> Option<String> {
-        backend.get_node(id).ok().flatten().map(|n| n.name.to_string())
+        backend
+            .get_node(id)
+            .ok()
+            .flatten()
+            .map(|n| n.name.to_string())
     }
 
     fn node_name_lookup<L: crate::node_lookup::NodeLookup + ?Sized>(
         lookup: &L,
         id: Uuid,
     ) -> Option<String> {
-        lookup.get_node(id).ok().flatten().map(|n| n.name.to_string())
+        lookup
+            .get_node(id)
+            .ok()
+            .flatten()
+            .map(|n| n.name.to_string())
     }
 
     #[allow(dead_code)]
@@ -284,7 +292,10 @@ impl MacroCallIndex {
             entries.insert(*id, Self::entry_from_result_lookup(lookup, result));
             if let Some(node) = lookup.get_node(*id).ok().flatten() {
                 symbol_context.insert(*id, Self::symbol_context_from_node(&node));
-                name_index.entry(node.name.to_string()).or_default().push(*id);
+                name_index
+                    .entry(node.name.to_string())
+                    .or_default()
+                    .push(*id);
             }
         }
 

@@ -39,12 +39,10 @@ pub struct CodeSlice {
 fn variable_on_node(n: &crate::pdg::PdgNode, variable: &str) -> bool {
     n.defined_vars.contains(variable)
         || n.used_vars.contains(variable)
-        || n
-            .defined_vars
+        || n.defined_vars
             .iter()
             .any(|d| d.starts_with(&format!("{variable}.")))
-        || n
-            .used_vars
+        || n.used_vars
             .iter()
             .any(|u| u.starts_with(&format!("{variable}.")))
 }
@@ -65,10 +63,7 @@ fn find_criterion_nodes(
         .nodes
         .values()
         .filter(|n| {
-            n.statement.line == criterion.line
-                && alias_names
-                    .iter()
-                    .any(|v| variable_on_node(n, v))
+            n.statement.line == criterion.line && alias_names.iter().any(|v| variable_on_node(n, v))
         })
         .map(|n| n.id)
         .collect();

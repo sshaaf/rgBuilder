@@ -3,7 +3,7 @@
 //! Run: `cargo bench --bench blast_radius_benchmarks`
 //! Ignored gates: `cargo test --release --test blast_radius_perf -- --ignored`
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
+use criterion::{Criterion, Throughput, black_box, criterion_group, criterion_main};
 use rgbuilder::analysis::{BlastEngineSnapshot, BlastRadiusEngine, PetGraphView};
 use rgbuilder::graph::backend::GraphBackend;
 use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};

@@ -3,11 +3,11 @@
 //! Run: `cargo bench --bench centrality_benchmarks`
 //! Large gate: `cargo test --release --test centrality_audit -- --ignored`
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use rgbuilder::analysis::{FastPageRank, FlatGraphIndex, PetGraphView};
+use rgbuilder::graph::CodeGraph;
 use rgbuilder::graph::backend::GraphBackend;
 use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rgbuilder::graph::CodeGraph;
 use std::path::Path;
 use std::time::{Duration, Instant};
 

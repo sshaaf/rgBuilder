@@ -1,9 +1,9 @@
 //! Package-level metagraph for Phase 2 community / macro visualization.
 
-use crate::communities::{summarize_communities, CommunitiesPayload, COMMUNITIES_FILE};
+use crate::communities::{COMMUNITIES_FILE, CommunitiesPayload, summarize_communities};
+use rgbuilder_analysis::AnalysisResults;
 use rgbuilder_analysis::community::CommunityDetector;
 use rgbuilder_analysis::graph_utils::PetGraphView;
-use rgbuilder_analysis::AnalysisResults;
 use rgbuilder_graph::backend::{GraphBackend, MemoryBackend};
 use rgbuilder_graph::schema::{EdgeType, NodeType};
 use serde::{Deserialize, Serialize};
@@ -66,10 +66,43 @@ struct PackageBucket {
     label: String,
     functions: u32,
     classes: u32,
+    modules: u32,
+    files: u32,
     complexity_sum: f64,
     complexity_count: u32,
     member_indices: Vec<u32>,
     community_votes: HashMap<usize, u32>,
+}
+
+fn bucket_member_count(bucket: &PackageBucket) -> u32 {
+    bucket.functions + bucket.classes + bucket.modules + bucket.files
+}
+
+/// Node types included in package metagraph buckets (code + doc structure).
+fn is_metagraph_member(node: &rgbuilder_graph::schema::Node) -> bool {
+    match node.node_type {
+        NodeType::Function | NodeType::Class | NodeType::File => true,
+        NodeType::Module => module_kind_allowed(node.properties.get("kind").map(|s| s.as_str())),
+        _ => false,
+    }
+}
+
+/// Doc `:Module` kinds we bucket; code package modules have no `kind` property.
+fn module_kind_allowed(kind: Option<&str>) -> bool {
+    match kind {
+        None => true,
+        Some("heading") | Some("code_block") => true,
+        _ => false,
+    }
+}
+
+fn metagraph_edge_kind(edge_type: EdgeType) -> Option<&'static str> {
+    match edge_type {
+        EdgeType::Calls => Some("calls"),
+        EdgeType::References => Some("references"),
+        EdgeType::Uses => Some("uses"),
+        _ => None,
+    }
 }
 
 /// Build package metagraph from indexed graph and write JSON beside the dashboard bundle.
@@ -105,7 +138,7 @@ pub fn write_metagraph(
     };
 
     let _ = backend.for_each_node(|n| {
-        if !matches!(n.node_type, NodeType::Function | NodeType::Class) {
+        if !is_metagraph_member(n) {
             return;
         }
         let label = package_label(n.file_path.as_deref().unwrap_or(""));
@@ -115,6 +148,8 @@ pub fn write_metagraph(
                 label: label.clone(),
                 functions: 0,
                 classes: 0,
+                modules: 0,
+                files: 0,
                 complexity_sum: 0.0,
                 complexity_count: 0,
                 member_indices: Vec::new(),
@@ -126,6 +161,8 @@ pub fn write_metagraph(
         match n.node_type {
             NodeType::Function => bucket.functions += 1,
             NodeType::Class => bucket.classes += 1,
+            NodeType::Module => bucket.modules += 1,
+            NodeType::File => bucket.files += 1,
             _ => {}
         }
         if let Some(c) = n
@@ -150,6 +187,8 @@ pub fn write_metagraph(
                 label: "default".into(),
                 functions: 0,
                 classes: 0,
+                modules: 0,
+                files: 0,
                 complexity_sum: 0.0,
                 complexity_count: 0,
                 member_indices: Vec::new(),
@@ -159,7 +198,7 @@ pub fn write_metagraph(
     }
 
     let mut ranked: Vec<_> = packages.into_values().collect();
-    ranked.sort_by_key(|b| std::cmp::Reverse(b.functions + b.classes));
+    ranked.sort_by_key(|b| std::cmp::Reverse(bucket_member_count(b)));
 
     let tail = if ranked.len() > MAX_METANODES {
         ranked.split_off(MAX_METANODES - 1)
@@ -183,6 +222,8 @@ pub fn write_metagraph(
             label: "(other)".into(),
             functions: 0,
             classes: 0,
+            modules: 0,
+            files: 0,
             complexity_sum: 0.0,
             complexity_count: 0,
             member_indices: Vec::new(),
@@ -196,6 +237,8 @@ pub fn write_metagraph(
         for b in tail {
             merged.functions += b.functions;
             merged.classes += b.classes;
+            merged.modules += b.modules;
+            merged.files += b.files;
             merged.complexity_sum += b.complexity_sum;
             merged.complexity_count += b.complexity_count;
             merged.member_indices.extend(b.member_indices);
@@ -205,7 +248,7 @@ pub fn write_metagraph(
     }
 
     let _ = backend.for_each_node(|n| {
-        if !matches!(n.node_type, NodeType::Function | NodeType::Class) {
+        if !is_metagraph_member(n) {
             return;
         }
         let label = package_label(n.file_path.as_deref().unwrap_or(""));
@@ -216,11 +259,11 @@ pub fn write_metagraph(
         uuid_to_pkg.insert(n.id, pkg_id);
     });
 
-    let mut edge_weights: HashMap<(u32, u32), u32> = HashMap::new();
+    let mut edge_weights: HashMap<(u32, u32, &'static str), u32> = HashMap::new();
     let _ = backend.for_each_edge(|e| {
-        if e.edge_type != EdgeType::Calls {
+        let Some(kind) = metagraph_edge_kind(e.edge_type) else {
             return;
-        }
+        };
         let Some(&from) = uuid_to_pkg.get(&e.from) else {
             return;
         };
@@ -230,16 +273,16 @@ pub fn write_metagraph(
         if from == to {
             return;
         }
-        *edge_weights.entry((from, to)).or_insert(0) += 1;
+        *edge_weights.entry((from, to, kind)).or_insert(0) += 1;
     });
 
     let edges: Vec<Metaedge> = edge_weights
         .into_iter()
-        .map(|((source, target), weight)| Metaedge {
+        .map(|((source, target, kind), weight)| Metaedge {
             source,
             target,
             weight,
-            kind: "calls".into(),
+            kind: kind.into(),
         })
         .collect();
 
@@ -268,11 +311,12 @@ pub fn write_metagraph(
         if map.is_empty() {
             if let Some(a) = analysis {
                 let ctx = rgbuilder_analysis::CommunityQueryContext::from_analysis(a, |uuid| {
-                    backend
-                        .get_node(uuid)
-                        .ok()
-                        .flatten()
-                        .map(|n| (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())))
+                    backend.get_node(uuid).ok().flatten().map(|n| {
+                        (
+                            n.name.to_string(),
+                            n.file_path.as_ref().map(|s| s.to_string()),
+                        )
+                    })
                 });
                 map = ctx
                     .communities
@@ -359,7 +403,7 @@ fn detect_node_communities(backend: &MemoryBackend) -> Result<(HashMap<Uuid, usi
 }
 
 fn bucket_to_metanode(id: u32, bucket: PackageBucket) -> Metanode {
-    let size = bucket.functions + bucket.classes;
+    let size = bucket_member_count(&bucket);
     let avg_complexity = if bucket.complexity_count > 0 {
         bucket.complexity_sum / bucket.complexity_count as f64
     } else {
@@ -429,6 +473,84 @@ fn fs_write(path: std::path::PathBuf, bytes: &[u8]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rgbuilder_graph::schema::{Edge, Node};
+    use std::collections::HashMap;
+    use tempfile::tempdir;
+
+    fn doc_heading(name: &str, file: &str) -> Node {
+        Node::new(NodeType::Module, name)
+            .with_file_path(file)
+            .with_property("kind".to_string(), "heading".to_string())
+    }
+
+    #[test]
+    fn markdown_only_graph_produces_communities_and_metanodes() {
+        let mut backend = MemoryBackend::new();
+
+        let file_a = Node::new(NodeType::File, "content/en/docs/a.md")
+            .with_file_path("content/en/docs/a.md");
+        let file_b = Node::new(NodeType::File, "content/en/blog/b.md")
+            .with_file_path("content/en/blog/b.md");
+        let h_a = doc_heading("Alpha", "content/en/docs/a.md");
+        let h_b = doc_heading("Beta", "content/en/blog/b.md");
+        let h_c = doc_heading("Gamma", "content/en/blog/b.md");
+
+        let id_file_a = file_a.id;
+        let id_file_b = file_b.id;
+        let id_h_a = h_a.id;
+        let id_h_b = h_b.id;
+        let id_h_c = h_c.id;
+
+        backend.insert_node(file_a).unwrap();
+        backend.insert_node(file_b).unwrap();
+        backend.insert_node(h_a).unwrap();
+        backend.insert_node(h_b).unwrap();
+        backend.insert_node(h_c).unwrap();
+
+        backend
+            .insert_edge(Edge::new(id_h_a, id_h_b, EdgeType::References))
+            .unwrap();
+        backend
+            .insert_edge(Edge::new(id_h_b, id_h_c, EdgeType::References))
+            .unwrap();
+        backend
+            .insert_edge(Edge::new(id_h_a, id_file_b, EdgeType::References))
+            .unwrap();
+        backend
+            .insert_edge(Edge::new(id_file_a, id_h_a, EdgeType::Contains))
+            .unwrap();
+        backend
+            .insert_edge(Edge::new(id_file_b, id_h_b, EdgeType::Contains))
+            .unwrap();
+
+        let dir = tempdir().unwrap();
+        let export = write_metagraph(
+            &backend,
+            Path::new("graph.snapshot.bin"),
+            dir.path(),
+            5,
+            None,
+            &HashMap::new(),
+        )
+        .unwrap();
+
+        assert!(
+            export.meta.nodes.iter().any(|n| n.size > 0),
+            "metanodes must count doc modules/files"
+        );
+        assert!(
+            !export.meta.nodes.iter().all(|n| n.label == "default"),
+            "expected directory buckets, not placeholder default only"
+        );
+        assert!(
+            export.meta.edges.iter().any(|e| e.kind == "references"),
+            "metaedges must include REFERENCES for doc graphs"
+        );
+        assert!(
+            !export.communities.communities.is_empty(),
+            "communities.json must list communities for markdown REFERENCES graph"
+        );
+    }
 
     #[test]
     fn java_package_label() {
@@ -444,5 +566,24 @@ mod tests {
             package_label("src/graph/detection/mod.rs"),
             "src.graph.detection"
         );
+    }
+
+    #[test]
+    fn markdown_heading_modules_are_metagraph_members() {
+        let heading = rgbuilder_graph::schema::Node::new(NodeType::Module, "Intro")
+            .with_property("kind".to_string(), "heading".to_string());
+        let link = rgbuilder_graph::schema::Node::new(NodeType::Import, "link");
+        assert!(is_metagraph_member(&heading));
+        assert!(!is_metagraph_member(&link));
+    }
+
+    #[test]
+    fn references_edges_map_to_metagraph_kind() {
+        assert_eq!(
+            metagraph_edge_kind(EdgeType::References),
+            Some("references")
+        );
+        assert_eq!(metagraph_edge_kind(EdgeType::Calls), Some("calls"));
+        assert_eq!(metagraph_edge_kind(EdgeType::Contains), None);
     }
 }

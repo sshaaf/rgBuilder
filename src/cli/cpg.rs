@@ -3,13 +3,15 @@
 use super::args::{InspectLayer, OutputFormat, PdgEdgeLayer, SliceDirection, SliceView};
 use super::context::CliContext;
 use super::inspect::{self, InspectArgs};
+use super::markup::markup_context_unsupported;
 use super::slice::{self, SliceArgs};
 use anyhow::Result;
 use rgbuilder_analysis::{
-    cpg_calls, cpg_flows, cpg_function, cpg_mutations, cpg_status, export_cpg, CpgExportFormat,
-    CpgExportScope, CpgFlowsArgs, MutationQuery, SliceDirection as AnalysisSliceDirection,
-    AstSkeletonArchive,
+    AstSkeletonArchive, CpgExportFormat, CpgExportScope, CpgFlowsArgs, MutationQuery,
+    SliceDirection as AnalysisSliceDirection, cpg_calls, cpg_flows, cpg_function, cpg_mutations,
+    cpg_status, export_cpg,
 };
+use std::path::Path;
 
 pub enum CpgAction {
     Status,
@@ -81,14 +83,7 @@ pub fn run(ctx: &CliContext, action: CpgAction) -> Result<()> {
             direction,
             with_alias,
         } => run_flows(
-            ctx,
-            file,
-            line,
-            variable,
-            function,
-            language,
-            direction,
-            with_alias,
+            ctx, file, line, variable, function, language, direction, with_alias,
         ),
         CpgAction::Ast { symbol } => run_ast(ctx, &symbol),
         CpgAction::Export {
@@ -172,10 +167,7 @@ fn run_status(ctx: &CliContext) -> Result<()> {
         println!("CPG field writes: missing (run discover --with-cfg)");
     }
     if status.ast_skeleton_present {
-        println!(
-            "CPG AST skeleton: {} functions",
-            status.ast_skeleton_count
-        );
+        println!("CPG AST skeleton: {} functions", status.ast_skeleton_count);
     } else {
         println!("CPG AST skeleton: missing (optional: discover --with-ast-skeleton)");
     }
@@ -228,6 +220,9 @@ fn run_flows(
     direction: SliceDirection,
     with_alias: bool,
 ) -> Result<()> {
+    if let Some(msg) = markup_context_unsupported("cpg flows", Path::new(&file)) {
+        anyhow::bail!(msg);
+    }
     let direction = match direction {
         SliceDirection::Forward => AnalysisSliceDirection::Forward,
         SliceDirection::Backward => AnalysisSliceDirection::Backward,
@@ -359,11 +354,7 @@ fn run_function(ctx: &CliContext, symbol: &str) -> Result<()> {
         println!("  qualified: {qn}");
     }
     if let Some(file) = &info.file_path {
-        println!(
-            "  file: {}:{}",
-            file,
-            info.start_line.unwrap_or(0)
-        );
+        println!("  file: {}:{}", file, info.start_line.unwrap_or(0));
     }
     println!(
         "  L_proc: {}",

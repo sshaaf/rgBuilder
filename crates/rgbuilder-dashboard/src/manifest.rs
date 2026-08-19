@@ -304,7 +304,7 @@ fn chrono_now_rfc3339() -> String {
 mod tests {
     use super::*;
     use crate::communities::CommunitiesPayload;
-    use crate::metagraph::{MetagraphExport, MetagraphPayload, Metanode, COMMUNITY_ONLY_THRESHOLD};
+    use crate::metagraph::{COMMUNITY_ONLY_THRESHOLD, MetagraphExport, MetagraphPayload, Metanode};
     use crate::migration_export::MigrationExportSummary;
 
     #[test]

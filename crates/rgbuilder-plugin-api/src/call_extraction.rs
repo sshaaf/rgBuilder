@@ -17,10 +17,7 @@ pub const TS_CALL_KINDS: &[&str] = &["call_expression"];
 /// Find the innermost function symbol containing `node`.
 ///
 /// `function_symbols` SHOULD already be filtered to [`SymbolType::Function`].
-pub fn containing_function<'a>(
-    node: Node,
-    function_symbols: &[&'a Symbol],
-) -> Option<&'a Symbol> {
+pub fn containing_function<'a>(node: Node, function_symbols: &[&'a Symbol]) -> Option<&'a Symbol> {
     let line = node.start_position().row + 1;
     function_symbols
         .iter()
@@ -121,9 +118,7 @@ pub fn push_call_relation(
 
     let (to_type_hint, to_qualified_hint) = if language == "go" {
         let ty = go_call_type_hint(node, source, symbols, from_fn);
-        let qh = ty
-            .as_ref()
-            .map(|t| format!("{t}.{callee}"));
+        let qh = ty.as_ref().map(|t| format!("{t}.{callee}"));
         (ty, qh)
     } else {
         (None, None)
@@ -152,9 +147,7 @@ pub fn push_call_relation(
             .qualified_name
             .clone()
             .unwrap_or_else(|| callee.clone()),
-        _ => to_qualified_hint
-            .clone()
-            .unwrap_or_else(|| callee.clone()),
+        _ => to_qualified_hint.clone().unwrap_or_else(|| callee.clone()),
     };
 
     relations.push(Relation {
@@ -175,11 +168,7 @@ pub fn push_call_relation(
 }
 
 /// `recv.field.Method` → (receiver_type, field_name) for late resolution in GraphBuilder.
-fn go_field_selector_meta(
-    call: Node,
-    source: &[u8],
-    from_fn: &Symbol,
-) -> Option<(String, String)> {
+fn go_field_selector_meta(call: Node, source: &[u8], from_fn: &Symbol) -> Option<(String, String)> {
     let func = call.child_by_field_name("function")?;
     if func.kind() != "selector_expression" {
         return None;
@@ -275,8 +264,7 @@ fn go_call_type_hint(
                     | SymbolType::Annotation
             ) && s.name == recv_ty
         })?;
-        if owner.symbol_type == SymbolType::Interface
-            || owner.symbol_type == SymbolType::Annotation
+        if owner.symbol_type == SymbolType::Interface || owner.symbol_type == SymbolType::Annotation
         {
             return Some(owner.name.clone());
         }

@@ -2,8 +2,8 @@
 //!
 //! Task 5.2.2: Deduplicate repeated strings across nodes
 
-use rgbuilder_error::{Error, Result};
 use crate::schema::SharedStr;
+use rgbuilder_error::{Error, Result};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 

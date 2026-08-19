@@ -11,13 +11,32 @@ use petgraph::graph::NodeIndex;
 use rgbuilder_error::Result;
 use rgbuilder_graph::backend::MemoryBackend;
 use rgbuilder_graph::schema::{EdgeType, NodeType};
+use rgbuilder_graph::snapshot::SnapshotNodeStore;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 /// Default behavioral edge types for community detection.
+///
+/// Includes [`EdgeType::References`] so markdown/doc graphs (link structure) form
+/// communities alongside code [`Calls`] / [`Uses`].
 pub fn default_community_edge_types() -> &'static [EdgeType] {
-    &[EdgeType::Calls, EdgeType::Uses]
+    &[EdgeType::Calls, EdgeType::Uses, EdgeType::References]
+}
+
+/// Edge types for community detection on a loaded graph (adds `Contains` when no functions).
+pub fn community_edge_types_for_backend(backend: &MemoryBackend) -> Vec<EdgeType> {
+    let mut types = default_community_edge_types().to_vec();
+    let mut functions = 0usize;
+    let _ = backend.for_each_node(|node| {
+        if node.node_type == NodeType::Function {
+            functions += 1;
+        }
+    });
+    if functions == 0 {
+        types.push(EdgeType::Contains);
+    }
+    types
 }
 
 /// Default σ multiplier for statistical hub stripping (`μ + kσ`).
@@ -133,7 +152,18 @@ impl CommunityDetector {
         self
     }
 
-    /// Detect communities using behavioral edge types (Calls + Uses).
+    /// Detect communities using doc-aware edge projection ([`build_community_neighbor_lists`]).
+    pub fn detect_with_view_defaults(
+        &self,
+        view: &PetGraphView,
+        store: &SnapshotNodeStore,
+    ) -> Result<CommunityResult> {
+        let neighbors = build_community_neighbor_lists(view, store)?;
+        let allowed = default_community_edge_types();
+        self.detect_with_neighbor_lists(view, neighbors, allowed, None)
+    }
+
+    /// Detect communities using [`default_community_edge_types`].
     ///
     /// Accepts a pre-built PetGraphView to avoid rebuilding the topology.
     pub fn detect_with_view(&self, view: &PetGraphView) -> Result<CommunityResult> {
@@ -156,12 +186,27 @@ impl CommunityDetector {
         allowed_types: &[EdgeType],
         importance: Option<&HashMap<Uuid, f64>>,
     ) -> Result<CommunityResult> {
+        self.detect_with_neighbor_lists(
+            view,
+            build_filtered_neighbor_lists(view, allowed_types),
+            allowed_types,
+            importance,
+        )
+    }
+
+    /// Detect communities with pre-built undirected neighbor lists.
+    pub fn detect_with_neighbor_lists(
+        &self,
+        view: &PetGraphView,
+        neighbors: Vec<Vec<usize>>,
+        allowed_types: &[EdgeType],
+        importance: Option<&HashMap<Uuid, f64>>,
+    ) -> Result<CommunityResult> {
         let node_count = view.node_count();
         if node_count == 0 {
             return Ok(empty_community_result());
         }
 
-        let neighbors = build_filtered_neighbor_lists(view, allowed_types);
         let degrees: Vec<usize> = neighbors.iter().map(|n| n.len()).collect();
         let is_hub = select_hubs(
             &degrees,
@@ -495,6 +540,77 @@ fn build_filtered_neighbor_lists(
     view.topo.undirected_filtered_neighbors(allowed_types)
 }
 
+/// Community neighbor projection: behavioral edges plus scoped `Contains`.
+pub fn build_community_neighbor_lists(
+    view: &PetGraphView,
+    store: &SnapshotNodeStore,
+) -> Result<Vec<Vec<usize>>> {
+    let base = default_community_edge_types();
+    let mut neighbors = build_filtered_neighbor_lists(view, base);
+    let mut function_count = 0usize;
+    let mut is_heading = vec![false; neighbors.len()];
+    let mut heading_count = 0usize;
+    for id in store.all_node_ids() {
+        if let Some(node) = store.get_node(id)? {
+            if node.node_type == NodeType::Function {
+                function_count += 1;
+            }
+            if node.node_type == NodeType::Module && node.get_property("kind") == Some("heading") {
+                if let Some(idx) = view.uuid_to_index.get(&id) {
+                    let pos = idx.index();
+                    if !is_heading[pos] {
+                        is_heading[pos] = true;
+                        heading_count += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // Fast path for code-heavy graphs without markdown headings: behavioral edges
+    // are sufficient and avoid scanning massive `Contains` edge sets on repos like linux.
+    if function_count > 0 && heading_count == 0 {
+        return Ok(neighbors);
+    }
+
+    // Keep adjacency dedupe O(1) during augmentation.
+    let mut dedup_neighbors: Vec<HashSet<usize>> = neighbors
+        .iter()
+        .map(|adj| adj.iter().copied().collect::<HashSet<_>>())
+        .collect();
+
+    store.for_each_edge(|from, to, ty| {
+        if ty != EdgeType::Contains {
+            return Ok(());
+        }
+        let Some(from_idx) = view.uuid_to_index.get(&from) else {
+            return Ok(());
+        };
+        let Some(to_idx) = view.uuid_to_index.get(&to) else {
+            return Ok(());
+        };
+        let u = from_idx.index();
+        let v = to_idx.index();
+        if is_heading[u] && is_heading[v] {
+            push_undirected_neighbor_set(&mut dedup_neighbors, u, v);
+        }
+        Ok(())
+    })?;
+
+    for (idx, set) in dedup_neighbors.into_iter().enumerate() {
+        neighbors[idx] = set.into_iter().collect();
+    }
+    Ok(neighbors)
+}
+
+fn push_undirected_neighbor_set(neighbors: &mut [HashSet<usize>], u: usize, v: usize) {
+    if u == v {
+        return;
+    }
+    neighbors[u].insert(v);
+    neighbors[v].insert(u);
+}
+
 /// Dashboard community with inferred metadata (Phase 14 A+).
 #[derive(Debug, Clone, Serialize)]
 pub struct DashboardCommunity {
@@ -590,7 +706,7 @@ fn build_dashboard_community(
     };
 
     let label = {
-        use crate::community_label::{infer_community_label, CommunityLabelHints};
+        use crate::community_label::{CommunityLabelHints, infer_community_label};
         let packages: Vec<String> = file_paths
             .iter()
             .map(|p| {
@@ -866,6 +982,90 @@ mod tests {
         }
         assert_eq!(best_label_id, 1, "label-id should select the lowest label");
         assert_ne!(best_label, best_label_id);
+    }
+
+    #[test]
+    fn references_only_graph_forms_communities() {
+        let mut backend = MemoryBackend::new();
+        let a = Node::new(NodeType::Module, "doc_a")
+            .with_file_path("docs/a.md")
+            .with_property("kind".to_string(), "heading".to_string());
+        let b = Node::new(NodeType::Module, "doc_b")
+            .with_file_path("docs/b.md")
+            .with_property("kind".to_string(), "heading".to_string());
+        let c = Node::new(NodeType::Module, "doc_c")
+            .with_file_path("docs/b.md")
+            .with_property("kind".to_string(), "heading".to_string());
+        let id_a = a.id;
+        let id_b = b.id;
+        let id_c = c.id;
+        backend.insert_node(a).unwrap();
+        backend.insert_node(b).unwrap();
+        backend.insert_node(c).unwrap();
+        backend
+            .insert_edge(Edge::new(id_a, id_b, EdgeType::References))
+            .unwrap();
+        backend
+            .insert_edge(Edge::new(id_b, id_c, EdgeType::References))
+            .unwrap();
+
+        let view = PetGraphView::from_backend(&backend).unwrap();
+        let detector = CommunityDetector::new();
+        let result = detector
+            .detect_with_view_filtered(&view, default_community_edge_types())
+            .unwrap();
+        assert!(!result.communities.is_empty());
+        assert!(result.modularity >= 0.0);
+    }
+
+    #[test]
+    fn mixed_code_and_docs_graph_forms_communities() {
+        let mut backend = MemoryBackend::new();
+        let f_checkout = Node::new(NodeType::Function, "checkout");
+        let f_publish = Node::new(NodeType::Function, "publishEvent");
+        let h_checkout = Node::new(NodeType::Module, "Checkout Flow")
+            .with_file_path("docs/guide.md")
+            .with_property("kind".to_string(), "heading".to_string());
+        let h_payments = Node::new(NodeType::Module, "Payments")
+            .with_file_path("docs/adr.md")
+            .with_property("kind".to_string(), "heading".to_string());
+
+        let id_checkout = f_checkout.id;
+        let id_publish = f_publish.id;
+        let id_h_checkout = h_checkout.id;
+        let id_h_payments = h_payments.id;
+
+        backend.insert_node(f_checkout).unwrap();
+        backend.insert_node(f_publish).unwrap();
+        backend.insert_node(h_checkout).unwrap();
+        backend.insert_node(h_payments).unwrap();
+
+        backend
+            .insert_edge(Edge::new(id_checkout, id_publish, EdgeType::Calls))
+            .unwrap();
+        backend
+            .insert_edge(Edge::new(
+                id_h_checkout,
+                id_h_payments,
+                EdgeType::References,
+            ))
+            .unwrap();
+        backend
+            .insert_edge(Edge::new(id_h_checkout, id_h_payments, EdgeType::Contains))
+            .unwrap();
+
+        let view = PetGraphView::from_backend(&backend).unwrap();
+        let detector = CommunityDetector::new();
+        let result = detector
+            .detect_with_view_filtered(&view, default_community_edge_types())
+            .unwrap();
+
+        assert!(!result.communities.is_empty());
+        assert_eq!(result.assignments.len(), 4);
+        assert!(result.assignments.contains_key(&id_checkout));
+        assert!(result.assignments.contains_key(&id_publish));
+        assert!(result.assignments.contains_key(&id_h_checkout));
+        assert!(result.assignments.contains_key(&id_h_payments));
     }
 
     #[test]

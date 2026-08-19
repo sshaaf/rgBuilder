@@ -1,13 +1,13 @@
 //! Phase 14 centrality audit — edge isolation, bridge detection, convergence, policy.
 
 use rgbuilder::analysis::{
-    check_policies, default_behavioral_edges, BetweennessCentrality, BlastRadiusEngine,
-    CentralityAnalyzer, CentralityScores, FastPageRank, FlatGraphIndex, PetGraphView,
-    PolicyRegistry, PolicyViolation, PAGERANK_TOLERANCE,
+    BetweennessCentrality, BlastRadiusEngine, CentralityAnalyzer, CentralityScores, FastPageRank,
+    FlatGraphIndex, PAGERANK_TOLERANCE, PetGraphView, PolicyRegistry, PolicyViolation,
+    check_policies, default_behavioral_edges,
 };
+use rgbuilder::graph::CodeGraph;
 use rgbuilder::graph::backend::GraphBackend;
 use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rgbuilder::graph::CodeGraph;
 use std::collections::HashMap;
 use std::path::Path;
 use std::time::{Duration, Instant};

@@ -184,6 +184,31 @@ fn cross_feature_consistency_after_discover() {
         "--cfg",
     ]);
     assert_success(&discover, "discover --cfg");
+    let discover_doc = sandbox.parse_json(&discover);
+    let files_failed = discover_doc
+        .pointer("/metrics/files_failed")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    check(
+        &mut failures,
+        files_failed == 0,
+        "REL",
+        format!("discover reported files_failed={files_failed} on fixture"),
+    );
+    let files_discovered = discover_doc
+        .pointer("/metrics/files_discovered")
+        .and_then(|v| v.as_u64());
+    let files_processed = discover_doc
+        .pointer("/metrics/files_processed")
+        .and_then(|v| v.as_u64());
+    if let (Some(d), Some(p)) = (files_discovered, files_processed) {
+        check(
+            &mut failures,
+            d == p,
+            "REL",
+            format!("discover metrics mismatch: files_discovered={d} files_processed={p}"),
+        );
+    }
 
     let blast_pe = sandbox.run(&["-f", "json", "blast-radius", "publishEvent"]);
     assert_success(&blast_pe, "blast-radius publishEvent");
@@ -373,7 +398,16 @@ fn cross_feature_consistency_after_discover() {
         );
     }
 
-    let index = sandbox.run(&["-f", "json", "semantic", "index", "--dimensions", "256"]);
+    let index = sandbox.run(&[
+        "-f",
+        "json",
+        "semantic",
+        "index",
+        "--dimensions",
+        "256",
+        "--embedder",
+        "vocab",
+    ]);
     assert_success(&index, "semantic index");
     let query = sandbox.run(&[
         "-f",

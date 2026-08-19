@@ -4,10 +4,10 @@
 //! - Unix: domain socket at `<repo>/.rgbuilder/query.sock`
 //! - Windows: loopback TCP; port stored in `<repo>/.rgbuilder/query.port`
 
-use super::blast_radius::{build_lite_response, BlastRadiusArgs};
+use super::blast_radius::{BlastRadiusArgs, build_lite_response};
 use super::blast_radius_output::BlastRadiusResponse;
 use super::context::CliContext;
-use crate::analysis::{parse_fqn_symbol, try_load_engine, BlastRadiusEngine};
+use crate::analysis::{BlastRadiusEngine, parse_fqn_symbol, try_load_engine};
 use anyhow::{Context, Result};
 use rgbuilder_graph::SnapshotNodeStore;
 use serde::{Deserialize, Serialize};
@@ -204,6 +204,13 @@ mod transport {
     use super::*;
     use std::os::unix::net::{UnixListener, UnixStream};
 
+    /// Max byte length for `sockaddr_un.sun_path` on common Unix targets (macOS/Linux).
+    const UNIX_SOCKET_PATH_MAX: usize = 104;
+
+    fn unix_socket_path_too_long(path: &Path) -> bool {
+        path.as_os_str().len() >= UNIX_SOCKET_PATH_MAX
+    }
+
     pub fn serve(ctx: &CliContext, socket_path: PathBuf, idle_secs: u64) -> Result<()> {
         let state = load_daemon_state(ctx)?;
         if socket_path.exists() {
@@ -214,8 +221,20 @@ mod transport {
             std::fs::create_dir_all(parent)?;
         }
 
-        let listener = UnixListener::bind(&socket_path)
-            .with_context(|| format!("bind query socket {}", socket_path.display()))?;
+        let listener = match UnixListener::bind(&socket_path) {
+            Ok(listener) => listener,
+            Err(err) if err.kind() == std::io::ErrorKind::InvalidInput => {
+                anyhow::bail!(
+                    "query socket path is too long for AF_UNIX ({} bytes): {}. \
+                     Use a shorter repository path or `serve --socket /tmp/rgbuilder.sock`",
+                    socket_path.as_os_str().len(),
+                    socket_path.display()
+                );
+            }
+            Err(err) => {
+                Err(err).with_context(|| format!("bind query socket {}", socket_path.display()))?
+            }
+        };
         eprintln!(
             "rg-build query daemon listening on {} (idle exit {}s)",
             socket_path.display(),
@@ -235,10 +254,15 @@ mod transport {
     }
 
     fn connect_socket(path: &Path) -> Result<Option<UnixStream>> {
+        if unix_socket_path_too_long(path) {
+            return Ok(None);
+        }
         let stream = match UnixStream::connect(path) {
             Ok(stream) => stream,
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(None),
             Err(err) if err.kind() == std::io::ErrorKind::ConnectionRefused => return Ok(None),
+            // Path longer than sockaddr_un.sun_path (blast-radius falls back to mmap lite path).
+            Err(err) if err.kind() == std::io::ErrorKind::InvalidInput => return Ok(None),
             Err(err) => return Err(err.into()),
         };
         stream
@@ -507,5 +531,26 @@ mod tests {
 
         drop(client);
         server.join().unwrap();
+    }
+
+    #[test]
+    fn rpc_call_skips_when_socket_path_too_long() {
+        let base = TempDir::new().unwrap();
+        let mut path = base.path().to_path_buf();
+        while path.as_os_str().len() < 104 {
+            path = path.join("x");
+        }
+        path.set_extension("sock");
+        assert!(
+            path.as_os_str().len() >= 104,
+            "could not construct overlong AF_UNIX path for this platform"
+        );
+        let request = RpcRequest {
+            id: 0,
+            method: "ping".into(),
+            params: serde_json::Value::Null,
+        };
+        let out = transport::rpc_call_endpoint(&path, &request).unwrap();
+        assert!(out.is_none());
     }
 }

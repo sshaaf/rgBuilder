@@ -4,10 +4,11 @@
 //! so the default discover path stays lean. Default semantic embedder is bundled
 //! code-daemon (requires the `semantic-onnx` feature, enabled by default).
 
-use crate::semantic_embedder::{embedder_for_index, OnnxReloadOptions, SemanticEmbedder};
+use crate::semantic_embedder::{OnnxReloadOptions, SemanticEmbedder, embedder_for_index};
 use crate::semantic_extract::extract_body_tokens_for_node;
 use rgbuilder_error::Result;
 use rgbuilder_graph::backend::MemoryBackend;
+use rgbuilder_graph::content_store::ContentStore;
 use rgbuilder_graph::schema::{Node, NodeType};
 use serde::{Deserialize, Serialize};
 use std::collections::{BinaryHeap, HashMap, HashSet};
@@ -40,6 +41,12 @@ pub struct SemanticEntry {
     /// BLAKE3 body hash at index time (incremental reuse).
     #[serde(default)]
     pub code_hash: Option<String>,
+    /// GQL node type label (`Function`, `Module`, …).
+    #[serde(default)]
+    pub node_type: Option<String>,
+    /// Doc `kind` property when indexed (`heading`, `code_block`, …).
+    #[serde(default)]
+    pub kind: Option<String>,
 }
 
 /// Bit-packed semantic index over function nodes only.
@@ -131,6 +138,18 @@ pub struct SemanticBuildStats {
     pub removed: usize,
 }
 
+/// Which graph nodes to embed in the semantic index.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SemanticIndexScope {
+    /// Function symbols only (default).
+    #[default]
+    Functions,
+    /// Documentation headings (`:Module` with `kind=heading`).
+    Docs,
+    /// Functions and documentation sections.
+    All,
+}
+
 /// Options controlling semantic index construction.
 #[derive(Debug, Clone)]
 pub struct SemanticBuildOptions {
@@ -150,6 +169,8 @@ pub struct SemanticBuildOptions {
     pub repo_root: Option<PathBuf>,
     /// Optional index-time call-graph diffusion (before sign quantization).
     pub diffuse: Option<crate::semantic_diffuse::DiffuseConfig>,
+    /// Node kinds to index.
+    pub scope: SemanticIndexScope,
 }
 
 impl SemanticBuildOptions {
@@ -164,6 +185,7 @@ impl SemanticBuildOptions {
             tokenizer_path: None,
             repo_root: None,
             diffuse: None,
+            scope: SemanticIndexScope::Functions,
         }
     }
 }
@@ -205,16 +227,28 @@ pub fn build_index(
     }
 
     let repo_root = options.repo_root.as_deref();
-    let mut functions: Vec<(SemanticEntry, String)> = Vec::new();
+    let content_store = options
+        .repo_root
+        .as_ref()
+        .and_then(|root| ContentStore::load(ContentStore::default_path(root)).ok());
+    let mut candidates: Vec<(SemanticEntry, String)> = Vec::new();
     backend.for_each_node(|node| {
-        if let Some(text) = embed_text_for_function(node, repo_root) {
-            functions.push((
+        let text = embed_text_for_scope(node, options.scope, repo_root, content_store.as_ref());
+        if let Some(text) = text {
+            let code_hash = node
+                .code_hash
+                .as_ref()
+                .map(|s| s.to_string())
+                .or_else(|| node.get_property("body_hash").map(|s| s.to_string()));
+            candidates.push((
                 SemanticEntry {
                     node_id: node.id,
                     name: node.name.to_string(),
                     qualified_name: node.qualified_name.as_ref().map(|s| s.to_string()),
                     file_path: node.file_path.as_ref().map(|s| s.to_string()),
-                    code_hash: node.code_hash.as_ref().map(|s| s.to_string()),
+                    code_hash,
+                    node_type: Some(format!("{:?}", node.node_type)),
+                    kind: node.get_property("kind").map(|s| s.to_string()),
                 },
                 text,
             ));
@@ -223,12 +257,12 @@ pub fn build_index(
 
     let diffuse = options.diffuse.filter(|cfg| cfg.is_active());
 
-    // Pure incremental hit: every function reuses bits and digests match.
+    // Pure incremental hit: every indexed node reuses bits and digests match.
     // When diffusion is requested, never take the pure-reuse shortcut — bits must be
     // recomputed through the dense→diffuse→quantize path.
     let mut pure_reuse = options.incremental && digest_matches_existing && diffuse.is_none();
     if pure_reuse {
-        for (fresh_entry, _) in &functions {
+        for (fresh_entry, _) in &candidates {
             match reuse_by_id.get(&fresh_entry.node_id) {
                 Some((old_entry, _)) if old_entry.code_hash == fresh_entry.code_hash => {}
                 _ => {
@@ -237,7 +271,7 @@ pub fn build_index(
                 }
             }
         }
-        if functions.len()
+        if candidates.len()
             != options
                 .existing
                 .as_ref()
@@ -257,7 +291,7 @@ pub fn build_index(
         let mut entry_by_uuid: HashMap<Uuid, (SemanticEntry, Vec<f32>)> = HashMap::new();
 
         let mut seen = HashSet::new();
-        for (fresh_entry, text) in functions {
+        for (fresh_entry, text) in candidates {
             seen.insert(fresh_entry.node_id);
             stats.total += 1;
             stats.embedded += 1;
@@ -296,7 +330,7 @@ pub fn build_index(
         }
     } else {
         let mut seen = HashSet::new();
-        for (fresh_entry, text) in functions {
+        for (fresh_entry, text) in candidates {
             seen.insert(fresh_entry.node_id);
             stats.total += 1;
 
@@ -395,6 +429,50 @@ pub fn embed_text_for_function(node: &Node, repo_root: Option<&Path>) -> Option<
     }
 
     Some(parts.join(" "))
+}
+
+/// Collect embeddable text for a documentation section (`:Module` heading / code block).
+pub fn embed_text_for_doc_node(
+    node: &Node,
+    content_store: Option<&ContentStore>,
+) -> Option<String> {
+    if node.node_type != NodeType::Module {
+        return None;
+    }
+    let kind = node.get_property("kind")?;
+    if kind != "heading" && kind != "code_block" {
+        return None;
+    }
+    let mut parts: Vec<String> = Vec::new();
+    if let Some(qn) = &node.qualified_name {
+        parts.push(qn.to_string());
+    }
+    parts.push(node.name.to_string());
+    if let Some(text) = node.get_property("body_text") {
+        parts.push(text.to_string());
+    } else if let Some(ref_key) = node.get_property("body_ref") {
+        if let Some(store) = content_store {
+            if let Some(body) = store.get_str(ref_key) {
+                parts.push(body.to_string());
+            }
+        }
+    }
+    Some(parts.join(" "))
+}
+
+/// Resolve embeddable text for the configured semantic index scope.
+pub fn embed_text_for_scope(
+    node: &Node,
+    scope: SemanticIndexScope,
+    repo_root: Option<&Path>,
+    content_store: Option<&ContentStore>,
+) -> Option<String> {
+    match scope {
+        SemanticIndexScope::Functions => embed_text_for_function(node, repo_root),
+        SemanticIndexScope::Docs => embed_text_for_doc_node(node, content_store),
+        SemanticIndexScope::All => embed_text_for_function(node, repo_root)
+            .or_else(|| embed_text_for_doc_node(node, content_store)),
+    }
 }
 
 /// Deterministic sign-hash embedding (bag-of-tokens → sparse signed vector).
@@ -599,9 +677,11 @@ pub fn query_communities(
     }
 
     hits.sort_by(|a, b| {
-        a.distance
-            .cmp(&b.distance)
-            .then_with(|| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal))
+        a.distance.cmp(&b.distance).then_with(|| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
     });
     hits.truncate(k);
     Ok(hits)
@@ -700,6 +780,8 @@ mod tests {
                     qualified_name: None,
                     file_path: None,
                     code_hash: None,
+                    node_type: None,
+                    kind: None,
                 })
                 .collect(),
             binary_embeddings: vec![
@@ -725,7 +807,7 @@ mod tests {
     #[test]
     fn embed_text_for_function_includes_signature() {
         let node = Node::new(NodeType::Function, "run")
-            .with_qualified_name("auth::run".into())
+            .with_qualified_name("auth::run")
             .with_signature("async fn run(token: &str) -> bool");
         let text = embed_text_for_node(&node).unwrap();
         assert!(text.contains("auth::run"));
@@ -733,13 +815,22 @@ mod tests {
     }
 
     #[test]
+    fn embed_text_skips_markup_heading_modules() {
+        let heading = Node::new(NodeType::Module, "Checkout Flow")
+            .with_property("kind".to_string(), "heading".to_string())
+            .with_file_path("docs/guide.md");
+        assert!(embed_text_for_function(&heading, None).is_none());
+        assert!(embed_text_for_node(&heading).is_none());
+    }
+
+    #[test]
     fn build_and_query_from_backend() {
         let mut backend = MemoryBackend::new();
         let n1 = Node::new(NodeType::Function, "authenticate")
-            .with_qualified_name("auth::authenticate".into())
+            .with_qualified_name("auth::authenticate")
             .with_signature("fn authenticate(token: &str) -> bool");
         let n2 = Node::new(NodeType::Function, "revoke")
-            .with_qualified_name("auth::revoke".into())
+            .with_qualified_name("auth::revoke")
             .with_signature("fn revoke(token: &str)");
         let class = Node::new(NodeType::Class, "AuthService");
         backend.insert_node(n1.clone()).unwrap();
@@ -772,6 +863,8 @@ mod tests {
                 qualified_name: None,
                 file_path: Some("src/main.rs".into()),
                 code_hash: Some("abc".into()),
+                node_type: None,
+                kind: None,
             }],
             binary_embeddings: vec![0b1010_1010, 0b0101_0101],
         };
@@ -809,6 +902,7 @@ mod tests {
                 tokenizer_path: None,
                 repo_root: None,
                 diffuse: None,
+                scope: SemanticIndexScope::Functions,
             },
         )
         .unwrap();
@@ -833,6 +927,7 @@ mod tests {
                 tokenizer_path: None,
                 repo_root: None,
                 diffuse: None,
+                scope: SemanticIndexScope::Functions,
             },
         )
         .unwrap();
@@ -855,10 +950,10 @@ mod tests {
 
         let mut backend = MemoryBackend::new();
         let opaque = Node::new(NodeType::Function, "cryptic_a")
-            .with_file_path(rel.into())
+            .with_file_path(rel)
             .with_location(1, 1);
         let helper = Node::new(NodeType::Function, "cryptic_b")
-            .with_file_path(rel.into())
+            .with_file_path(rel)
             .with_location(3, 5)
             .with_code_hash("body-v1");
         backend.insert_node(opaque.clone()).unwrap();
@@ -876,6 +971,7 @@ mod tests {
                 tokenizer_path: None,
                 repo_root: None,
                 diffuse: None,
+                scope: SemanticIndexScope::Functions,
             },
         )
         .unwrap()
@@ -893,6 +989,7 @@ mod tests {
                 tokenizer_path: None,
                 repo_root: Some(dir.path().to_path_buf()),
                 diffuse: None,
+                scope: SemanticIndexScope::Functions,
             },
         )
         .unwrap()
@@ -938,6 +1035,8 @@ mod tests {
                     qualified_name: None,
                     file_path: None,
                     code_hash: None,
+                    node_type: None,
+                    kind: None,
                 })
                 .collect(),
             binary_embeddings: bits,

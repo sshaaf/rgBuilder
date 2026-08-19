@@ -174,10 +174,7 @@ fn print_timing_table(label: &str, timings: &[QueryTiming]) {
     let max = timings.iter().map(|t| t.wall).max().unwrap_or_default();
     let min = timings.iter().map(|t| t.wall).min().unwrap_or_default();
     eprintln!("\n=== {label} ({n} queries) ===", n = timings.len());
-    eprintln!(
-        "{:<22} {:>10} {:>6}",
-        "query_id", "wall_ms", "hits"
-    );
+    eprintln!("{:<22} {:>10} {:>6}", "query_id", "wall_ms", "hits");
     for t in timings {
         eprintln!(
             "{:<22} {:>10.2} {:>6}",
@@ -242,10 +239,7 @@ fn vocab_multi_query_timing_polyglot() {
     assert!(
         timings.iter().all(|t| t.wall < Duration::from_secs(10)),
         "an individual query exceeded 10s: {:?}",
-        timings
-            .iter()
-            .map(|t| (&t.id, t.wall))
-            .collect::<Vec<_>>()
+        timings.iter().map(|t| (&t.id, t.wall)).collect::<Vec<_>>()
     );
 }
 
@@ -305,8 +299,8 @@ fn linux_vocab_multi_query_timing() {
     let mut timings = Vec::new();
     for (id, text) in queries {
         let started = Instant::now();
-        let hits =
-            rgbuilder_analysis::query_index_with_embedder(&index, text, 10, &reload).expect("query");
+        let hits = rgbuilder_analysis::query_index_with_embedder(&index, text, 10, &reload)
+            .expect("query");
         let wall = started.elapsed();
         timings.push(QueryTiming {
             id: id.to_string(),
@@ -324,7 +318,10 @@ fn linux_vocab_multi_query_timing() {
     }
 
     print_timing_table("example/linux in-process vocab Hamming", &timings);
-    let mean_ms = timings.iter().map(|t| t.wall.as_secs_f64() * 1000.0).sum::<f64>()
+    let mean_ms = timings
+        .iter()
+        .map(|t| t.wall.as_secs_f64() * 1000.0)
+        .sum::<f64>()
         / timings.len().max(1) as f64;
     eprintln!("linux mean wall_ms={mean_ms:.2} (index load excluded: {load_ms:.1}ms)");
     // In-process Hamming over ~1.86M × 32 B should be well under 20s mean.

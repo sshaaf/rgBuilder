@@ -17,13 +17,20 @@ export function nodeTypeBit(nodeType: number): number {
 export function passesMetanodeTypeMask(node: Metanode, mask: number): boolean {
   const fn = NODE_TYPE_MASK.Function;
   const cl = NODE_TYPE_MASK.Class;
-  const rollupMask = fn | cl;
+  const mod = NODE_TYPE_MASK.Module;
+  const rollupMask = fn | cl | mod;
   const selected = mask & rollupMask;
   if (selected === 0) return true;
 
   let match = false;
   if (selected & fn) match ||= node.functions > 0;
   if (selected & cl) match ||= node.classes > 0;
+  if (selected & mod) {
+    // Doc rollups: `size` counts modules/files; code packages match via fn/cl bits above.
+    const docOnly = node.functions === 0 && node.classes === 0 && node.size > 0;
+    const codeSelected = (selected & fn) !== 0 || (selected & cl) !== 0;
+    match ||= docOnly || (!codeSelected && node.size > 0);
+  }
   return match;
 }
 

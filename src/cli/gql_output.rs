@@ -3,7 +3,7 @@
 use rgbuilder_analysis::is_virtual_community;
 use rgbuilder_gql::QueryResult;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// Current GQL JSON schema version.
 pub const GQL_SCHEMA_VERSION: u32 = 1;
@@ -57,11 +57,7 @@ fn projected_properties(
             out.insert((*key).to_string(), val.clone());
         }
     }
-    if out.is_empty() {
-        None
-    } else {
-        Some(out)
-    }
+    if out.is_empty() { None } else { Some(out) }
 }
 
 /// Top-level GQL JSON payload.
@@ -155,8 +151,8 @@ pub fn fixture_gql_json() -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rgbuilder_graph::schema::{Node, NodeType};
     use rgbuilder_gql::QueryResult;
+    use rgbuilder_graph::schema::{Node, NodeType};
     use std::collections::HashMap;
 
     #[test]

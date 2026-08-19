@@ -299,7 +299,9 @@ fn signature_wildcard_match(pattern: &str, signature: &str) -> bool {
             return false;
         }
     }
-    parts.last().is_none_or(|last| last.is_empty() || signature.ends_with(last))
+    parts
+        .last()
+        .is_none_or(|last| last.is_empty() || signature.ends_with(last))
 }
 
 #[cfg(test)]

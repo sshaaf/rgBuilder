@@ -96,10 +96,7 @@ where
             members.entry(cid).or_default().push((uuid, compact));
         }
     }
-    let pagerank = analysis
-        .centrality
-        .as_ref()
-        .map(|c| c.pagerank.clone());
+    let pagerank = analysis.centrality.as_ref().map(|c| c.pagerank.clone());
 
     let mut labeled: Vec<(usize, String)> = Vec::with_capacity(members.len());
     for (cid, entries) in &members {
@@ -158,7 +155,12 @@ where
     F: FnMut(Uuid) -> Option<Node>,
 {
     fill_community_labels(analysis, infrastructure_id, |uuid| {
-        get_node(uuid).map(|n| (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())))
+        get_node(uuid).map(|n| {
+            (
+                n.name.to_string(),
+                n.file_path.as_ref().map(|s| s.to_string()),
+            )
+        })
     })
 }
 
@@ -306,11 +308,7 @@ mod tests {
 
     #[test]
     fn dedupe_suffixes() {
-        let mut labels = vec![
-            (1, "auth".into()),
-            (2, "auth".into()),
-            (3, "cart".into()),
-        ];
+        let mut labels = vec![(1, "auth".into()), (2, "auth".into()), (3, "cart".into())];
         dedupe_community_labels(&mut labels);
         assert_eq!(labels[0].1, "auth");
         assert_eq!(labels[1].1, "auth (2)");
@@ -319,11 +317,7 @@ mod tests {
 
     #[test]
     fn token_fallback() {
-        let names = vec![
-            "do_login".into(),
-            "try_login".into(),
-            "login_admin".into(),
-        ];
+        let names = vec!["do_login".into(), "try_login".into(), "login_admin".into()];
         let label = infer_community_label(&CommunityLabelHints {
             id: 9,
             names: &names,

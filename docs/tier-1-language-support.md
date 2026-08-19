@@ -20,6 +20,8 @@ rgBuilder uses a **hybrid tiering** model:
 
 **Tier 1 custom plugins today:** Rust, Python, TypeScript, JavaScript, Go, Java, C#, C, C++ — see `languages.toml` (`handler = "custom"`).
 
+**Markdown** is a separate **custom markup plugin** (`rgbuilder-lang-markdown`): documentation context graph only — not Tier 1 and not generic Tier 2. See [markdown-context.md](markdown-context.md).
+
 **Fully supported** means the language passes **all** of [Layers A–F](#2-capability-checklist--fully-supported) with automated tests. Layer F (hybrid CPG: fields, constructors, typed params, field-write mutations) is **not optional** for Tier 1 — Java is the reference implementation, not a special case.
 
 Honesty limits still apply (no full points-to, no reflection, dynamic languages may emit more `Unresolved` receivers) — but plugins must ship the same *shapes* and golden mutation fixture as Java.

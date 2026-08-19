@@ -1,7 +1,7 @@
 //! Phase 12.4 — GQL integration tests
 
 use rgbuilder::gql::{
-    execute, execute_explain, execute_macro, parse, QueryExecutor, QueryMacroRegistry,
+    QueryExecutor, QueryMacroRegistry, execute, execute_explain, execute_macro, parse,
 };
 use rgbuilder::graph::backend::{GraphBackend, MemoryBackend};
 use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};

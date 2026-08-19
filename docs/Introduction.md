@@ -68,6 +68,8 @@ Commands and sample output live in the **[User Guide](user-guide.md)**. Short in
 | **migration hints** | Package roadmap JSON (`--export-migration-hints`) |
 | **serve** | Optional HTTP API (+ dashboard if assets present) |
 
+**Markdown / docs:** `discover` indexes `.md` and `.mdx` by default (headings, links, frontmatter). GQL on `:Module` (`kind=heading`) and `REFERENCES`; semantic search stays function-only. See [markdown-context.md](markdown-context.md).
+
 Languages: [languages.md](languages.md). Research: [further-reading.md](further-reading.md).
 
 ---
@@ -79,4 +81,5 @@ Languages: [languages.md](languages.md). Research: [further-reading.md](further-
 | Install and run every CLI command | [User Guide](user-guide.md) |
 | Agent recipes | [AGENTS.md](../AGENTS.md) · [agent-recipes.md](agent-recipes.md) |
 | JSON fields | [json-api.md](json-api.md) |
+| Markdown / doc graph | [markdown-context.md](markdown-context.md) |
 | Contribute / internals | [docs hub — For contributors](README.md#for-contributors) |

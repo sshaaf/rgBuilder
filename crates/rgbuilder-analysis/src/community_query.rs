@@ -1,8 +1,6 @@
 //! Query-time community overlay for GQL (virtual `:Community` + `community_id`).
 
-use crate::community_label::{
-    dedupe_community_labels, infer_community_label, CommunityLabelHints,
-};
+use crate::community_label::{CommunityLabelHints, dedupe_community_labels, infer_community_label};
 use crate::results::AnalysisResults;
 use rgbuilder_graph::schema::{Node, NodeType};
 use std::collections::HashMap;
@@ -104,8 +102,7 @@ impl CommunityQueryContext {
                 );
                 node.properties
                     .insert("community_id".into(), c.id.to_string());
-                node.properties
-                    .insert("label".into(), c.label.clone());
+                node.properties.insert("label".into(), c.label.clone());
                 node.properties
                     .insert("member_count".into(), c.member_count.to_string());
                 node.properties

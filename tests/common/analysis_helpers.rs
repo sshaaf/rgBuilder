@@ -3,9 +3,9 @@
 #![allow(dead_code)]
 
 use rgbuilder::analysis::{
-    build_cfg_for_function, CallGraph, ControlFlowGraph, DominatorTree, InferredType,
-    ProgramDependenceGraph, TaintAnalyzer, TaintFlow, TaintSink, TaintSource, TypeInferenceEngine,
-    VariableType,
+    CallGraph, ControlFlowGraph, DominatorTree, InferredType, ProgramDependenceGraph,
+    TaintAnalyzer, TaintFlow, TaintSink, TaintSource, TypeInferenceEngine, VariableType,
+    build_cfg_for_function,
 };
 use rgbuilder::graph::backend::{GraphBackend, MemoryBackend};
 use rgbuilder::graph::schema::{Edge, EdgeType, GraphParameter, Node, NodeType};

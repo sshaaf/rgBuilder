@@ -9,7 +9,7 @@ import type {
   SubgraphNode,
   SubgraphPayload,
 } from "./types";
-import { DEFAULT_GRAPH_TYPE_MASK } from "./types";
+import { defaultGraphTypeMask } from "./types";
 import { bundleDataUrl } from "./bundleUrl";
 import {
   buildUndirectedAdjacency,
@@ -55,10 +55,11 @@ export function GraphView({
   const containerRef = useRef<HTMLDivElement>(null);
   const sigmaRef = useRef<Sigma | null>(null);
   const adjacencyRef = useRef<Map<string, Set<string>>>(new Map());
+  const initialTypeMask = defaultGraphTypeMask(communityOnly, sourceNodeCount);
   const filterRef = useRef<GraphFilterState>({
     search: "",
     communityId: null,
-    typeMask: DEFAULT_GRAPH_TYPE_MASK,
+    typeMask: initialTypeMask,
     soloCommunity: false,
   });
   const highlightRef = useRef<{ hover: string | null; selected: string | null }>({
@@ -76,7 +77,14 @@ export function GraphView({
   const [subgraph, setSubgraph] = useState<SubgraphPayload | null>(null);
   const [drillLabel, setDrillLabel] = useState<string | null>(null);
   const [drillCommunityId, setDrillCommunityId] = useState<number | null>(null);
-  const [typeMask, setTypeMask] = useState(DEFAULT_GRAPH_TYPE_MASK);
+  const [typeMask, setTypeMask] = useState(() =>
+    defaultGraphTypeMask(communityOnly, sourceNodeCount),
+  );
+
+  useEffect(() => {
+    const mask = defaultGraphTypeMask(communityOnly, sourceNodeCount);
+    setTypeMask((prev) => (prev === mask ? prev : mask));
+  }, [communityOnly, sourceNodeCount]);
   const [expanding, setExpanding] = useState(false);
   const [subHover, setSubHover] = useState<SubgraphNode | null>(null);
   const [search, setSearch] = useState("");
@@ -323,7 +331,7 @@ export function GraphView({
                 onChange={(e) => setShowCalls((e.target as HTMLInputElement).checked)}
               />
               <label class="form-check-label small" for="show-calls">
-                Calls
+                Package edges
               </label>
             </div>
           </div>

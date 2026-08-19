@@ -6,7 +6,7 @@
 use rgbuilder_error::{Error, Result};
 use rgbuilder_graph::backend::MemoryBackend;
 use rgbuilder_graph::schema::{Node, NodeType};
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
@@ -540,7 +540,8 @@ impl MacroCallLookupDb {
             .join(rgbuilder_graph::code_graph::GRAPH_DIR)
             .join(rgbuilder_graph::snapshot::SNAPSHOT_FILE);
         if snapshot_path.exists() {
-            if let Ok(mmap) = rgbuilder_graph::snapshot::MmappedGraphSnapshot::open(&snapshot_path) {
+            if let Ok(mmap) = rgbuilder_graph::snapshot::MmappedGraphSnapshot::open(&snapshot_path)
+            {
                 if let Some(stored) = Self::read_meta(&conn, "graph_digest")? {
                     return Ok(stored == mmap.content_digest()?);
                 }
@@ -869,7 +870,7 @@ mod tests {
     fn canonical_fqn_java_dot_notation() {
         use rgbuilder_graph::schema::{Node, NodeType};
         let node = Node::new(NodeType::Function, "process")
-            .with_qualified_name("com.example.OrderService.process".into());
+            .with_qualified_name("com.example.OrderService.process");
         assert_eq!(canonical_fqn_from_node(&node), "OrderService::process");
     }
 

@@ -5,8 +5,8 @@
 use crate::matcher::RuleMatcher;
 use crate::schema::{RuleAction, Ruleset};
 use rgbuilder_error::Result;
-use rgbuilder_graph::backend::trait_def::GraphBackend;
 use rgbuilder_graph::backend::MemoryBackend;
+use rgbuilder_graph::backend::trait_def::GraphBackend;
 use std::collections::HashMap;
 
 /// Report from applying a ruleset.

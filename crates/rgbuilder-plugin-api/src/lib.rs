@@ -8,14 +8,15 @@ mod error;
 mod registrar;
 
 pub use call_extraction::{
-    callee_name, containing_function, push_call_relation, walk_calls, CPP_CALL_KINDS,
-    CSHARP_CALL_KINDS, C_CALL_KINDS, GO_CALL_KINDS, JS_CALL_KINDS, PYTHON_CALL_KINDS,
-    RUST_CALL_KINDS, TS_CALL_KINDS,
+    C_CALL_KINDS, CPP_CALL_KINDS, CSHARP_CALL_KINDS, GO_CALL_KINDS, JS_CALL_KINDS,
+    PYTHON_CALL_KINDS, RUST_CALL_KINDS, TS_CALL_KINDS, callee_name, containing_function,
+    push_call_relation, walk_calls,
 };
 
 pub use error::{Error, Result};
 pub use registrar::ConfigFormatRegistrar;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::Path;
 
 /// A symbol extracted from source code (function, class, struct, variable, etc.)
@@ -205,6 +206,28 @@ pub struct Relation {
     pub to_type_hint: Option<String>,
 }
 
+/// Combined output from [`LanguagePlugin::extract_all`].
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ExtractAllResult {
+    /// Extracted symbols.
+    pub symbols: Vec<Symbol>,
+    /// Extracted relations.
+    pub relations: Vec<Relation>,
+    /// Out-of-line content blobs keyed by Blake3 hex (`body_ref` / `blob_ref`).
+    pub content_blobs: HashMap<String, String>,
+}
+
+impl ExtractAllResult {
+    /// Build from symbols and relations with no out-of-line blobs.
+    pub fn from_parts(symbols: Vec<Symbol>, relations: Vec<Relation>) -> Self {
+        Self {
+            symbols,
+            relations,
+            content_blobs: HashMap::new(),
+        }
+    }
+}
+
 /// Type of relationship between symbols
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RelationType {
@@ -376,14 +399,14 @@ pub trait LanguagePlugin: Send + Sync {
     /// Default calls [`extract_symbols`](Self::extract_symbols) then
     /// [`extract_relations`](Self::extract_relations). Plugins that parse twice
     /// SHOULD override to share one AST.
-    fn extract_all(
-        &self,
-        file_path: &Path,
-        source: &[u8],
-    ) -> Result<(Vec<Symbol>, Vec<Relation>)> {
+    fn extract_all(&self, file_path: &Path, source: &[u8]) -> Result<ExtractAllResult> {
         let symbols = self.extract_symbols(file_path, source)?;
         let relations = self.extract_relations(file_path, source, &symbols)?;
-        Ok((symbols, relations))
+        Ok(ExtractAllResult {
+            symbols,
+            relations,
+            content_blobs: HashMap::new(),
+        })
     }
 
     /// Calculate complexity metrics for a symbol

@@ -3,12 +3,16 @@
 pub mod graphml;
 pub mod graphviz;
 pub mod mermaid;
+pub mod obsidian;
+pub mod okf;
 pub mod render;
 
 pub use graphml::export_graphml;
-pub use graphviz::{generate_dot, parse_layout, GraphvizOptions, Layout, RankDir};
-pub use mermaid::{generate_mermaid, parse_diagram_type, DiagramType, MermaidOptions};
-pub use render::{check_graphviz_installed, render_dot_to_file, ImageFormat};
+pub use graphviz::{GraphvizOptions, Layout, RankDir, generate_dot, parse_layout};
+pub use mermaid::{DiagramType, MermaidOptions, generate_mermaid, parse_diagram_type};
+pub use obsidian::{ObsidianExportStats, export_obsidian_vault};
+pub use okf::{OkfExportStats, export_okf_json};
+pub use render::{ImageFormat, check_graphviz_installed, render_dot_to_file};
 
 use rgbuilder_error::Result;
 use rgbuilder_graph::backend::{GraphBackend, MemoryBackend};

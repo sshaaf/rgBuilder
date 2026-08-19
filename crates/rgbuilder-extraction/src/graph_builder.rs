@@ -1,8 +1,10 @@
 //! Maps extracted symbols and relations into graph nodes and edges.
 
 use rgbuilder_error::{Error, Result};
-use rgbuilder_graph::code_index::{hash_code, CodeIndex};
+use rgbuilder_graph::code_index::{CodeIndex, hash_code};
+use rgbuilder_graph::content_store::{ContentStore, INLINE_BODY_MAX_BYTES, hash_bytes};
 use rgbuilder_graph::migration::graph_parameter_from_plugin;
+use rgbuilder_graph::normalize_path_str;
 use rgbuilder_graph::schema::{Edge, EdgeType, Node, NodeType};
 use rgbuilder_graph::segmented_spill::{FinishedSpill, SegmentedSpill};
 use rgbuilder_graph::structural_sketch::build_token_bloom;
@@ -10,7 +12,7 @@ use rgbuilder_plugin_api::{
     ComplexityMetrics, ConfigKey, Relation, RelationType, Symbol, SymbolType,
 };
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy)]
@@ -25,6 +27,8 @@ struct LineSpan {
 pub struct GraphBuilder {
     symbol_index: HashMap<String, Uuid>,
     file_nodes: HashMap<String, Uuid>,
+    /// Normalized path + component-boundary suffixes → file node id (O(1) lookup).
+    file_path_lookup: HashMap<String, Uuid>,
     config_key_nodes: HashMap<String, Uuid>,
     env_nodes: HashMap<String, Uuid>,
     nodes: Vec<Node>,
@@ -37,6 +41,7 @@ pub struct GraphBuilder {
     /// Line ranges for config-usage resolution when nodes are spilled.
     file_line_spans: HashMap<String, Vec<LineSpan>>,
     code_index: Option<CodeIndex>,
+    content_store: Option<ContentStore>,
     // Resolution performance tracking
     resolution_stats: ResolutionStats,
     // Fast resolution indexes (built on demand)
@@ -143,7 +148,10 @@ impl GraphBuilder {
             if !is_field_member && parts.len() >= 3 {
                 for i in 0..parts.len() {
                     let suffix = parts[i..].join(".");
-                    self.symbols_by_suffix.entry(suffix).or_default().push(node.id);
+                    self.symbols_by_suffix
+                        .entry(suffix)
+                        .or_default()
+                        .push(node.id);
                 }
             }
         } else {
@@ -155,7 +163,10 @@ impl GraphBuilder {
         let parts: Vec<&str> = key.split("::").collect();
         for i in 1..parts.len() {
             let suffix = parts[i..].join("::");
-            self.symbols_by_suffix.entry(suffix).or_default().push(node.id);
+            self.symbols_by_suffix
+                .entry(suffix)
+                .or_default()
+                .push(node.id);
         }
     }
 
@@ -186,14 +197,32 @@ impl GraphBuilder {
 
     /// Ensure a file node exists and return its ID.
     pub fn ensure_file_node(&mut self, path: &Path) -> Uuid {
+        self.ensure_file_node_with_source(path, None)
+    }
+
+    /// Ensure a file node exists, optionally recording full-file content hash / blob ref.
+    pub fn ensure_file_node_with_source(&mut self, path: &Path, source: Option<&[u8]>) -> Uuid {
         let file_path = path.to_string_lossy().to_string();
         if let Some(id) = self.file_nodes.get(&file_path) {
             return *id;
         }
 
-        let node = Node::new(NodeType::File, file_path.clone()).with_file_path(file_path.clone());
+        let mut node =
+            Node::new(NodeType::File, file_path.clone()).with_file_path(file_path.clone());
+        if let Some(bytes) = source {
+            let content_hash = hash_bytes(bytes);
+            node = node.with_property("content_hash".to_string(), content_hash.clone());
+            if bytes.len() > INLINE_BODY_MAX_BYTES {
+                if let Some(store) = self.content_store.as_mut() {
+                    store.insert_bytes(&content_hash, bytes.to_vec());
+                    node = node.with_property("blob_ref".to_string(), content_hash);
+                }
+            }
+        }
         let id = node.id;
+        let norm = normalize_file_key(&file_path);
         self.file_nodes.insert(file_path, id);
+        register_file_lookup_keys(&mut self.file_path_lookup, &norm, id);
         self.commit_node(node);
         id
     }
@@ -206,6 +235,33 @@ impl GraphBuilder {
     /// Mutable access to the optional code index.
     pub fn code_index_mut(&mut self) -> Option<&mut CodeIndex> {
         self.code_index.as_mut()
+    }
+
+    /// Attach a content blob store for truncated markdown bodies and large files.
+    pub fn set_content_store(&mut self, store: ContentStore) {
+        self.content_store = Some(store);
+    }
+
+    /// Mutable access to the optional content store.
+    pub fn content_store_mut(&mut self) -> Option<&mut ContentStore> {
+        self.content_store.as_mut()
+    }
+
+    /// Merge out-of-line content blobs from extraction.
+    pub fn merge_content_blobs(&mut self, blobs: &std::collections::HashMap<String, String>) {
+        if let Some(store) = self.content_store.as_mut() {
+            store.merge_text_blobs(blobs);
+        }
+    }
+
+    /// Take the accumulated content store after graph build.
+    pub fn take_content_store(&mut self) -> Option<ContentStore> {
+        self.content_store.take()
+    }
+
+    /// Take the accumulated code index after graph build.
+    pub fn take_code_index(&mut self) -> Option<CodeIndex> {
+        self.code_index.take()
     }
 
     /// Add a symbol node linked to its file.
@@ -320,11 +376,7 @@ impl GraphBuilder {
             .unwrap_or_else(|| symbol.name.clone());
         for field in &symbol.fields {
             let field_qn = format!("{owner_qn}.{}", field.name);
-            let key = symbol_key(
-                &symbol.location.file,
-                &field.name,
-                Some(field_qn.as_str()),
-            );
+            let key = symbol_key(&symbol.location.file, &field.name, Some(field_qn.as_str()));
             if self.symbol_index.contains_key(&key) {
                 continue;
             }
@@ -372,16 +424,16 @@ impl GraphBuilder {
         if let Some(id) = self.symbol_index.get(&key)
             && let Some(node) = self.nodes.iter_mut().find(|n| n.id == *id)
         {
-                node.properties
-                    .insert("cyclomatic".to_string(), metrics.cyclomatic.to_string());
-                node.properties
-                    .insert("cognitive".to_string(), metrics.cognitive.to_string());
-                node.properties
-                    .insert("loc".to_string(), metrics.loc.to_string());
-                node.properties.insert(
-                    "nesting_depth".to_string(),
-                    metrics.nesting_depth.to_string(),
-                );
+            node.properties
+                .insert("cyclomatic".to_string(), metrics.cyclomatic.to_string());
+            node.properties
+                .insert("cognitive".to_string(), metrics.cognitive.to_string());
+            node.properties
+                .insert("loc".to_string(), metrics.loc.to_string());
+            node.properties.insert(
+                "nesting_depth".to_string(),
+                metrics.nesting_depth.to_string(),
+            );
         }
     }
 
@@ -449,11 +501,13 @@ impl GraphBuilder {
     /// external stub nodes (`is_external_stub`) so Instantiates / JPMS /
     /// AnnotatedWith / References edges survive into GQL.
     pub fn add_relation(&mut self, relation: &Relation) -> Result<()> {
-        let from_id =
+        let mut from_id =
             self.resolve_symbol_tracked(&relation.from, &relation.location.file, None, None);
+        if from_id.is_none() {
+            from_id = self.lookup_file_node(&relation.from, &relation.location.file);
+        }
 
-        let (to_type_hint, to_qualified_hint) =
-            self.enrich_go_type_hints(relation);
+        let (to_type_hint, to_qualified_hint) = self.enrich_go_type_hints(relation);
 
         let mut to_id = self.resolve_symbol_tracked(
             &relation.to,
@@ -461,10 +515,19 @@ impl GraphBuilder {
             to_qualified_hint
                 .as_deref()
                 .or(relation.to_qualified_hint.as_deref()),
-            to_type_hint
-                .as_deref()
-                .or(relation.to_type_hint.as_deref()),
+            to_type_hint.as_deref().or(relation.to_type_hint.as_deref()),
         );
+        if to_id.is_none() {
+            if let Some(id) = self.lookup_file_node(&relation.to, &relation.location.file) {
+                to_id = Some(id);
+            } else if relation
+                .to_type_hint
+                .as_deref()
+                .is_some_and(|hint| hint.eq_ignore_ascii_case("file"))
+            {
+                return Ok(());
+            }
+        }
 
         if relation_allows_external_stub(relation.relation_type) {
             // Only stub unresolved *targets*. Stubbing missing `from` when
@@ -494,6 +557,24 @@ impl GraphBuilder {
             self.commit_edge(edge);
         }
         Ok(())
+    }
+
+    /// Resolve a file path string to a registered File node (absolute/relative tolerant).
+    fn lookup_file_node(&self, path_str: &str, anchor_file: &str) -> Option<Uuid> {
+        let target = normalize_file_key(path_str);
+        if !target.is_empty() {
+            if let Some(id) = self.file_path_lookup.get(&target) {
+                return Some(*id);
+            }
+        }
+        let anchor = Path::new(anchor_file);
+        if let Some(parent) = anchor.parent() {
+            let joined = normalize_file_key(&join_path_normalized(parent, path_str));
+            if !joined.is_empty() {
+                return self.file_path_lookup.get(&joined).copied();
+            }
+        }
+        None
     }
 
     /// Create or reuse a stub node for an unresolved relation endpoint.
@@ -533,9 +614,9 @@ impl GraphBuilder {
                 .symbols_by_suffix
                 .get(simple)
                 .and_then(|ids| unique_resolved(ids))
-            {
-                return id;
-            }
+        {
+            return id;
+        }
 
         const STUB_FILE: &str = "<external>";
         let key = symbol_key(STUB_FILE, simple, Some(qn.as_str()));
@@ -564,17 +645,11 @@ impl GraphBuilder {
     }
 
     /// Late-bind Go `recv.field.Method` using field Variable nodes from Pass 1.
-    fn enrich_go_type_hints(
-        &self,
-        relation: &Relation,
-    ) -> (Option<String>, Option<String>) {
+    fn enrich_go_type_hints(&self, relation: &Relation) -> (Option<String>, Option<String>) {
         if relation.to_type_hint.is_some() {
             return (None, None);
         }
-        let lang = relation
-            .metadata
-            .get("language")
-            .and_then(|v| v.as_str());
+        let lang = relation.metadata.get("language").and_then(|v| v.as_str());
         if lang != Some("go") {
             return (None, None);
         }
@@ -585,11 +660,7 @@ impl GraphBuilder {
         else {
             return (None, None);
         };
-        let Some(field) = relation
-            .metadata
-            .get("go_field")
-            .and_then(|v| v.as_str())
-        else {
+        let Some(field) = relation.metadata.get("go_field").and_then(|v| v.as_str()) else {
             return (None, None);
         };
         let callee = relation
@@ -676,15 +747,13 @@ impl GraphBuilder {
         self.resolution_stats.line_lookups += 1;
 
         let result = if self.spill.is_some() {
-            self.file_line_spans
-                .get(file_path)
-                .and_then(|spans| {
-                    spans
-                        .iter()
-                        .filter(|s| s.start <= line && s.end >= line)
-                        .max_by_key(|s| s.start)
-                        .map(|s| s.id)
-                })
+            self.file_line_spans.get(file_path).and_then(|spans| {
+                spans
+                    .iter()
+                    .filter(|s| s.start <= line && s.end >= line)
+                    .max_by_key(|s| s.start)
+                    .map(|s| s.id)
+            })
         } else {
             self.nodes
                 .iter()
@@ -1006,6 +1075,57 @@ fn symbol_type_to_node_type(symbol_type: SymbolType) -> NodeType {
     }
 }
 
+const MAX_FILE_LOOKUP_SUFFIX_KEYS: usize = 8;
+
+fn register_file_lookup_keys(index: &mut HashMap<String, Uuid>, norm_path: &str, id: Uuid) {
+    if norm_path.is_empty() {
+        return;
+    }
+    index.entry(norm_path.to_string()).or_insert(id);
+    let slash_positions: Vec<usize> = norm_path.match_indices('/').map(|(i, _)| i).collect();
+    let start = slash_positions
+        .len()
+        .saturating_sub(MAX_FILE_LOOKUP_SUFFIX_KEYS);
+    for i in slash_positions.into_iter().skip(start) {
+        if i + 1 < norm_path.len() {
+            let suffix = &norm_path[i + 1..];
+            index.entry(suffix.to_string()).or_insert(id);
+        }
+    }
+}
+
+fn normalize_file_key(path: &str) -> String {
+    let mut out = PathBuf::new();
+    for component in Path::new(path).components() {
+        match component {
+            Component::Prefix(prefix) => out = PathBuf::from(prefix.as_os_str()),
+            Component::RootDir => out.push(std::path::MAIN_SEPARATOR_STR),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                out.pop();
+            }
+            Component::Normal(part) => out.push(part),
+        }
+    }
+    normalize_path_str(out.to_string_lossy().as_ref())
+}
+
+fn join_path_normalized(base: &Path, rel: &str) -> String {
+    let mut out = base.to_path_buf();
+    for component in Path::new(rel).components() {
+        match component {
+            Component::Prefix(prefix) => out = PathBuf::from(prefix.as_os_str()),
+            Component::RootDir => out = PathBuf::from(std::path::MAIN_SEPARATOR_STR),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                out.pop();
+            }
+            Component::Normal(part) => out.push(part),
+        }
+    }
+    normalize_file_key(out.to_string_lossy().as_ref())
+}
+
 fn relation_allows_external_stub(relation_type: RelationType) -> bool {
     matches!(
         relation_type,
@@ -1230,12 +1350,18 @@ mod tests {
         let stub = builder
             .nodes()
             .iter()
-            .find(|n| n.name == "String" && n.properties.get("is_external_stub").map(String::as_str) == Some("true"))
+            .find(|n| {
+                n.name == "String"
+                    && n.properties.get("is_external_stub").map(String::as_str) == Some("true")
+            })
             .expect("String stub");
         assert_eq!(stub.node_type, NodeType::Class);
-        assert!(builder.edges.iter().any(|e| {
-            e.edge_type == EdgeType::Instantiates && e.to == stub.id
-        }));
+        assert!(
+            builder
+                .edges
+                .iter()
+                .any(|e| { e.edge_type == EdgeType::Instantiates && e.to == stub.id })
+        );
     }
 
     #[test]
@@ -1289,9 +1415,12 @@ mod tests {
             })
             .expect("java.base stub");
         assert_eq!(stub.node_type, NodeType::Module);
-        assert!(builder.edges.iter().any(|e| {
-            e.edge_type == EdgeType::DependsOn && e.to == stub.id
-        }));
+        assert!(
+            builder
+                .edges
+                .iter()
+                .any(|e| { e.edge_type == EdgeType::DependsOn && e.to == stub.id })
+        );
     }
 
     #[test]
@@ -1345,9 +1474,12 @@ mod tests {
             stub.properties.get("is_external_stub").map(String::as_str),
             Some("true")
         );
-        assert!(builder.edges.iter().any(|e| {
-            e.edge_type == EdgeType::AnnotatedWith && e.to == stub.id
-        }));
+        assert!(
+            builder
+                .edges
+                .iter()
+                .any(|e| { e.edge_type == EdgeType::AnnotatedWith && e.to == stub.id })
+        );
     }
 
     #[test]
@@ -1402,6 +1534,254 @@ mod tests {
             })
             .collect();
         assert_eq!(stubs.len(), 1, "expected one stub for java.lang.String");
+    }
+
+    #[test]
+    fn references_file_target_resolves_to_file_node() {
+        let mut builder = GraphBuilder::new();
+        let guide_id = builder.ensure_file_node(Path::new("docs/guide.md"));
+        let adr_id = builder.ensure_file_node(Path::new("docs/adr.md"));
+        let heading = Symbol {
+            name: "Checkout Flow".to_string(),
+            symbol_type: SymbolType::Module,
+            qualified_name: Some("docs/guide.md#checkout-flow".to_string()),
+            location: SourceLocation {
+                file: "docs/guide.md".to_string(),
+                start_line: 1,
+                end_line: 1,
+                start_column: 0,
+                end_column: 1,
+            },
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({ "kind": "heading" }),
+        };
+        builder.add_symbol(&heading, guide_id);
+        builder.build_resolution_indexes();
+        builder
+            .add_relation(&Relation {
+                from: "docs/guide.md#checkout-flow".to_string(),
+                to: "docs/adr.md".to_string(),
+                relation_type: RelationType::References,
+                location: SourceLocation {
+                    file: "docs/guide.md".to_string(),
+                    start_line: 2,
+                    end_line: 2,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "kind": "markdown_link" }),
+                to_qualified_hint: Some("docs/adr.md".to_string()),
+                to_type_hint: Some("file".to_string()),
+            })
+            .unwrap();
+
+        let heading_id = builder
+            .nodes()
+            .iter()
+            .find(|n| n.qualified_name.as_deref() == Some("docs/guide.md#checkout-flow"))
+            .expect("heading node")
+            .id;
+        assert!(builder.edges.iter().any(|e| {
+            e.edge_type == EdgeType::References && e.from == heading_id && e.to == adr_id
+        }));
+        assert!(
+            !builder.nodes().iter().any(|n| {
+                n.node_type == NodeType::Class
+                    && n.properties.get("is_external_stub").map(String::as_str) == Some("true")
+                    && n.name.contains("adr")
+            }),
+            "file target must not create Class stub"
+        );
+    }
+
+    #[test]
+    fn references_from_document_path_resolves_to_file_node() {
+        let mut builder = GraphBuilder::new();
+        let guide_id = builder.ensure_file_node(Path::new("docs/guide.md"));
+        let adr_id = builder.ensure_file_node(Path::new("docs/adr.md"));
+        builder.build_resolution_indexes();
+        builder
+            .add_relation(&Relation {
+                from: "docs/guide.md".to_string(),
+                to: "docs/adr.md".to_string(),
+                relation_type: RelationType::References,
+                location: SourceLocation {
+                    file: "docs/guide.md".to_string(),
+                    start_line: 1,
+                    end_line: 1,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "kind": "markdown_link" }),
+                to_qualified_hint: Some("docs/adr.md".to_string()),
+                to_type_hint: Some("file".to_string()),
+            })
+            .unwrap();
+
+        assert!(builder.edges.iter().any(|e| {
+            e.edge_type == EdgeType::References && e.from == guide_id && e.to == adr_id
+        }));
+    }
+
+    #[test]
+    fn references_missing_file_target_skips_edge_and_stub() {
+        let mut builder = GraphBuilder::new();
+        let guide_id = builder.ensure_file_node(Path::new("docs/guide.md"));
+        builder.build_resolution_indexes();
+        builder
+            .add_relation(&Relation {
+                from: "docs/guide.md".to_string(),
+                to: "docs/missing.md".to_string(),
+                relation_type: RelationType::References,
+                location: SourceLocation {
+                    file: "docs/guide.md".to_string(),
+                    start_line: 1,
+                    end_line: 1,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "kind": "markdown_link" }),
+                to_qualified_hint: Some("docs/missing.md".to_string()),
+                to_type_hint: Some("file".to_string()),
+            })
+            .unwrap();
+
+        assert!(
+            !builder
+                .edges
+                .iter()
+                .any(|e| e.edge_type == EdgeType::References),
+            "missing file href must not create an edge"
+        );
+        assert_eq!(builder.node_count(), 1, "only guide file node");
+        assert!(
+            !builder.nodes().iter().any(|n| n
+                .properties
+                .get("is_external_stub")
+                .map(String::as_str)
+                == Some("true")),
+            "missing file href must not stub"
+        );
+        let _ = guide_id;
+    }
+
+    #[test]
+    fn references_file_target_resolves_with_absolute_discover_paths() {
+        let mut builder = GraphBuilder::new();
+        let guide_abs = "/tmp/fixture/./docs/guide.md";
+        let java_abs = "/tmp/fixture/src/CheckoutService.java";
+        let guide_id = builder.ensure_file_node(Path::new(guide_abs));
+        let java_id = builder.ensure_file_node(Path::new(java_abs));
+        let checkout = Symbol {
+            name: "Checkout Flow".to_string(),
+            symbol_type: SymbolType::Module,
+            qualified_name: Some(format!("{guide_abs}#checkout-flow")),
+            location: SourceLocation {
+                file: guide_abs.to_string(),
+                start_line: 1,
+                end_line: 1,
+                start_column: 0,
+                end_column: 1,
+            },
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({ "kind": "heading", "level": 1 }),
+        };
+        let checkout_id = builder.add_symbol(&checkout, guide_id);
+        builder.build_resolution_indexes();
+        builder
+            .add_relation(&Relation {
+                from: format!("{guide_abs}#checkout-flow"),
+                to: "src/CheckoutService.java".to_string(),
+                relation_type: RelationType::References,
+                location: SourceLocation {
+                    file: guide_abs.to_string(),
+                    start_line: 1,
+                    end_line: 1,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "kind": "markdown_link" }),
+                to_qualified_hint: Some("src/CheckoutService.java".to_string()),
+                to_type_hint: Some("file".to_string()),
+            })
+            .unwrap();
+
+        assert!(
+            builder.edges.iter().any(|e| {
+                e.edge_type == EdgeType::References && e.from == checkout_id && e.to == java_id
+            }),
+            "relative file href must resolve against absolute discover paths"
+        );
+    }
+
+    #[test]
+    fn references_arraylist_without_file_hint_still_stubs_class() {
+        let mut builder = GraphBuilder::new();
+        let file_id = builder.ensure_file_node(Path::new("Demo.java"));
+        let method = Symbol {
+            name: "run".to_string(),
+            symbol_type: SymbolType::Function,
+            qualified_name: Some("Demo.run".to_string()),
+            location: SourceLocation {
+                file: "Demo.java".to_string(),
+                start_line: 2,
+                end_line: 4,
+                start_column: 0,
+                end_column: 1,
+            },
+            signature: None,
+            return_type: None,
+            parameters: vec![],
+            fields: vec![],
+            modifiers: vec![],
+            documentation: None,
+            metadata: serde_json::json!({ "language": "java" }),
+        };
+        builder.add_symbol(&method, file_id);
+        builder.build_resolution_indexes();
+        builder
+            .add_relation(&Relation {
+                from: "Demo.run".to_string(),
+                to: "ArrayList".to_string(),
+                relation_type: RelationType::References,
+                location: SourceLocation {
+                    file: "Demo.java".to_string(),
+                    start_line: 3,
+                    end_line: 3,
+                    start_column: 0,
+                    end_column: 1,
+                },
+                metadata: serde_json::json!({ "language": "java" }),
+                to_qualified_hint: None,
+                to_type_hint: None,
+            })
+            .unwrap();
+
+        let stub = builder
+            .nodes()
+            .iter()
+            .find(|n| n.name == "ArrayList" && n.node_type == NodeType::Class)
+            .expect("ArrayList Class stub");
+        assert_eq!(
+            stub.properties.get("is_external_stub").map(String::as_str),
+            Some("true")
+        );
+        assert!(
+            builder
+                .edges
+                .iter()
+                .any(|e| { e.edge_type == EdgeType::References && e.to == stub.id })
+        );
     }
 
     #[test]
@@ -1498,10 +1878,12 @@ mod tests {
         builder.link_config_usage("src/main.rs", 1, "DB_HOST", ConfigUsageKind::EnvVar);
 
         assert!(builder.node_count() >= 3);
-        assert!(builder
-            .edges
-            .iter()
-            .any(|e| e.edge_type == EdgeType::UsesConfig));
+        assert!(
+            builder
+                .edges
+                .iter()
+                .any(|e| e.edge_type == EdgeType::UsesConfig)
+        );
     }
 
     fn function_symbol(file: &str, name: &str, qualified: &str) -> Symbol {
@@ -1608,7 +1990,7 @@ mod tests {
     fn test_c_struct_fields_not_materialized_by_default() {
         let mut builder = GraphBuilder::new();
         let file_id = builder.ensure_file_node(Path::new("cart.c"));
-        let mut symbol = Symbol {
+        let symbol = Symbol {
             name: "Cart".to_string(),
             symbol_type: SymbolType::Class,
             location: SourceLocation {
@@ -1646,7 +2028,7 @@ mod tests {
         let mut builder = GraphBuilder::new();
         builder.set_materialize_fields(true);
         let file_id = builder.ensure_file_node(Path::new("cart.c"));
-        let mut symbol = Symbol {
+        let symbol = Symbol {
             name: "Cart".to_string(),
             symbol_type: SymbolType::Class,
             location: SourceLocation {
@@ -1675,6 +2057,30 @@ mod tests {
         assert!(
             bare.is_none() || bare.is_some_and(|v| v.is_empty()),
             "bare field suffix must not be indexed for C struct fields"
+        );
+    }
+
+    #[test]
+    fn test_file_lookup_suffix_keys_are_bounded() {
+        let mut index = HashMap::new();
+        let id = Uuid::new_v4();
+        let deep = "a/b/c/d/e/f/g/h/i/j/k/l/m.rs";
+        register_file_lookup_keys(&mut index, deep, id);
+
+        assert_eq!(index.get(deep), Some(&id));
+        assert_eq!(
+            index.get("m.rs"),
+            Some(&id),
+            "shortest suffix should still resolve"
+        );
+        assert_eq!(
+            index.get("l/m.rs"),
+            Some(&id),
+            "near-tail multi-segment suffix should resolve"
+        );
+        assert!(
+            !index.contains_key("b/c/d/e/f/g/h/i/j/k/l/m.rs"),
+            "far-prefix suffix should be skipped when depth exceeds bound"
         );
     }
 }

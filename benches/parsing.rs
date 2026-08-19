@@ -2,7 +2,7 @@
 //!
 //! Run with: cargo bench --bench parsing
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use rgbuilder::languages::registry::LanguageRegistry;
 use rgbuilder::pipeline::{PipelineConfig, ProcessingPipeline};
 use std::fs;

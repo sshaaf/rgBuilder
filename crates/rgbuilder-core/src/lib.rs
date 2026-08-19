@@ -41,10 +41,10 @@ pub use rgbuilder_incremental::{
     IncrementalUpdater, UpdateOptions, UpdateResult,
 };
 pub use rgbuilder_pipeline::parallel;
-pub use rgbuilder_pipeline::{par_filter_map, PipelineConfig, PipelineStats, ProcessingPipeline};
+pub use rgbuilder_pipeline::{PipelineConfig, PipelineStats, ProcessingPipeline, par_filter_map};
 pub use rgbuilder_project_config::analyzer::{ConfigAnalyzer, MissingEnvVar, UnusedConfigKey};
 pub use rgbuilder_project_config::drift::{
-    compare_configs, format_drift_report, ConfigDiffEntry, ConfigDiffKind, ConfigDriftReport,
+    ConfigDiffEntry, ConfigDiffKind, ConfigDriftReport, compare_configs, format_drift_report,
 };
 pub use rgbuilder_project_config::project::{HooksConfig, RgbuilderConfig, RiskLevel, WatchConfig};
 pub use rgbuilder_project_config::secret_detector::{

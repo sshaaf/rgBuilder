@@ -1,5 +1,7 @@
 use rgbuilder::analysis::MacroIndexEntry;
-use rgbuilder::cli::blast_radius_output::{build_from_cache_entry, skipped_gatekeeping, NodeLookup};
+use rgbuilder::cli::blast_radius_output::{
+    NodeLookup, build_from_cache_entry, skipped_gatekeeping,
+};
 use uuid::Uuid;
 
 #[test]
@@ -28,9 +30,11 @@ fn test_cache_entry_omits_unresolved_topology_without_nil_uuid() {
         None,
     );
     assert!(response.topology.direct_callers.is_empty());
-    assert!(response
-        .topology
-        .direct_callers
-        .iter()
-        .all(|c| c.id != Uuid::nil()));
+    assert!(
+        response
+            .topology
+            .direct_callers
+            .iter()
+            .all(|c| c.id != Uuid::nil())
+    );
 }

@@ -48,7 +48,9 @@ impl GoPlugin {
                     "identifier" | "field_identifier" if name.is_none() => {
                         name = Some(child.utf8_text(source)?.to_string());
                     }
-                    "parameter_list" if parameters.is_empty() && node.kind() == "function_declaration" => {
+                    "parameter_list"
+                        if parameters.is_empty() && node.kind() == "function_declaration" =>
+                    {
                         parameters = self.extract_parameters(child, source)?;
                     }
                     "type_identifier" | "pointer_type" | "slice_type" | "qualified_type"
@@ -274,8 +276,7 @@ impl GoPlugin {
                                 }
                                 "type_identifier" | "pointer_type" | "slice_type"
                                 | "qualified_type" | "generic_type" => {
-                                    field_type =
-                                        Some(decl_child.utf8_text(source)?.to_string());
+                                    field_type = Some(decl_child.utf8_text(source)?.to_string());
                                 }
                                 _ => {}
                             }
@@ -420,13 +421,7 @@ impl GoPlugin {
                 "type_identifier" | "qualified_type" | "type_elem" => {
                     // Embedded interface (e.g. RuntimeService embeds PodSandboxManager).
                     if let Ok(t) = child.utf8_text(source) {
-                        let bare = t
-                            .trim()
-                            .rsplit('.')
-                            .next()
-                            .unwrap_or(t)
-                            .trim()
-                            .to_string();
+                        let bare = t.trim().rsplit('.').next().unwrap_or(t).trim().to_string();
                         if !bare.is_empty() && bare != iface_name {
                             embedded.push(bare);
                         }
@@ -471,10 +466,14 @@ impl GoPlugin {
             let mut cursor = node.walk();
             for child in node.children(&mut cursor) {
                 match child.kind() {
-                    "if_statement" | "for_statement"
-                    | "expression_switch_statement" | "type_switch_statement"
+                    "if_statement"
+                    | "for_statement"
+                    | "expression_switch_statement"
+                    | "type_switch_statement"
                     | "select_statement"
-                    | "expression_case" | "type_case" | "default_case"
+                    | "expression_case"
+                    | "type_case"
+                    | "default_case"
                     | "communication_case" => {
                         *complexity += 1;
                     }
@@ -499,7 +498,9 @@ impl GoPlugin {
                         *cognitive += 1 + nesting;
                         traverse(child, cognitive, nesting + 1);
                     }
-                    "expression_switch_statement" | "type_switch_statement" | "select_statement" => {
+                    "expression_switch_statement"
+                    | "type_switch_statement"
+                    | "select_statement" => {
                         *cognitive += 1 + nesting;
                         traverse(child, cognitive, nesting);
                     }
@@ -607,24 +608,27 @@ impl GoPlugin {
         let mut stack = vec![import_decl];
         while let Some(node) = stack.pop() {
             if node.kind() == "import_spec" {
-                let path = node.child_by_field_name("path").and_then(|n| {
-                    n.utf8_text(source)
-                        .ok()
-                        .map(|s| s.trim_matches('"').to_string())
-                }).or_else(|| {
-                    let mut c = node.walk();
-                    let mut found = None;
-                    for ch in node.children(&mut c) {
-                        if ch.kind() == "interpreted_string_literal" {
-                            found = ch
-                                .utf8_text(source)
-                                .ok()
-                                .map(|s| s.trim_matches('"').to_string());
-                            break;
+                let path = node
+                    .child_by_field_name("path")
+                    .and_then(|n| {
+                        n.utf8_text(source)
+                            .ok()
+                            .map(|s| s.trim_matches('"').to_string())
+                    })
+                    .or_else(|| {
+                        let mut c = node.walk();
+                        let mut found = None;
+                        for ch in node.children(&mut c) {
+                            if ch.kind() == "interpreted_string_literal" {
+                                found = ch
+                                    .utf8_text(source)
+                                    .ok()
+                                    .map(|s| s.trim_matches('"').to_string());
+                                break;
+                            }
                         }
-                    }
-                    found
-                });
+                        found
+                    });
                 let alias = node
                     .child_by_field_name("name")
                     .and_then(|n| n.utf8_text(source).ok())
@@ -751,11 +755,7 @@ impl GoPlugin {
                 continue;
             }
             // Interface method stubs are not concrete implementors.
-            if s.metadata
-                .get("interface_method")
-                .and_then(|v| v.as_bool())
-                == Some(true)
-            {
+            if s.metadata.get("interface_method").and_then(|v| v.as_bool()) == Some(true) {
                 continue;
             }
             if let Some(rt) = s.metadata.get("receiver_type").and_then(|v| v.as_str()) {
@@ -766,17 +766,15 @@ impl GoPlugin {
             }
         }
 
-        let mut iface_methods: std::collections::HashMap<String, std::collections::HashSet<String>> =
-            std::collections::HashMap::new();
+        let mut iface_methods: std::collections::HashMap<
+            String,
+            std::collections::HashSet<String>,
+        > = std::collections::HashMap::new();
         for s in symbols {
             if s.symbol_type != SymbolType::Function {
                 continue;
             }
-            if s.metadata
-                .get("interface_method")
-                .and_then(|v| v.as_bool())
-                != Some(true)
-            {
+            if s.metadata.get("interface_method").and_then(|v| v.as_bool()) != Some(true) {
                 continue;
             }
             if let Some(rt) = s.metadata.get("receiver_type").and_then(|v| v.as_str()) {
@@ -992,16 +990,12 @@ impl LanguagePlugin for GoPlugin {
         self.relations_from_tree(tree.root_node(), source, file_path, symbols)
     }
 
-    fn extract_all(
-        &self,
-        file_path: &Path,
-        source: &[u8],
-    ) -> Result<(Vec<Symbol>, Vec<Relation>)> {
+    fn extract_all(&self, file_path: &Path, source: &[u8]) -> Result<ExtractAllResult> {
         let tree = self.parse(file_path, source)?;
         let root = tree.root_node();
         let symbols = self.symbols_from_tree(root, source, file_path)?;
         let relations = self.relations_from_tree(root, source, file_path, &symbols)?;
-        Ok((symbols, relations))
+        Ok(ExtractAllResult::from_parts(symbols, relations))
     }
 
     fn calculate_complexity(
@@ -1136,10 +1130,7 @@ func Sum(a, b int) int {
             .iter()
             .find(|s| {
                 s.symbol_type == SymbolType::Function
-                    && s.metadata
-                        .get("is_constructor")
-                        .and_then(|v| v.as_bool())
-                        == Some(true)
+                    && s.metadata.get("is_constructor").and_then(|v| v.as_bool()) == Some(true)
             })
             .expect("constructor");
         assert_eq!(ctor.name, "NewUser");
@@ -1204,10 +1195,7 @@ func (o *Orch) Run() int {
         let plugin = GoPlugin::new().unwrap();
         let path = Path::new("demo.go");
         let symbols = plugin.extract_symbols(path, source).unwrap();
-        let run = symbols
-            .iter()
-            .find(|s| s.name == "Run")
-            .expect("Run");
+        let run = symbols.iter().find(|s| s.name == "Run").expect("Run");
         assert_eq!(run.qualified_name.as_deref(), Some("Orch.Run"));
         let rels = plugin.extract_relations(path, source, &symbols).unwrap();
         let hit = rels.iter().find(|r| {
@@ -1219,7 +1207,8 @@ func (o *Orch) Run() int {
         let hit = hit.unwrap();
         assert_eq!(hit.to_type_hint.as_deref(), Some("Beta"));
         assert!(
-            hit.to.ends_with("Beta.ListItems") || hit.to_qualified_hint.as_deref() == Some("Beta.ListItems"),
+            hit.to.ends_with("Beta.ListItems")
+                || hit.to_qualified_hint.as_deref() == Some("Beta.ListItems"),
             "got to={} hint={:?}",
             hit.to,
             hit.to_qualified_hint
@@ -1348,9 +1337,9 @@ func Identity[T any](v T) T { return v }
             "missing const StatusPending"
         );
         assert!(
-            symbols.iter().any(|s| {
-                s.name == "UserID" && s.symbol_type == SymbolType::TypeAlias
-            }),
+            symbols
+                .iter()
+                .any(|s| { s.name == "UserID" && s.symbol_type == SymbolType::TypeAlias }),
             "missing TypeAlias UserID"
         );
         let box_sym = symbols
@@ -1381,20 +1370,14 @@ func Identity[T any](v T) T { return v }
     }
 }
 
-
-
-
-
-
-
-
-
 #[cfg(test)]
 mod cri_promote {
     use super::*;
     #[test]
     fn runtime_service_promotes_runpodsandbox() {
-        let path = Path::new("/Users/sshaaf/git/rust/rg-build/example/kubernetes/staging/src/k8s.io/cri-api/pkg/apis/services.go");
+        let path = Path::new(
+            "/Users/sshaaf/git/rust/rg-build/example/kubernetes/staging/src/k8s.io/cri-api/pkg/apis/services.go",
+        );
         let src = std::fs::read(path).unwrap();
         let plugin = GoPlugin::new().unwrap();
         let symbols = plugin.extract_symbols(path, &src).unwrap();

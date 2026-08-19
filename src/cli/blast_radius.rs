@@ -2,17 +2,17 @@
 
 use super::args::OutputFormat;
 use super::blast_radius_output::{
-    build_from_cache_entry, build_from_engine_result, emit_text, evaluate_gatekeeping,
-    handoffs_from_seeds, response_to_json, skipped_gatekeeping, BlastRadiusResponse, NodeLookup,
+    BlastRadiusResponse, NodeLookup, build_from_cache_entry, build_from_engine_result, emit_text,
+    evaluate_gatekeeping, handoffs_from_seeds, response_to_json, skipped_gatekeeping,
 };
 use super::context::CliContext;
 use super::policy_file::PolicyFile;
 use super::query_daemon;
 use crate::analysis::{
-    candidates_from_backend, candidates_from_snapshot, filter_impact_by_caller_depth,
+    BlastRadiusEngine, BlastRadiusResult, MacroCallIndex, MacroCallLookupDb, MacroIndexEntry,
+    PetGraphView, candidates_from_backend, candidates_from_snapshot, filter_impact_by_caller_depth,
     impact_score_from_counts, parse_fqn_symbol, resolve_handoff_seeds, resolve_symbol_uuid,
-    trace_blast_to_slices_with_blast, try_load_engine, try_parse_symbol_uuid, BlastRadiusEngine,
-    BlastRadiusResult, MacroCallIndex, MacroCallLookupDb, MacroIndexEntry, PetGraphView,
+    trace_blast_to_slices_with_blast, try_load_engine, try_parse_symbol_uuid,
 };
 use crate::graph::backend::GraphBackend;
 use anyhow::Result;

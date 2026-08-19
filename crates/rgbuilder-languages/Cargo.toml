@@ -18,3 +18,4 @@ rgbuilder-lang-java = { workspace = true }
 rgbuilder-lang-csharp = { workspace = true }
 rgbuilder-lang-c = { workspace = true }
 rgbuilder-lang-cpp = { workspace = true }
+rgbuilder-lang-markdown = { workspace = true }

@@ -5,11 +5,11 @@
 mod analysis_helpers;
 
 use analysis_helpers::run_taint_security;
-use rgbuilder::analysis::{
-    build_cfg_for_function, ProgramDependenceGraph, TaintFlow, TaintSink, TaintSource,
-};
-use rgbuilder::security::{default_cwe_patterns, SecurityAnalyzer};
 use regex::Regex;
+use rgbuilder::analysis::{
+    ProgramDependenceGraph, TaintFlow, TaintSink, TaintSource, build_cfg_for_function,
+};
+use rgbuilder::security::{SecurityAnalyzer, default_cwe_patterns};
 
 macro_rules! cwe_test {
     ($name:ident, $cwe:expr, $body:expr) => {
@@ -77,9 +77,11 @@ def run(request):
         !flows.is_empty(),
         "expected vulnerable command injection flow"
     );
-    assert!(flows
-        .iter()
-        .any(|f| f.sink_type == rgbuilder::analysis::TaintSink::ShellCommand));
+    assert!(
+        flows
+            .iter()
+            .any(|f| f.sink_type == rgbuilder::analysis::TaintSink::ShellCommand)
+    );
     let vulns = run_taint_security("python", code, "run");
     assert!(
         vulns.iter().any(|v| v.cwe_id == cwe)

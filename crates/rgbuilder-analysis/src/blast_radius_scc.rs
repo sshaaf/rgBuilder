@@ -22,9 +22,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::blast_engine_snapshot::{ReachabilityStore, FLAT_SCC_COMPRESSION_THRESHOLD};
+use crate::blast_engine_snapshot::{FLAT_SCC_COMPRESSION_THRESHOLD, ReachabilityStore};
 use crate::centrality::CentralityScores;
-use crate::policy::{evaluate_policies, PolicyRegistry};
+use crate::policy::{PolicyRegistry, evaluate_policies};
 
 /// A strongly connected component in the condensed graph.
 #[derive(Debug, Clone)]
@@ -392,7 +392,7 @@ impl BlastRadiusEngine {
         graph_digest: String,
     ) -> crate::blast_engine_snapshot::BlastEngineSnapshot {
         use crate::blast_engine_snapshot::{
-            bitset_to_words, compress_words, words_popcount, ReachabilityRow,
+            ReachabilityRow, bitset_to_words, compress_words, words_popcount,
         };
         use rayon::prelude::*;
 
@@ -430,7 +430,11 @@ impl BlastRadiusEngine {
                 })
                 .collect(),
             scc_members: self.scc_members.clone(),
-            scc_names: self.dag.node_weights().map(|n| n.name.to_string()).collect(),
+            scc_names: self
+                .dag
+                .node_weights()
+                .map(|n| n.name.to_string())
+                .collect(),
             node_to_scc: self
                 .node_to_scc
                 .iter()

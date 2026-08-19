@@ -1,7 +1,7 @@
 //! Structured inspect CLI JSON responses with composable graph topology.
 
 use super::slice_output::{
-    cfg_topology_json, pdg_topology_json, CfgBlockNode, CfgEdgeNode, PdgGraphEdge, PdgGraphNode,
+    CfgBlockNode, CfgEdgeNode, PdgGraphEdge, PdgGraphNode, cfg_topology_json, pdg_topology_json,
 };
 use crate::analysis::cfg::{BlockId, ControlFlowGraph};
 use crate::analysis::dominance::DominatorTree;

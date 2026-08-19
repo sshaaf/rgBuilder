@@ -7,9 +7,9 @@
 use crate::cfg::ControlFlowGraph;
 use crate::cfg_pdg_archive::{CfgPdgArchive, CfgPdgRecord};
 use crate::field_write_locals::LocalsParseContext;
+use rayon::prelude::*;
 use rgbuilder_error::{Error, Result};
 use rgbuilder_graph::schema::Node;
-use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -199,9 +199,7 @@ impl FieldWriteIndex {
     pub fn load_from_path(path: &Path) -> Result<Self> {
         let bytes = fs::read(path)?;
         if bytes.len() < 8 || &bytes[0..4] != b"RBFW" {
-            return Err(Error::SerdeError(
-                "invalid field_write index magic".into(),
-            ));
+            return Err(Error::SerdeError("invalid field_write index magic".into()));
         }
         let version = u32::from_le_bytes(bytes[4..8].try_into().unwrap_or([0; 4]));
         if version != FIELD_WRITE_INDEX_VERSION {
@@ -261,7 +259,9 @@ fn type_matches(have: &str, want: &str) -> bool {
         return true;
     }
     let have_n = normalize_type_name(have);
-    have_n == want || have_n.ends_with(&format!(".{want}")) || have_n.ends_with(&format!("::{want}"))
+    have_n == want
+        || have_n.ends_with(&format!(".{want}"))
+        || have_n.ends_with(&format!("::{want}"))
 }
 
 fn normalize_type_name(name: &str) -> String {
@@ -608,12 +608,8 @@ public class OrderProcessor {
             pdg: Arc::new(pdg_proc),
         });
 
-        let index = FieldWriteIndex::build_from_archive(
-            &archive,
-            &[order_fn, process_fn],
-            None,
-            None,
-        );
+        let index =
+            FieldWriteIndex::build_from_archive(&archive, &[order_fn, process_fn], None, None);
         let hits = index.query(&MutationQuery {
             type_name: "OrderDTO".into(),
             exclude_ctors: true,
@@ -655,9 +651,9 @@ public class Dual {
         let cfg_second = build_cfg_for_function("java", source, "second").expect("second cfg");
 
         let mut first_fn = Node::new(NodeType::Function, "first");
-        first_fn.file_path = Some(file.clone());
+        first_fn.file_path = Some(file.clone().into());
         let mut second_fn = Node::new(NodeType::Function, "second");
-        second_fn.file_path = Some(file.clone());
+        second_fn.file_path = Some(file.clone().into());
 
         let id_first = first_fn.id;
         let id_second = second_fn.id;
@@ -697,7 +693,10 @@ public class Dual {
         assert_eq!(hits.len(), 2, "hits={hits:?}");
         assert!(hits.iter().any(|h| h.function_name == "first"));
         assert!(hits.iter().any(|h| h.function_name == "second"));
-        assert!(hits.iter().all(|h| h.receiver_type.as_deref() == Some("OrderDTO")));
+        assert!(
+            hits.iter()
+                .all(|h| h.receiver_type.as_deref() == Some("OrderDTO"))
+        );
         // Stable sort: same file, earlier line first
         assert!(hits[0].line <= hits[1].line);
     }
@@ -761,12 +760,8 @@ public class OrderProcessor {
             pdg: Arc::new(pdg_proc),
         });
 
-        let index = FieldWriteIndex::build_from_archive(
-            &archive,
-            &[ctor_fn, process_fn],
-            None,
-            None,
-        );
+        let index =
+            FieldWriteIndex::build_from_archive(&archive, &[ctor_fn, process_fn], None, None);
         let hits = index.query(&MutationQuery {
             type_name: type_name.into(),
             exclude_ctors: true,
@@ -786,20 +781,13 @@ public class OrderProcessor {
         assert!(!hits[0].is_constructor);
     }
 
-    fn fn_node(
-        name: &str,
-        qn: &str,
-        file: &str,
-        is_ctor: bool,
-        params: Vec<(&str, &str)>,
-    ) -> Node {
+    fn fn_node(name: &str, qn: &str, file: &str, is_ctor: bool, params: Vec<(&str, &str)>) -> Node {
         use rgbuilder_graph::schema::{GraphParameter, NodeType};
-        let mut n = Node::new(NodeType::Function, name.into());
+        let mut n = Node::new(NodeType::Function, name);
         n.qualified_name = Some(qn.into());
         n.file_path = Some(file.into());
         if is_ctor {
-            n.properties
-                .insert("is_constructor".into(), "true".into());
+            n.properties.insert("is_constructor".into(), "true".into());
         }
         n.parameters = params
             .into_iter()

@@ -281,7 +281,9 @@ impl CallGraph {
     /// Backward compatibility: Access nodes (builds cache on first call).
     ///
     /// Prefer columnar fields (`names`, `file_paths`, `success_list`, …) on new code paths.
-    #[deprecated(note = "use columnar CallGraph fields; legacy cache will be removed in a future release")]
+    #[deprecated(
+        note = "use columnar CallGraph fields; legacy cache will be removed in a future release"
+    )]
     pub fn nodes(&mut self) -> &HashMap<Uuid, CallGraphNode> {
         if self.nodes_cache.is_none() {
             let mut nodes = HashMap::new();
@@ -306,7 +308,9 @@ impl CallGraph {
     /// Backward compatibility: Access edges (builds cache on first call).
     ///
     /// Prefer `success_list` / `call_edges_between` on new code paths.
-    #[deprecated(note = "use columnar CallGraph fields; legacy cache will be removed in a future release")]
+    #[deprecated(
+        note = "use columnar CallGraph fields; legacy cache will be removed in a future release"
+    )]
     pub fn edges(&mut self) -> &Vec<CallGraphEdge> {
         if self.edges_cache.is_none() {
             let mut edges = Vec::new();

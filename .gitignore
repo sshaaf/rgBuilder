@@ -1,10 +1,6 @@
-#AI — ignore local agent state, but keep committed skill discovery entrypoints
-.cursor/*
-!.cursor/skills/
-!.cursor/skills/**
-.claude/*
-!.claude/skills/
-!.claude/skills/**
+# AI local state
+.cursor/
+.claude/
 .opencode/
 openspec/
 .scratch/
@@ -60,7 +56,8 @@ graphify-out/
 .cache/
 
 # Local large fixtures (clone separately; not part of the repo)
-/example/
+/example/*
+!/example/README.md
 
 # VHS / Playwright intermediate recordings
 docs/videos/*.raw.webm

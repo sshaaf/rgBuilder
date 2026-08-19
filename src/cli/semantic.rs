@@ -6,12 +6,12 @@ use super::semantic_output::{
     build_index_response, index_response_to_json, query_response_to_json,
 };
 use crate::analysis::{
-    blast_summary_from_result, build_index, default_tokenizer_path, resolve_embedder,
-    try_load_engine, validate_mrl_dimensions, BlastRadiusEngine, BlastSummaryProvider,
-    EmbedderChoice, SemanticBuildOptions, SemanticExpansion, SemanticIndex, CODE_DAEMON_MRL_DIMS,
+    BlastRadiusEngine, BlastSummaryProvider, CODE_DAEMON_MRL_DIMS, EmbedderChoice,
+    SemanticBuildOptions, SemanticExpansion, SemanticIndex, blast_summary_from_result, build_index,
+    default_tokenizer_path, resolve_embedder, try_load_engine, validate_mrl_dimensions,
 };
 use crate::graph::backend::{GraphBackend, MemoryBackend};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::ValueEnum;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
@@ -32,8 +32,21 @@ pub enum CliEmbedderKind {
 pub enum CliSemanticScope {
     /// Rank function symbols (default).
     Function,
+    /// Rank documentation headings (`:Module` with `kind=heading`).
+    Docs,
+    /// Rank functions and documentation sections.
+    All,
     /// Rank communities via pooled member embeddings.
     Community,
+}
+
+fn cli_scope_to_build(scope: CliSemanticScope) -> crate::analysis::SemanticIndexScope {
+    match scope {
+        CliSemanticScope::Function => crate::analysis::SemanticIndexScope::Functions,
+        CliSemanticScope::Docs => crate::analysis::SemanticIndexScope::Docs,
+        CliSemanticScope::All => crate::analysis::SemanticIndexScope::All,
+        CliSemanticScope::Community => crate::analysis::SemanticIndexScope::Functions,
+    }
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
@@ -54,6 +67,7 @@ pub struct SemanticIndexArgs {
     pub diffuse_alpha: f64,
     pub diffuse_iters: usize,
     pub diffuse_bidirectional: bool,
+    pub scope: CliSemanticScope,
 }
 
 pub struct SemanticQueryArgs {
@@ -126,6 +140,7 @@ pub fn run_index(ctx: &CliContext, args: SemanticIndexArgs) -> Result<()> {
             } else {
                 None
             },
+            scope: cli_scope_to_build(args.scope),
         },
     )?;
 
@@ -145,9 +160,19 @@ pub fn run_index(ctx: &CliContext, args: SemanticIndexArgs) -> Result<()> {
     if ctx.format == OutputFormat::Json {
         ctx.emit_json_value(&index_response_to_json(&response))?;
     } else {
+        let scope_label = match args.scope {
+            CliSemanticScope::Function => "functions",
+            CliSemanticScope::Docs => "doc sections",
+            CliSemanticScope::All => "entries",
+            CliSemanticScope::Community => "functions",
+        };
         println!(
-            "Indexed {} functions ({}, {} dims) → {}",
-            response.functions_indexed, response.model_id, response.dimensions, response.path
+            "Indexed {} {} ({}, {} dims) → {}",
+            response.functions_indexed,
+            scope_label,
+            response.model_id,
+            response.dimensions,
+            response.path
         );
         if let Some(build_stats) = &response.build_stats {
             println!(
@@ -315,6 +340,8 @@ impl BlastSummaryProvider for EngineBlastProvider<'_> {
                 qualified_name: node.qualified_name.as_ref().map(|s| s.to_string()),
                 file_path: node.file_path.as_ref().map(|s| s.to_string()),
                 code_hash: node.code_hash.as_ref().map(|s| s.to_string()),
+                node_type: None,
+                kind: None,
             },
             result.direct_caller_ids.len(),
             result.impact_zone_ids.len(),

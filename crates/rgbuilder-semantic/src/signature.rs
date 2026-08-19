@@ -2,9 +2,9 @@
 //!
 //! Task 4.1.2: Extract language-agnostic function signatures.
 
+use regex::Regex;
 use rgbuilder_graph::schema::{Node, NodeType};
 use rgbuilder_plugin_api::{Parameter, Symbol};
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 /// A normalized function parameter.

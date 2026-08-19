@@ -336,12 +336,16 @@ def example():
         let pdg = ProgramDependenceGraph::build(&cfg, code.as_bytes()).unwrap();
         let mut engine = TypeInferenceEngine::new(&pdg, &cfg, "python");
         let types = engine.infer();
-        assert!(types
-            .iter()
-            .any(|t| t.variable == "x" && t.inferred_type == InferredType::Int));
-        assert!(types
-            .iter()
-            .any(|t| t.variable == "y" && t.inferred_type == InferredType::String));
+        assert!(
+            types
+                .iter()
+                .any(|t| t.variable == "x" && t.inferred_type == InferredType::Int)
+        );
+        assert!(
+            types
+                .iter()
+                .any(|t| t.variable == "y" && t.inferred_type == InferredType::String)
+        );
     }
 
     #[test]
@@ -356,9 +360,11 @@ def process(data):
         let pdg = ProgramDependenceGraph::build(&cfg, code.as_bytes()).unwrap();
         let mut engine = TypeInferenceEngine::new(&pdg, &cfg, "python");
         let types = engine.infer();
-        assert!(types
-            .iter()
-            .any(|t| t.variable == "data" && t.inferred_type == InferredType::String));
+        assert!(
+            types
+                .iter()
+                .any(|t| t.variable == "data" && t.inferred_type == InferredType::String)
+        );
         assert!(types.iter().any(|t| {
             t.variable == "items" && matches!(t.inferred_type, InferredType::List(_))
         }));

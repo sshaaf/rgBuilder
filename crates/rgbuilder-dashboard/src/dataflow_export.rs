@@ -1,6 +1,6 @@
 //! Dataflow index for dashboard Phase 7 (PDG bundles live under `slice/`).
 
-use crate::slice_export::{SliceExportSummary, SLICE_DETAIL_DIR};
+use crate::slice_export::{SLICE_DETAIL_DIR, SliceExportSummary};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;

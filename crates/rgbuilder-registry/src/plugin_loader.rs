@@ -3,7 +3,7 @@
 //! Records paths to third-party plugin artifacts. Parsing is not loaded from
 //! shared libraries; built-in languages use `rgbuilder-lang-*` crates instead.
 
-use crate::plugin_abi::{PluginMetadata, PLUGIN_ABI_VERSION};
+use crate::plugin_abi::{PLUGIN_ABI_VERSION, PluginMetadata};
 use rgbuilder_error::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};

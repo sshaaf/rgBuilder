@@ -158,7 +158,8 @@ If you add a new workspace crate that external tools should use, export it throu
 | `rgbuilder-plugin-api` | Traits and types: `LanguagePlugin`, `Symbol`, relations, config format plugins. **Contract** all languages implement. |
 | `rgbuilder-plugin-helpers` | Shared tree-sitter/complexity utilities for plugin authors. |
 | `rgbuilder-lang-runtime` | Config-driven generic plugins (tree-sitter / regex) for simple languages. |
-| `rgbuilder-config-formats` | Non-code config parsers (YAML, JSON, TOML, properties, markdown config). |
+| `rgbuilder-config-formats` | Non-code config parsers (YAML, JSON, TOML, properties). |
+| `rgbuilder-lang-markdown` | Custom markup plugin for `.md` / `.mdx` (context graph; not Tier 1). |
 | `rgbuilder-registry` | `LanguageRegistry`, dynamic plugin loading, `full_registry()`. |
 | `rgbuilder-languages` | Registers all Tier 1 lang crates at link time. |
 | `rgbuilder-lang-*` | Per-language implementations (see note below). |
@@ -260,7 +261,8 @@ Alphabetical list of workspace crates **excluding** individual `rgbuilder-lang-*
 | **rg-build** | `.` | CLI binary, command dispatch, language bundle wiring, public library root. |
 | **rgbuilder-analysis** | `crates/rgbuilder-analysis` | Graph algorithms: blast radius, centrality, community, CFG/PDG, slicing, taint, policies, caches, `PetGraphView`. |
 | **rgbuilder-languages** | `crates/rgbuilder-languages` | Registers all Tier 1 language plugins (Rust, Python, JS/TS, Go, Java, C#, C, C++). |
-| **rgbuilder-config-formats** | `crates/rgbuilder-config-formats` | Config file plugins (YAML, JSON, TOML, properties, markdown). |
+| **rgbuilder-config-formats** | `crates/rgbuilder-config-formats` | Config file plugins (YAML, JSON, TOML, properties). |
+| **rgbuilder-lang-markdown** | `crates/rgbuilder-lang-markdown` | Markdown context graph (headings, links, frontmatter). |
 | **rgbuilder-core** | `crates/rgbuilder-core` | Facade crate re-exporting the stable library API for embedders. |
 | **rgbuilder-error** | `crates/rgbuilder-error` | Shared error types (`Error`, `Result`) for the whole workspace. |
 | **rgbuilder-export** | `crates/rgbuilder-export` | Export graph and analysis to HTML dashboard, Mermaid, GraphML, Graphviz. |

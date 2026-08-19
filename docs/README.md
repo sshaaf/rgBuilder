@@ -19,6 +19,7 @@ Agent-first docs: index once, query with `-f json`, deepen in the User Guide whe
 | Goal | Doc |
 |------|-----|
 | Supported languages | [Languages](languages.md) |
+| Markdown / doc context graph | [Markdown context](markdown-context.md) — `.md` / `.mdx`, GQL, Obsidian vault export, doc semantic index |
 | FAQ / glossary | [FAQ](faq.md) · [Glossary](glossary.md) |
 | HTTP `serve` query API | [HTTP API](http-api.md) |
 | CI blast-radius policy | [Policy format](policy-format.md) |
@@ -33,8 +34,9 @@ Internals and contribution bars — not the default agent reading path.
 
 | Document | Topic |
 |----------|--------|
+| [Contributor checklist](contributor-checklist.md) | End-to-end workflow: add language, update feature, tests, PR |
 | [Feature designs](design/README.md) | Per-capability engineering notes |
-| [Tier 1 language support](tier-1-language-support.md) | Checklist to add/promote a language |
+| [Tier 1 language support](tier-1-language-support.md) | Layer A–F bar for Tier 1 languages |
 | [Code structure](Code_structure.md) | Crate layout |
 | [Analysis architecture](analysis-architecture.md) | CFG / PDG / taint |
 | [Graph storage architecture](graph-storage-architecture.md) | Snapshots, blast cache |

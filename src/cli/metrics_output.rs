@@ -1,7 +1,7 @@
 //! Structured metrics CLI JSON response.
 
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// Current metrics JSON schema version.
 pub const METRICS_SCHEMA_VERSION: u32 = 1;

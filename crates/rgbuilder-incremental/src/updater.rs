@@ -2,21 +2,21 @@
 //!
 //! Task 5.1.2: Update graph for changed files only (CRITICAL)
 
-use crate::file_tracker::{git_changed_files, relative_path, resolve_path, ChangeSet, FileTracker};
+use crate::file_tracker::{ChangeSet, FileTracker, git_changed_files, relative_path, resolve_path};
 use indicatif::{ProgressBar, ProgressStyle};
+use rgbuilder_analysis::{
+    BlastEngineSnapshot, CfgPdgArchive, MacroCallIndex, MacroCallLookupDb, SemanticIndex,
+};
 use rgbuilder_error::Result;
 use rgbuilder_extraction::discovery::{DiscoveryConfig, FileDiscoverer};
 use rgbuilder_extraction::{Extractor, GraphBuilder};
 use rgbuilder_graph::code_graph::CodeGraph;
 use rgbuilder_graph::schema::EdgeType;
 use rgbuilder_graph::{
-    compact_repo_snapshot, write_columnar_from_backend, DeltaSegment, MmappedGraphSnapshot,
-};
-use rgbuilder_analysis::{
-    BlastEngineSnapshot, CfgPdgArchive, MacroCallIndex, MacroCallLookupDb, SemanticIndex,
+    DeltaSegment, MmappedGraphSnapshot, compact_repo_snapshot, write_columnar_from_backend,
 };
 use rgbuilder_pipeline::parallel::par_map;
-use rgbuilder_pipeline::stream::{stream_into_graph, DEFAULT_STREAM_CHANNEL_CAPACITY};
+use rgbuilder_pipeline::stream::{DEFAULT_STREAM_CHANNEL_CAPACITY, stream_into_graph};
 use rgbuilder_pipeline::{PipelineConfig, ProcessingPipeline};
 use rgbuilder_registry::LanguageRegistry;
 use std::collections::HashMap;
@@ -168,7 +168,8 @@ impl IncrementalUpdater {
         let nodes_removed = graph.node_count();
         let edges_removed = graph.edge_count();
 
-        let (stats, _digest) = pipeline.process_repository_to_snapshot(repo_root, &snapshot_path)?;
+        let (stats, _digest) =
+            pipeline.process_repository_to_snapshot(repo_root, &snapshot_path)?;
         *graph = CodeGraph::open_snapshot(&snapshot_path)?;
 
         let mut tracker = FileTracker::new(repo_root);
@@ -298,7 +299,7 @@ impl IncrementalUpdater {
         }
         std::fs::create_dir_all(&spill_dir)?;
         let mut builder = GraphBuilder::with_spill(&spill_dir)?;
-        let (_files_processed, tails) = stream_into_graph(
+        let (_stream_stats, tails) = stream_into_graph(
             self.config.thread_count,
             &extractor,
             Arc::clone(&self.registry),
@@ -348,10 +349,10 @@ impl IncrementalUpdater {
         // Sidecars key off graph_digest — drop them so next discover/blast rebuilds cleanly.
         invalidate_digest_sidecars(repo_root);
 
-        result.nodes_removed = nodes_before
-            .saturating_sub(graph.node_count().saturating_sub(result.nodes_added));
-        result.edges_removed = edges_before
-            .saturating_sub(graph.edge_count().saturating_sub(result.edges_added));
+        result.nodes_removed =
+            nodes_before.saturating_sub(graph.node_count().saturating_sub(result.nodes_added));
+        result.edges_removed =
+            edges_before.saturating_sub(graph.edge_count().saturating_sub(result.edges_added));
 
         if let Some(pb) = progress {
             pb.finish_with_message("done");
@@ -429,7 +430,7 @@ impl IncrementalUpdater {
 
         let extractor = Extractor::new(Arc::clone(&self.registry));
         let mut builder = GraphBuilder::new();
-        let (files_processed, tails) = stream_into_graph(
+        let (stream_stats, tails) = stream_into_graph(
             self.config.thread_count,
             &extractor,
             Arc::clone(&self.registry),
@@ -438,7 +439,7 @@ impl IncrementalUpdater {
             &mut builder,
             || {},
         )?;
-        let _ = files_processed;
+        let _ = stream_stats;
         builder.build_resolution_indexes();
         extractor.populate_pass2(&tails, &mut builder)?;
         let (new_nodes, new_edges) = builder.into_graph();
@@ -679,8 +680,17 @@ mod tests {
         let updater = IncrementalUpdater::new(registry);
         updater.update(&mut graph, root).unwrap();
 
-        assert!(!blast.exists(), "blast sidecar should be removed after compact");
-        assert!(!macro_idx.exists(), "macro index should be removed after compact");
-        assert!(!analysis.exists(), "analysis_results should be removed after compact");
+        assert!(
+            !blast.exists(),
+            "blast sidecar should be removed after compact"
+        );
+        assert!(
+            !macro_idx.exists(),
+            "macro index should be removed after compact"
+        );
+        assert!(
+            !analysis.exists(),
+            "analysis_results should be removed after compact"
+        );
     }
 }

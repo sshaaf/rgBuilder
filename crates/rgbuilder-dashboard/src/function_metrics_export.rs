@@ -1,6 +1,6 @@
 //! Export per-node analysis scores for the Functions dashboard tab.
 
-use crate::export_context::{resolve_analysis, DashboardExportContext};
+use crate::export_context::{DashboardExportContext, resolve_analysis};
 use crate::metagraph::COMMUNITY_ONLY_THRESHOLD;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -45,8 +45,8 @@ pub fn export_function_metrics(
 
     // Large graphs still get per-function centrality rows so the Functions tab can
     // sort by PR / BC / Harm / Blast. Metagraph view may remain community-only.
-    let sparse_mode = (source_node_count >= COMMUNITY_ONLY_THRESHOLD)
-        .then_some("community_only".to_string());
+    let sparse_mode =
+        (source_node_count >= COMMUNITY_ONLY_THRESHOLD).then_some("community_only".to_string());
 
     let repo_root = snapshot_path
         .parent()

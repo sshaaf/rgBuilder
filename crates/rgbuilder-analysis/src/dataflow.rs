@@ -139,9 +139,7 @@ pub fn compute_reaching_definitions(
     }
 
     let bitset_to_hashset = |bits: &BitSet| -> HashSet<Definition> {
-        bits.iter()
-            .map(|idx| catalog.defs[idx].clone())
-            .collect()
+        bits.iter().map(|idx| catalog.defs[idx].clone()).collect()
     };
 
     let in_set = in_set_bits

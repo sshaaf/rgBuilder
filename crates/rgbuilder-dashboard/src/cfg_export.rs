@@ -249,7 +249,9 @@ pub(crate) fn write_empty_cfg_index(index_path: &Path) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rgbuilder_analysis::cfg::{BasicBlock, CfgEdge, ControlFlowGraph, Statement, StatementKind};
+    use rgbuilder_analysis::cfg::{
+        BasicBlock, CfgEdge, ControlFlowGraph, Statement, StatementKind,
+    };
     use std::collections::HashSet;
 
     #[test]

@@ -81,7 +81,13 @@ impl DependencyAnalyzer {
                 .collect();
             let names: Vec<String> = uuids
                 .iter()
-                .filter_map(|id| lookup.get_node(*id).ok().flatten().map(|n| n.name.to_string()))
+                .filter_map(|id| {
+                    lookup
+                        .get_node(*id)
+                        .ok()
+                        .flatten()
+                        .map(|n| n.name.to_string())
+                })
                 .collect();
 
             if uuids.len() >= 2 {

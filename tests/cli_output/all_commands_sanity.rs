@@ -298,10 +298,12 @@ fn test_all_cli_commands_json_schema_sanity() {
     let metrics_bc_str = str::from_utf8(&metrics_bc.stdout).unwrap();
     let metrics_bc_doc = sandbox.parse_stdout_json(&metrics_bc);
     assert_schema_version(&metrics_bc_doc, 1);
-    assert!(metrics_bc_doc
-        .get("betweenness")
-        .and_then(|v| v.as_array())
-        .is_some());
+    assert!(
+        metrics_bc_doc
+            .get("betweenness")
+            .and_then(|v| v.as_array())
+            .is_some()
+    );
     assert_keys_absent_in_str(metrics_bc_str, &["pagerank", "communities"]);
 
     // --- metrics: communities-only omits other sections ---
@@ -445,10 +447,11 @@ fn test_all_cli_commands_json_schema_sanity() {
     if let Some(idom) = dom_doc["idom"].as_array() {
         for rel in idom {
             assert!(rel.get("block").and_then(|v| v.as_u64()).is_some());
-            assert!(rel
-                .get("immediate_dominator")
-                .and_then(|v| v.as_u64())
-                .is_some());
+            assert!(
+                rel.get("immediate_dominator")
+                    .and_then(|v| v.as_u64())
+                    .is_some()
+            );
         }
     }
 
@@ -576,9 +579,16 @@ fn test_discover_cli_flags() {
         ("security", "--with-security"),
         ("cfg", "--with-cfg"),
         ("taint", "--with-taint"),
+        ("dfg-loops", "--with-dfg-loops"),
+        ("ast-skeleton", "--with-ast-skeleton"),
     ] {
         let sandbox = Sandbox::new();
-        let doc = discover_json_metrics(&sandbox, &[flag]);
+        let extra: &[&str] = if label == "dfg-loops" || label == "ast-skeleton" {
+            &[flag, "--with-cfg"]
+        } else {
+            &[flag]
+        };
+        let doc = discover_json_metrics(&sandbox, extra);
         assert_schema_version(&doc, 2);
         assert_eq!(doc["command"].as_str(), Some("discover"));
         assert!(

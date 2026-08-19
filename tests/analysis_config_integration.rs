@@ -3,9 +3,9 @@
 use rgbuilder::analysis::{ComplexityAnalyzer, DependencyAnalyzer};
 use rgbuilder::config::analyzer::ConfigAnalyzer;
 use rgbuilder::config::secret_detector::SecretDetector;
+use rgbuilder::graph::CodeGraph;
 use rgbuilder::graph::backend::GraphBackend;
 use rgbuilder::graph::schema::{Edge, Node, NodeType};
-use rgbuilder::graph::CodeGraph;
 use std::fs;
 use tempfile::TempDir;
 

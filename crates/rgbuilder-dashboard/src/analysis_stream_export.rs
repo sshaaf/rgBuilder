@@ -1,18 +1,18 @@
 //! Stream CFG/PDG dashboard export from per-function `.analysis.bin` files (no monolithic archive load).
 
 use crate::cfg_export::{
-    cfg_detail_light, write_empty_cfg_index, CfgDetailPayload, CfgExportSummary, CfgFunctionEntry,
-    CfgIndexPayload, CFG_ARCHIVE_BUNDLE_NAME, CFG_DETAIL_DIR, CFG_DETAIL_INLINE_LIMIT,
-    CFG_INDEX_FILE,
+    CFG_ARCHIVE_BUNDLE_NAME, CFG_DETAIL_DIR, CFG_DETAIL_INLINE_LIMIT, CFG_INDEX_FILE,
+    CfgDetailPayload, CfgExportSummary, CfgFunctionEntry, CfgIndexPayload, cfg_detail_light,
+    write_empty_cfg_index,
 };
-use crate::cfg_record_pack::{CfgRecordPackWriter, CFG_RECORD_DATA_FILE, CFG_RECORD_INDEX_FILE};
+use crate::cfg_record_pack::{CFG_RECORD_DATA_FILE, CFG_RECORD_INDEX_FILE, CfgRecordPackWriter};
 use crate::export_util::{link_or_copy, write_json_compact};
 use crate::function_meta::{function_meta_map, resolve_function_meta};
 use crate::slice_export::{
-    export_pdg, function_line_span, write_empty_slice_index, SliceBundlePayload,
-    SliceExportSummary, SliceFunctionEntry, SLICE_DETAIL_DIR, SLICE_INDEX_FILE,
+    SLICE_DETAIL_DIR, SLICE_INDEX_FILE, SliceBundlePayload, SliceExportSummary, SliceFunctionEntry,
+    export_pdg, function_line_span, write_empty_slice_index,
 };
-use crate::source_catalog::{ensure_source_file, write_source_index, SourceFileEntry};
+use crate::source_catalog::{SourceFileEntry, ensure_source_file, write_source_index};
 use rayon::prelude::*;
 use rgbuilder_analysis::cfg_pdg_archive::CfgPdgArchive;
 use rgbuilder_analysis::storage::{AnalysisIndexEntry, AnalysisStorage};

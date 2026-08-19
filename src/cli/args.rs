@@ -44,6 +44,8 @@ pub enum ExportFormat {
     Graphml,
     Graphviz,
     Mermaid,
+    Obsidian,
+    Okf,
 }
 
 /// Inspect layer subcommand.

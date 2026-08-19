@@ -15,8 +15,8 @@ pub struct GqlArgs {
 
 pub fn run(ctx: &CliContext, args: GqlArgs) -> Result<()> {
     use crate::gql::{
-        execute_explain_with_community, execute_macro_with_community, execute_with_community,
-        QueryMacroRegistry,
+        QueryMacroRegistry, execute_explain_with_community, execute_macro_with_community,
+        execute_with_community,
     };
 
     let graph = ctx.load_graph()?;
@@ -62,10 +62,11 @@ pub(crate) fn load_community_context(
     }
     let analysis = AnalysisResults::load(&path).ok()?;
     Some(CommunityQueryContext::from_analysis(&analysis, |uuid| {
-        backend
-            .get_node(uuid)
-            .ok()
-            .flatten()
-            .map(|n| (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())))
+        backend.get_node(uuid).ok().flatten().map(|n| {
+            (
+                n.name.to_string(),
+                n.file_path.as_ref().map(|s| s.to_string()),
+            )
+        })
     }))
 }

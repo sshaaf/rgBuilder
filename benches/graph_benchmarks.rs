@@ -3,12 +3,12 @@
 //! Run: `cargo bench --bench graph_benchmarks`
 //! Large memory audit: `RGBUILDER_BENCH_LARGE=1 cargo bench --bench graph_benchmarks large`
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use rgbuilder::analysis::graph_utils::PetGraphView;
 use rgbuilder::analysis::{BlastRadiusEngine, PolicyRegistry};
+use rgbuilder::graph::CodeGraph;
 use rgbuilder::graph::backend::GraphBackend;
 use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rgbuilder::graph::CodeGraph;
 use std::time::Duration;
 
 fn build_typed_graph(nodes: usize, edges: usize) -> CodeGraph {

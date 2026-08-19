@@ -120,10 +120,12 @@ fn discover_json_emits_telemetry_on_stdout() {
             .unwrap()
             > 0
     );
-    assert!(metrics
-        .get("duration_ms")
-        .and_then(|v| v.as_u64())
-        .is_some());
+    assert!(
+        metrics
+            .get("duration_ms")
+            .and_then(|v| v.as_u64())
+            .is_some()
+    );
 }
 
 #[test]
@@ -290,7 +292,8 @@ fn blast_radius_with_slices_under_30s_after_cfg_discover() {
         String::from_utf8_lossy(&discover.stderr)
     );
     assert!(
-        repo.join(".rgbuilder/analysis/cfg_pdg.archive.bin").exists(),
+        repo.join(".rgbuilder/analysis/cfg_pdg.archive.bin")
+            .exists(),
         "discover --cfg should write cfg_pdg archive"
     );
 

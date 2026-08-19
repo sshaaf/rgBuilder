@@ -1,9 +1,9 @@
 //! Export community-level migration graph for the dashboard bundle.
 
-use crate::export_context::{resolve_analysis, DashboardExportContext};
+use crate::export_context::{DashboardExportContext, resolve_analysis};
 use rgbuilder_analysis::{
-    build_migration_graph, compute_migration_plan, MigrationGraphPayload, MigrationOrderMode,
-    MigrationPlanPayload, MigrationWeights,
+    MigrationGraphPayload, MigrationOrderMode, MigrationPlanPayload, MigrationWeights,
+    build_migration_graph, compute_migration_plan,
 };
 use rgbuilder_graph::backend::MemoryBackend;
 use std::fs;

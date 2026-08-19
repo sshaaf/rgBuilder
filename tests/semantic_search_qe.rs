@@ -14,16 +14,21 @@ fn fixture_repo() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/tiny_polyglot_repo")
 }
 
+fn markdown_fixture_repo() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/markdown-context")
+}
+
 fn oracles_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/semantic_oracles.json")
 }
 
 fn rgbuilder_bin() -> PathBuf {
-    option_env!("CARGO_BIN_EXE_rg_build")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/release/rg-build")
-        })
+    if let Some(bin) = std::env::var_os("CARGO_BIN_EXE_rg-build")
+        .or_else(|| std::env::var_os("CARGO_BIN_EXE_rg_build"))
+    {
+        return PathBuf::from(bin);
+    }
+    panic!("CARGO_BIN_EXE_rg_build is not set; run via `cargo test`");
 }
 
 fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
@@ -77,8 +82,12 @@ struct Sandbox {
 
 impl Sandbox {
     fn new() -> Self {
+        Self::from_fixture(&fixture_repo())
+    }
+
+    fn from_fixture(fixture: &Path) -> Self {
         let dir = tempfile::tempdir().expect("tempdir");
-        copy_dir_all(&fixture_repo(), dir.path()).expect("copy fixture");
+        copy_dir_all(fixture, dir.path()).expect("copy fixture");
         Self {
             repo: dir.path().to_path_buf(),
             _dir: dir,
@@ -314,5 +323,49 @@ fn semantic_vocab_and_diffuse_find_checkout() {
     assert!(
         names2.iter().any(|n| n.contains("checkout")),
         "vocab+diffuse should still rank checkout: {names2:?}"
+    );
+}
+
+#[test]
+fn semantic_query_scope_docs_and_function_are_enforced() {
+    let sandbox = Sandbox::from_fixture(&markdown_fixture_repo());
+    let discover = sandbox.run(&["-f", "json", "discover", ".", "--languages", "markdown"]);
+    assert_success(&discover, "discover markdown");
+
+    let docs_index = sandbox.run(&[
+        "-f",
+        "json",
+        "semantic",
+        "index",
+        "--scope",
+        "docs",
+        "--embedder",
+        "vocab",
+        "--dimensions",
+        "256",
+    ]);
+    assert_success(&docs_index, "semantic index docs");
+
+    let docs_query = sandbox.run(&[
+        "-f", "json", "semantic", "query", "checkout", "--scope", "docs", "--limit", "5",
+    ]);
+    assert_success(&docs_query, "semantic docs query");
+    let docs_hits = hit_names(&sandbox.parse_json(&docs_query));
+    assert!(
+        !docs_hits.is_empty(),
+        "expected docs hits for checkout query"
+    );
+
+    let function_query = sandbox.run(&[
+        "-f", "json", "semantic", "query", "checkout", "--scope", "function", "--limit", "5",
+    ]);
+    assert!(
+        !function_query.status.success(),
+        "function scope query should fail against docs-only index"
+    );
+    let stderr = str::from_utf8(&function_query.stderr).unwrap_or("");
+    assert!(
+        stderr.contains("semantic query scope"),
+        "expected scope mismatch message, got stderr={stderr}"
     );
 }

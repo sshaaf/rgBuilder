@@ -1,6 +1,6 @@
 //! Monolith registry wrapper — wires built-in language plugins.
 
-pub use rgbuilder_registry::{plugin_abi, plugin_loader, RegistryStats};
+pub use rgbuilder_registry::{RegistryStats, plugin_abi, plugin_loader};
 
 use rgbuilder_registry::LanguageRegistry as InnerRegistry;
 use std::sync::Once;

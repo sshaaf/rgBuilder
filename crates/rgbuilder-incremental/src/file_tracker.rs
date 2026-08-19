@@ -401,8 +401,8 @@ mod tests {
     fn test_node_mapping() {
         let mut graph = CodeGraph::new();
         let backend = graph.backend_mut();
-        let mut node = Node::new(NodeType::Function, "hello".to_string());
-        node.file_path = Some("src/lib.rs".to_string());
+        let mut node = Node::new(NodeType::Function, "hello");
+        node.file_path = Some("src/lib.rs".into());
         backend.insert_node(node).unwrap();
 
         let mapping = build_node_mapping(&graph);

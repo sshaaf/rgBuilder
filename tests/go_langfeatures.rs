@@ -62,9 +62,8 @@ fn gql(repo: &Path, query: &str) -> Value {
 }
 
 fn callees_named(repo: &Path, caller: &str) -> Vec<(String, String)> {
-    let q = format!(
-        "MATCH (a:Function)-[:CALLS]->(b:Function) WHERE a.name = '{caller}' RETURN a,b"
-    );
+    let q =
+        format!("MATCH (a:Function)-[:CALLS]->(b:Function) WHERE a.name = '{caller}' RETURN a,b");
     let v = gql(repo, &q);
     let mut out = Vec::new();
     if let Some(rows) = v.get("rows").and_then(|r| r.as_array()) {
@@ -304,7 +303,10 @@ fn lf16_generics_symbols_present() {
         "LF-16 expected Function LfIdentity"
     );
     let box_t = gql(&repo, "MATCH (n:Struct) WHERE n.name = 'LfBox' RETURN n");
-    assert!(!node_names(&box_t).is_empty(), "LF-16 expected Struct LfBox");
+    assert!(
+        !node_names(&box_t).is_empty(),
+        "LF-16 expected Struct LfBox"
+    );
 }
 
 #[test]
@@ -315,14 +317,8 @@ fn lf17_import_symbols() {
     }
     ensure_discovered();
     let fmt = gql(&repo, "MATCH (n:Import) WHERE n.name = 'fmt' RETURN n");
-    assert!(
-        !node_names(&fmt).is_empty(),
-        "LF-17 expected Import fmt"
-    );
-    let tu = gql(
-        &repo,
-        "MATCH (n:Import) WHERE n.name = 'timeutil' RETURN n",
-    );
+    assert!(!node_names(&fmt).is_empty(), "LF-17 expected Import fmt");
+    let tu = gql(&repo, "MATCH (n:Import) WHERE n.name = 'timeutil' RETURN n");
     assert!(
         !node_names(&tu).is_empty(),
         "LF-17 expected Import timeutil"

@@ -7,8 +7,10 @@ pub mod secret_detector;
 
 pub use analyzer::{ConfigAnalyzer, MissingEnvVar, UnusedConfigKey};
 pub use drift::{
-    compare_configs, format_drift_report, ConfigDiffEntry, ConfigDiffKind, ConfigDriftReport,
+    ConfigDiffEntry, ConfigDiffKind, ConfigDriftReport, compare_configs, format_drift_report,
 };
 pub use project::{HooksConfig, RgbuilderConfig, RiskLevel, WatchConfig};
-pub use rgbuilder_extraction::usage_detector::{ConfigConfidence, ConfigUsage, ConfigUsageDetector};
+pub use rgbuilder_extraction::usage_detector::{
+    ConfigConfidence, ConfigUsage, ConfigUsageDetector,
+};
 pub use secret_detector::{DetectedSecret, SecretDetector, Severity as SecretSeverity};

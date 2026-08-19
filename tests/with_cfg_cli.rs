@@ -75,6 +75,20 @@ fn discover_cfg_alias_still_works() {
 }
 
 #[test]
+fn discover_with_dfg_loops_requires_cfg_pass() {
+    let (_tmp, repo) = materialize();
+    let output = run_discover(&repo, &["--with-dfg-loops", "--with-cfg"]);
+    assert_ok(&output, "discover --with-dfg-loops --with-cfg");
+}
+
+#[test]
+fn discover_with_ast_skeleton_requires_cfg_pass() {
+    let (_tmp, repo) = materialize();
+    let output = run_discover(&repo, &["--with-ast-skeleton", "--with-cfg"]);
+    assert_ok(&output, "discover --with-ast-skeleton --with-cfg");
+}
+
+#[test]
 fn discover_help_lists_with_flags_not_all() {
     let output = Command::new(rgbuilder_bin())
         .args(["discover", "--help"])

@@ -1,4 +1,4 @@
-use rgbuilder::cli::gql_output::{fixture_gql_json, GQL_SCHEMA_VERSION};
+use rgbuilder::cli::gql_output::{GQL_SCHEMA_VERSION, fixture_gql_json};
 
 #[test]
 fn test_gql_json_schema_sanity() {
@@ -58,9 +58,10 @@ fn test_gql_empty_rows_explicit_array() {
     assert_eq!(response.count, 0);
     assert!(response.rows.is_empty());
     let doc = serde_json::to_value(&response).unwrap();
-    assert!(doc
-        .get("rows")
-        .and_then(|v| v.as_array())
-        .unwrap()
-        .is_empty());
+    assert!(
+        doc.get("rows")
+            .and_then(|v| v.as_array())
+            .unwrap()
+            .is_empty()
+    );
 }

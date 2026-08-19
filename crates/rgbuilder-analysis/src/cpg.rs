@@ -5,11 +5,11 @@
 //! Phase 2: `cpg_flows` (forward/backward data slice) — see `docs/design/hybrid-cpg-plan.md`.
 
 use crate::cfg_builder::build_cfg_for_function;
-use crate::cfg_pdg_archive::{CfgPdgArchive, CFG_PDG_ARCHIVE_FILE};
+use crate::cfg_pdg_archive::{CFG_PDG_ARCHIVE_FILE, CfgPdgArchive};
 use crate::field_write::{FieldWriteIndex, MutationQuery};
 use crate::language_profile::cfg_language_id_from_path;
 use crate::pdg::ProgramDependenceGraph;
-use crate::slicing::{compute_slice_with_options, SliceCriterion, SliceDirection, SliceOptions};
+use crate::slicing::{SliceCriterion, SliceDirection, SliceOptions, compute_slice_with_options};
 use rgbuilder_error::{Error, Result};
 use rgbuilder_graph::backend::{GraphBackend, MemoryBackend};
 use rgbuilder_graph::schema::{EdgeType, Node, NodeType};
@@ -102,11 +102,11 @@ pub fn cpg_status(repo_root: &Path) -> Result<CpgStatus> {
         Ok(Some(idx)) => (true, idx.writes.len()),
         _ => (false, 0),
     };
-    let (ast_present, ast_count) = match crate::ast_skeleton::AstSkeletonArchive::open_if_exists(repo_root)
-    {
-        Ok(Some(a)) => (true, a.records.len()),
-        _ => (false, 0),
-    };
+    let (ast_present, ast_count) =
+        match crate::ast_skeleton::AstSkeletonArchive::open_if_exists(repo_root) {
+            Ok(Some(a)) => (true, a.records.len()),
+            _ => (false, 0),
+        };
     if !path.is_file() {
         return Ok(CpgStatus {
             schema_version: 1,
@@ -144,10 +144,9 @@ fn function_matches(node: &Node, symbol: &str) -> bool {
     }
     node.name == symbol
         || node.qualified_name.as_deref() == Some(symbol)
-        || node
-            .qualified_name
-            .as_deref()
-            .is_some_and(|q| q.ends_with(&format!("::{symbol}")) || q.ends_with(&format!(".{symbol}")))
+        || node.qualified_name.as_deref().is_some_and(|q| {
+            q.ends_with(&format!("::{symbol}")) || q.ends_with(&format!(".{symbol}"))
+        })
 }
 
 /// Resolve a function by simple name, FQN, or UUID string.
@@ -529,4 +528,3 @@ public class OrderProcessor {
         assert!(!result.steps.is_empty());
     }
 }
-

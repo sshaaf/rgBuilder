@@ -348,8 +348,7 @@ mod tests {
         }
         let edges = store.edge_topology_typed().unwrap();
         let legacy = CodeGraphCsr::from_typed_edges(store.node_count(), &edges, &uuid_to_index);
-        let streamed =
-            CodeGraphCsr::from_store_topology(&store, &uuid_to_index).unwrap();
+        let streamed = CodeGraphCsr::from_store_topology(&store, &uuid_to_index).unwrap();
         assert_eq!(legacy.node_count(), streamed.node_count());
         assert_eq!(legacy.edge_count(), streamed.edge_count());
         assert_eq!(legacy.targets, streamed.targets);

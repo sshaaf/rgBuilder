@@ -107,9 +107,8 @@ impl TokenSpaceAccumulator {
 
     /// Shared process-wide accumulator over the compiled matrix.
     pub fn global() -> Result<&'static TokenSpaceAccumulator> {
-        let slot = ACCUMULATOR.get_or_init(|| {
-            Self::from_bytes(embedded_bytes()).map_err(|err| err.to_string())
-        });
+        let slot = ACCUMULATOR
+            .get_or_init(|| Self::from_bytes(embedded_bytes()).map_err(|err| err.to_string()));
         match slot {
             Ok(acc) => Ok(acc),
             Err(msg) => Err(Error::ConfigError(msg.clone())),

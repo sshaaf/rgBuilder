@@ -1,6 +1,6 @@
 //! Phase 14: Mermaid diagram export tests.
 
-use rgbuilder::export::{generate_mermaid, DiagramType, MermaidOptions};
+use rgbuilder::export::{DiagramType, MermaidOptions, generate_mermaid};
 use rgbuilder::graph::backend::GraphBackend;
 use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
 

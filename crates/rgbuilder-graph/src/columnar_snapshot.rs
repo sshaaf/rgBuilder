@@ -6,8 +6,8 @@
 //! **Complexity:** open is O(N) for id→index map only; `find_nodes_by_name` uses the embedded
 //! name index without hydrating a [`MemoryBackend`] or calling [`Self::to_prepared`].
 
-use crate::backend::trait_def::GraphBackend;
 use crate::backend::MemoryBackend;
+use crate::backend::trait_def::GraphBackend;
 use crate::csr::{edge_type_from_u8, edge_type_to_u8};
 use crate::normalize_path_str;
 use crate::schema::{Edge, EdgeType, GraphParameter, Node, NodeType, SharedStr};
@@ -183,7 +183,8 @@ impl ColumnarGraphMmap {
         self.id_to_index.get_or_init(|| {
             let mut map = HashMap::with_capacity(self.node_count);
             for idx in 0..self.node_count {
-                if let Ok(row) = read_node_row(self.mmap.as_ref(), self.offset_nodes as usize, idx) {
+                if let Ok(row) = read_node_row(self.mmap.as_ref(), self.offset_nodes as usize, idx)
+                {
                     map.insert(Uuid::from_bytes(row.id), idx);
                 }
             }
@@ -231,9 +232,7 @@ impl ColumnarGraphMmap {
 
     /// Iterate `(column_index, node_id)` pairs without materializing nodes.
     pub fn node_ids_by_index(&self) -> impl Iterator<Item = (usize, Uuid)> + '_ {
-        self.id_to_index_map()
-            .iter()
-            .map(|(id, idx)| (*idx, *id))
+        self.id_to_index_map().iter().map(|(id, idx)| (*idx, *id))
     }
 
     /// Read typed edge topology directly from mmap columns.
@@ -1029,7 +1028,11 @@ pub fn write_columnar_from_nodes_edges(
 ) -> Result<String> {
     nodes.sort_by_key(|n| n.id);
     edges.sort_by(|a, b| {
-        (a.from, a.to, edge_type_to_u8(a.edge_type)).cmp(&(b.from, b.to, edge_type_to_u8(b.edge_type)))
+        (a.from, a.to, edge_type_to_u8(a.edge_type)).cmp(&(
+            b.from,
+            b.to,
+            edge_type_to_u8(b.edge_type),
+        ))
     });
 
     let mut hasher = blake3::Hasher::new();
@@ -1246,8 +1249,7 @@ mod tests {
         let path_backend = tmp.path().join("backend.bin");
         let path_vecs = tmp.path().join("vecs.bin");
         let d_backend = write_columnar_from_backend(&backend, &path_backend).unwrap();
-        let d_vecs =
-            write_columnar_from_nodes_edges(vec![b, a], vec![edge], &path_vecs).unwrap();
+        let d_vecs = write_columnar_from_nodes_edges(vec![b, a], vec![edge], &path_vecs).unwrap();
         assert_eq!(d_backend, d_vecs);
 
         let open = |path: &std::path::Path| {
@@ -1274,9 +1276,12 @@ mod tests {
             .with_property("call_site_line".into(), "42".into());
 
         let tmp = TempDir::new().unwrap();
-        let d_plain =
-            write_columnar_from_nodes_edges(vec![a.clone(), b.clone()], vec![plain], &tmp.path().join("p.bin"))
-                .unwrap();
+        let d_plain = write_columnar_from_nodes_edges(
+            vec![a.clone(), b.clone()],
+            vec![plain],
+            &tmp.path().join("p.bin"),
+        )
+        .unwrap();
         let d_rich =
             write_columnar_from_nodes_edges(vec![a, b], vec![rich], &tmp.path().join("r.bin"))
                 .unwrap();
@@ -1321,8 +1326,11 @@ mod tests {
         })
         .unwrap();
         edges.sort_by(|a, b| {
-            (a.from, a.to, edge_type_to_u8(a.edge_type))
-                .cmp(&(b.from, b.to, edge_type_to_u8(b.edge_type)))
+            (a.from, a.to, edge_type_to_u8(a.edge_type)).cmp(&(
+                b.from,
+                b.to,
+                edge_type_to_u8(b.edge_type),
+            ))
         });
         for edge in &edges {
             hasher.update(&bincode::serialize(&edge.for_columnar_digest()).unwrap());
@@ -1340,8 +1348,8 @@ mod tests {
         use std::sync::Arc;
         use tempfile::TempDir;
 
-        let ann = Node::new(NodeType::Annotation, "AddOnStartup")
-            .with_file_path("AddOnStartup.java");
+        let ann =
+            Node::new(NodeType::Annotation, "AddOnStartup").with_file_path("AddOnStartup.java");
         let method = Node::new(NodeType::Function, "bar").with_file_path("Foo.java");
         let sealed = Node::new(NodeType::Class, "Shape").with_file_path("Shape.java");
         let circle = Node::new(NodeType::Class, "Circle").with_file_path("Circle.java");

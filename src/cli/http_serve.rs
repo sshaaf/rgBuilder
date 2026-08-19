@@ -5,19 +5,19 @@ use super::gql_output::gql_result_to_json;
 use super::semantic::SemanticQueryArgs;
 use super::semantic_api::{execute_semantic_query, semantic_index_path, semantic_status};
 use super::semantic_output::query_response_to_json;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use axum::{
+    Json, Router,
     extract::State,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
 use rgbuilder_analysis::{CommunityQueryContext, SemanticIndex};
 use rgbuilder_dashboard::default_dashboard_path;
 use rgbuilder_gql::{
-    execute_explain_with_community, execute_macro_with_community, execute_with_community,
-    QueryMacroRegistry,
+    QueryMacroRegistry, execute_explain_with_community, execute_macro_with_community,
+    execute_with_community,
 };
 use rgbuilder_graph::CodeGraph;
 use serde::Deserialize;
@@ -282,7 +282,12 @@ async fn api_semantic_query(
         )
     })?;
 
-    let scope = match body.scope.as_deref().unwrap_or("function").to_ascii_lowercase().as_str()
+    let scope = match body
+        .scope
+        .as_deref()
+        .unwrap_or("function")
+        .to_ascii_lowercase()
+        .as_str()
     {
         "function" | "functions" => super::semantic::CliSemanticScope::Function,
         "community" | "communities" => super::semantic::CliSemanticScope::Community,

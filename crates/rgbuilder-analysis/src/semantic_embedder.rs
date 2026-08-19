@@ -3,8 +3,8 @@
 use rgbuilder_error::{Error, Result};
 use std::path::{Path, PathBuf};
 
-use crate::semantic_search::{quantize_binary, sign_hash_embed, SIGN_HASH_MODEL_ID};
-use crate::semantic_vocab::{VocabAccumulateEmbedder, VOCAB_ACCUMULATE_MODEL_ID};
+use crate::semantic_search::{SIGN_HASH_MODEL_ID, quantize_binary, sign_hash_embed};
+use crate::semantic_vocab::{VOCAB_ACCUMULATE_MODEL_ID, VocabAccumulateEmbedder};
 
 /// Embed text into a float vector before binary quantization.
 pub trait SemanticEmbedder: Send + Sync {

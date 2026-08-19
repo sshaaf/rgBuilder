@@ -116,12 +116,7 @@ impl CPlugin {
         file_path: &Path,
     ) -> Result<Vec<Symbol>> {
         let mut symbols = Vec::new();
-        self.traverse(
-            root,
-            source,
-            &file_path.to_string_lossy(),
-            &mut symbols,
-        )?;
+        self.traverse(root, source, &file_path.to_string_lossy(), &mut symbols)?;
         Ok(symbols)
     }
 
@@ -254,16 +249,12 @@ impl LanguagePlugin for CPlugin {
         self.relations_from_tree(tree.root_node(), source, file_path, symbols)
     }
 
-    fn extract_all(
-        &self,
-        file_path: &Path,
-        source: &[u8],
-    ) -> Result<(Vec<Symbol>, Vec<Relation>)> {
+    fn extract_all(&self, file_path: &Path, source: &[u8]) -> Result<ExtractAllResult> {
         let tree = self.parse(file_path, source)?;
         let root = tree.root_node();
         let symbols = self.symbols_from_tree(root, source, file_path)?;
         let relations = self.relations_from_tree(root, source, file_path, &symbols)?;
-        Ok((symbols, relations))
+        Ok(ExtractAllResult::from_parts(symbols, relations))
     }
 
     fn calculate_complexity(

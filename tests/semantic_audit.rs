@@ -8,8 +8,8 @@ use fixtures::{
     dead_code_post_return, diamond_merge, interprocedural_handoff, loop_back_edge, sanitizer_bypass,
 };
 use rgbuilder::analysis::{
-    build_cfg_for_function, verify_idom_acyclic, DominatorTree, PolicyViolation,
-    ProgramDependenceGraph, TaintAnalyzer,
+    DominatorTree, PolicyViolation, ProgramDependenceGraph, TaintAnalyzer, build_cfg_for_function,
+    verify_idom_acyclic,
 };
 use rgbuilder::graph::backend::{GraphBackend, MemoryBackend};
 use rgbuilder::graph::schema::{Edge, EdgeType, GraphParameter, Node, NodeType};
@@ -77,7 +77,7 @@ fn fixture_sanitizer_bypass_detected() {
 }
 #[test]
 fn fixture_interprocedural_handoff_trace() {
-    use rgbuilder::analysis::{resolve_handoff_seeds, BlastRadiusEngine, InterproceduralCFG};
+    use rgbuilder::analysis::{BlastRadiusEngine, InterproceduralCFG, resolve_handoff_seeds};
 
     let mut backend = MemoryBackend::new();
     let main = Node::new(NodeType::Function, "main").with_file_path("chain.rs");
@@ -106,9 +106,11 @@ fn fixture_interprocedural_handoff_trace() {
     let blast = engine.analyze(id_process).unwrap();
     let seeds = resolve_handoff_seeds(&backend, &blast, id_process).unwrap();
     assert!(!seeds.is_empty());
-    assert!(seeds
-        .iter()
-        .any(|s| s.caller_id == id_main && s.callee_id == id_process));
+    assert!(
+        seeds
+            .iter()
+            .any(|s| s.caller_id == id_main && s.callee_id == id_process)
+    );
 
     let icfg = InterproceduralCFG::build(&backend, &files).unwrap();
     assert!(icfg.get_cfg(id_process).is_some());

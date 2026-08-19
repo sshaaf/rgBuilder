@@ -1,8 +1,8 @@
 //! Phase 13-style Rust analysis: expanded taint patterns and call relations.
 
 use rgbuilder::analysis::{
-    build_cfg_for_function, cfg_language_id_from_path, ProgramDependenceGraph, TaintAnalyzer,
-    TaintSink, TaintSource,
+    ProgramDependenceGraph, TaintAnalyzer, TaintSink, TaintSource, build_cfg_for_function,
+    cfg_language_id_from_path,
 };
 use rgbuilder_lang_rust::RustPlugin;
 use rgbuilder_plugin_api::{LanguagePlugin, RelationType};

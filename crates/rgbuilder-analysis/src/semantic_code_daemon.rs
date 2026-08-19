@@ -3,7 +3,7 @@
 #[cfg(feature = "semantic-onnx")]
 use crate::semantic_onnx::{Postprocess, SharedOnnxEmbedder};
 #[cfg(feature = "semantic-onnx")]
-use crate::semantic_onnx_tokenizer::{resolve_sentencepiece_path, OnnxTokenizer};
+use crate::semantic_onnx_tokenizer::{OnnxTokenizer, resolve_sentencepiece_path};
 use rgbuilder_error::{Error, Result};
 use std::path::{Path, PathBuf};
 

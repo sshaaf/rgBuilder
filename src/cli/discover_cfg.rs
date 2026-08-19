@@ -2,9 +2,9 @@
 
 use crate::analysis::storage::stable_function_key;
 use crate::analysis::{
-    build_cfg_for_function, cfg_language_id_from_path, AnalysisIndexEntry, AnalysisStorage,
-    CfgPdgRecord, ControlFlowGraph, DominatorTree, FunctionAnalysis, FunctionIdSyncEntry,
-    ParsedSourceFile, PdgBuildOptions, ProgramDependenceGraph, TaintAnalyzer,
+    AnalysisIndexEntry, AnalysisStorage, CfgPdgRecord, ControlFlowGraph, DominatorTree,
+    FunctionAnalysis, FunctionIdSyncEntry, ParsedSourceFile, PdgBuildOptions,
+    ProgramDependenceGraph, TaintAnalyzer, build_cfg_for_function, cfg_language_id_from_path,
 };
 use rayon::prelude::*;
 use rgbuilder_graph::code_index::hash_code;

@@ -7,7 +7,7 @@
 //! This BFS-based analyzer uses [`crate::graph_utils::TraversalConfig`] (default depth 10).
 
 use crate::flow_cache::FlowCache;
-use crate::graph_utils::{PetGraphView, TraversalConfig, DEFAULT_TRAVERSAL_DEPTH};
+use crate::graph_utils::{DEFAULT_TRAVERSAL_DEPTH, PetGraphView, TraversalConfig};
 use petgraph::graph::NodeIndex;
 use rgbuilder_error::{Error, Result};
 use rgbuilder_graph::backend::{GraphBackend, MemoryBackend};
@@ -305,11 +305,7 @@ fn average_complexity(backend: &MemoryBackend, ids: &HashSet<Uuid>) -> f64 {
         }
     }
     let count = ids.len() as f64;
-    if sum == 0.0 {
-        1.0
-    } else {
-        sum / count
-    }
+    if sum == 0.0 { 1.0 } else { sum / count }
 }
 
 #[cfg(test)]

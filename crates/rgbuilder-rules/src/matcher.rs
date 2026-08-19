@@ -3,11 +3,11 @@
 //! Task 3.1.2: Match nodes against rule conditions
 
 use crate::schema::{MatchCondition, MatchLeaf, Rule};
-use rgbuilder_error::Result;
-use rgbuilder_graph::backend::trait_def::GraphBackend;
-use rgbuilder_graph::backend::MemoryBackend;
-use rgbuilder_graph::schema::{EdgeType, Node, NodeType};
 use regex::Regex;
+use rgbuilder_error::Result;
+use rgbuilder_graph::backend::MemoryBackend;
+use rgbuilder_graph::backend::trait_def::GraphBackend;
+use rgbuilder_graph::schema::{EdgeType, Node, NodeType};
 use std::collections::HashSet;
 use uuid::Uuid;
 

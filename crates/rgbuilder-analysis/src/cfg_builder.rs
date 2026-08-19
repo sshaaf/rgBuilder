@@ -423,9 +423,7 @@ impl<'a> CfgBuilder<'a> {
             "lock_statement" => self.visit_lock_statement(node, source),
 
             // Null-conditional / coalescing (also visited from expr walk)
-            "conditional_access_expression" => {
-                self.visit_conditional_access(node, source)
-            }
+            "conditional_access_expression" => self.visit_conditional_access(node, source),
 
             // Jumps
             "break_expression" | "break_statement" => self.visit_break(node, source),
@@ -481,8 +479,12 @@ impl<'a> CfgBuilder<'a> {
                 self.add_statement(node, source, StatementKind::Assignment)?;
                 Ok(())
             }
-            "inc_statement" | "dec_statement" | "send_statement" | "update_expression"
-            | "postfix_unary_expression" | "prefix_unary_expression" => {
+            "inc_statement"
+            | "dec_statement"
+            | "send_statement"
+            | "update_expression"
+            | "postfix_unary_expression"
+            | "prefix_unary_expression" => {
                 self.add_statement(node, source, StatementKind::Expression)?;
                 Ok(())
             }
@@ -497,9 +499,9 @@ impl<'a> CfgBuilder<'a> {
             "match_expression" => self.visit_match(node, source),
 
             // Switch (Go + Java/C# `switch_expression`)
-            "switch_statement"
-            | "type_switch_statement"
-            | "expression_switch_statement" => self.visit_switch(node, source),
+            "switch_statement" | "type_switch_statement" | "expression_switch_statement" => {
+                self.visit_switch(node, source)
+            }
             "switch_expression" => self.visit_switch_expression(node, source),
             "select_statement" => self.visit_select(node, source),
 
@@ -547,13 +549,29 @@ impl<'a> CfgBuilder<'a> {
     fn visit_expression_stmt(&mut self, node: Node, source: &[u8]) -> Result<()> {
         let inner = node.named_child(0).unwrap_or(node);
         match inner.kind() {
-            "if_statement" | "if_expression" | "while_statement" | "while_expression"
-            | "for_statement" | "for_expression" | "for_in_expression" | "loop_expression"
-            | "match_expression" | "return_statement" | "return_expression"
-            | "try_expression" | "await_expression" | "break_expression" | "continue_expression"
-            | "macro_invocation" | "conditional_expression" | "co_await_expression"
-            | "throw_statement" | "throw_expression" | "co_yield_statement"
-            | "co_return_statement" | "switch_expression"
+            "if_statement"
+            | "if_expression"
+            | "while_statement"
+            | "while_expression"
+            | "for_statement"
+            | "for_expression"
+            | "for_in_expression"
+            | "loop_expression"
+            | "match_expression"
+            | "return_statement"
+            | "return_expression"
+            | "try_expression"
+            | "await_expression"
+            | "break_expression"
+            | "continue_expression"
+            | "macro_invocation"
+            | "conditional_expression"
+            | "co_await_expression"
+            | "throw_statement"
+            | "throw_expression"
+            | "co_yield_statement"
+            | "co_return_statement"
+            | "switch_expression"
             | "conditional_access_expression"
             | "lambda_expression"
             | "anonymous_method_expression" => self.visit_statement(inner, source),
@@ -598,12 +616,20 @@ impl<'a> CfgBuilder<'a> {
             "binary_expression" if null_coalesce_operator(node, source) => {
                 self.visit_null_coalesce(node, source)
             }
-            "if_expression" | "if_statement" | "match_expression" | "loop_expression"
-            | "while_expression" | "while_statement" | "for_expression" | "for_statement"
-            | "return_expression" | "return_statement" | "break_expression"
-            | "continue_expression" | "macro_invocation" | "conditional_expression" => {
-                self.visit_statement(node, source)
-            }
+            "if_expression"
+            | "if_statement"
+            | "match_expression"
+            | "loop_expression"
+            | "while_expression"
+            | "while_statement"
+            | "for_expression"
+            | "for_statement"
+            | "return_expression"
+            | "return_statement"
+            | "break_expression"
+            | "continue_expression"
+            | "macro_invocation"
+            | "conditional_expression" => self.visit_statement(node, source),
             _ => {
                 // Detect setjmp/longjmp/abort nested in larger expressions (e.g. if cond).
                 if is_setjmp_call(node, source) {
@@ -726,11 +752,7 @@ impl<'a> CfgBuilder<'a> {
                 return Ok(());
             }
         }
-        let text = node
-            .utf8_text(source)
-            .unwrap_or("?")
-            .trim()
-            .to_string();
+        let text = node.utf8_text(source).unwrap_or("?").trim().to_string();
         self.add_statement_to_current(Statement {
             kind: StatementKind::Branch,
             line: node.start_position().row + 1,
@@ -784,8 +806,7 @@ impl<'a> CfgBuilder<'a> {
             let suspend = self.new_block();
             self.cfg.add_edge(from, suspend, CfgEdgeType::IfFalse);
             if let Some(&nested) = self.nested_exits.last() {
-                self.cfg
-                    .add_edge(suspend, nested, CfgEdgeType::Return);
+                self.cfg.add_edge(suspend, nested, CfgEdgeType::Return);
             } else {
                 self.cfg.exits.push(suspend);
             }
@@ -881,8 +902,7 @@ impl<'a> CfgBuilder<'a> {
         if self.flow_active {
             for d in &dispose {
                 let b = self.new_block();
-                self.cfg
-                    .add_edge(self.current_block, b, CfgEdgeType::Next);
+                self.cfg.add_edge(self.current_block, b, CfgEdgeType::Next);
                 self.current_block = b;
                 self.add_statement_to_current(Statement {
                     kind: StatementKind::Expression,
@@ -921,8 +941,7 @@ impl<'a> CfgBuilder<'a> {
         if self.flow_active {
             for d in &exit_call {
                 let b = self.new_block();
-                self.cfg
-                    .add_edge(self.current_block, b, CfgEdgeType::Next);
+                self.cfg.add_edge(self.current_block, b, CfgEdgeType::Next);
                 self.current_block = b;
                 self.add_statement_to_current(Statement {
                     kind: StatementKind::Expression,
@@ -1715,10 +1734,7 @@ impl<'a> CfgBuilder<'a> {
                 if !ch.is_named() {
                     continue;
                 }
-                if matches!(
-                    ch.kind(),
-                    "switch_expression" | "conditional_expression"
-                ) {
+                if matches!(ch.kind(), "switch_expression" | "conditional_expression") {
                     continue;
                 }
                 self.visit_expr_for_control_flow(ch, source)?;
@@ -1758,8 +1774,7 @@ impl<'a> CfgBuilder<'a> {
         for stmts in frames {
             for d in stmts {
                 let b = self.new_block();
-                self.cfg
-                    .add_edge(self.current_block, b, CfgEdgeType::Next);
+                self.cfg.add_edge(self.current_block, b, CfgEdgeType::Next);
                 self.current_block = b;
                 self.add_statement_to_current(Statement {
                     kind: StatementKind::Expression,
@@ -1873,8 +1888,7 @@ impl<'a> CfgBuilder<'a> {
             if self.flow_active {
                 for d in &dispose {
                     let b = self.new_block();
-                    self.cfg
-                        .add_edge(self.current_block, b, CfgEdgeType::Next);
+                    self.cfg.add_edge(self.current_block, b, CfgEdgeType::Next);
                     self.current_block = b;
                     self.add_statement_to_current(Statement {
                         kind: StatementKind::Expression,
@@ -1922,28 +1936,27 @@ impl<'a> CfgBuilder<'a> {
             .or_else(|| find_child_kind(node, "block"))
             .or_else(|| {
                 // Expression-bodied local function / lambda.
-                node.child_by_field_name("value")
-                    .or_else(|| {
-                        let mut last = None;
-                        let mut c = node.walk();
-                        for ch in node.children(&mut c) {
-                            if ch.is_named()
-                                && !matches!(
-                                    ch.kind(),
-                                    "parameter_list"
-                                        | "implicit_parameter"
-                                        | "identifier"
-                                        | "predefined_type"
-                                        | "generic_name"
-                                        | "modifier"
-                                        | "attribute_list"
-                                )
-                            {
-                                last = Some(ch);
-                            }
+                node.child_by_field_name("value").or_else(|| {
+                    let mut last = None;
+                    let mut c = node.walk();
+                    for ch in node.children(&mut c) {
+                        if ch.is_named()
+                            && !matches!(
+                                ch.kind(),
+                                "parameter_list"
+                                    | "implicit_parameter"
+                                    | "identifier"
+                                    | "predefined_type"
+                                    | "generic_name"
+                                    | "modifier"
+                                    | "attribute_list"
+                            )
+                        {
+                            last = Some(ch);
                         }
-                        last
-                    })
+                    }
+                    last
+                })
             });
 
         let Some(body) = body else {
@@ -1973,8 +1986,7 @@ impl<'a> CfgBuilder<'a> {
 
         let sub_entry = self.new_block();
         let sub_exit = self.new_block();
-        self.cfg
-            .add_edge(def_block, sub_entry, CfgEdgeType::Jump);
+        self.cfg.add_edge(def_block, sub_entry, CfgEdgeType::Jump);
         self.nested_exits.push(sub_exit);
         self.current_block = sub_entry;
         self.flow_active = true;
@@ -2047,21 +2059,19 @@ impl<'a> CfgBuilder<'a> {
         let mut c = node.walk();
         for ch in node.children(&mut c) {
             if ch.kind() == "label_name" || ch.kind() == "label" {
-                return ch.utf8_text(source).ok().map(|s| {
-                    s.trim()
-                        .trim_start_matches('\'')
-                        .to_string()
-                });
+                return ch
+                    .utf8_text(source)
+                    .ok()
+                    .map(|s| s.trim().trim_start_matches('\'').to_string());
             }
         }
         // `break Outer` — named child may be the label
         if let Some(n) = node.named_child(0) {
             if n.kind() == "label_name" || n.kind() == "label" || n.kind() == "identifier" {
-                return n.utf8_text(source).ok().map(|s| {
-                    s.trim()
-                        .trim_start_matches('\'')
-                        .to_string()
-                });
+                return n
+                    .utf8_text(source)
+                    .ok()
+                    .map(|s| s.trim().trim_start_matches('\'').to_string());
             }
         }
         None
@@ -2179,9 +2189,10 @@ impl<'a> CfgBuilder<'a> {
                         ch.kind(),
                         "label_name" | "label" | "statement_identifier" | "identifier"
                     ) {
-                        return ch.utf8_text(source).ok().map(|s| {
-                            s.trim().trim_start_matches('\'').to_string()
-                        });
+                        return ch
+                            .utf8_text(source)
+                            .ok()
+                            .map(|s| s.trim().trim_start_matches('\'').to_string());
                     }
                 }
                 None
@@ -2241,7 +2252,10 @@ impl<'a> CfgBuilder<'a> {
             if child.kind() == "label_name" || child.kind() == "statement_identifier" {
                 continue;
             }
-            if node.child_by_field_name("label").is_some_and(|l| l.id() == child.id()) {
+            if node
+                .child_by_field_name("label")
+                .is_some_and(|l| l.id() == child.id())
+            {
                 continue;
             }
             // Java label identifier is the first named child — skip it.
@@ -2442,8 +2456,7 @@ impl<'a> CfgBuilder<'a> {
             if let Some(fail) = pending_fail.take() {
                 self.cfg.add_edge(fail, test, CfgEdgeType::Next);
             } else {
-                self.cfg
-                    .add_edge(cond_block, test, CfgEdgeType::IfTrue);
+                self.cfg.add_edge(cond_block, test, CfgEdgeType::IfTrue);
             }
             self.flow_active = true;
             self.current_block = test;
@@ -2678,8 +2691,7 @@ impl<'a> CfgBuilder<'a> {
             if let Some(fail) = pending_fail.take() {
                 self.cfg.add_edge(fail, test, CfgEdgeType::Next);
             } else {
-                self.cfg
-                    .add_edge(cond_block, test, CfgEdgeType::IfTrue);
+                self.cfg.add_edge(cond_block, test, CfgEdgeType::IfTrue);
             }
             self.flow_active = true;
             self.current_block = test;
@@ -2955,8 +2967,7 @@ impl<'a> CfgBuilder<'a> {
             if pushed_closes {
                 for d in &resource_closes {
                     let b = self.new_block();
-                    self.cfg
-                        .add_edge(self.current_block, b, CfgEdgeType::Next);
+                    self.cfg.add_edge(self.current_block, b, CfgEdgeType::Next);
                     self.current_block = b;
                     self.add_statement_to_current(Statement {
                         kind: StatementKind::Expression,
@@ -2970,8 +2981,7 @@ impl<'a> CfgBuilder<'a> {
             if let Some(ref stmts) = finally_snapshot {
                 for d in stmts {
                     let b = self.new_block();
-                    self.cfg
-                        .add_edge(self.current_block, b, CfgEdgeType::Next);
+                    self.cfg.add_edge(self.current_block, b, CfgEdgeType::Next);
                     self.current_block = b;
                     self.add_statement_to_current(Statement {
                         kind: StatementKind::Expression,
@@ -3115,10 +3125,7 @@ fn is_switch_default_case(case: Node, source: &[u8]) -> bool {
         if child.kind() == "default" || child.kind() == "default_switch_label" {
             return true;
         }
-        if matches!(
-            child.kind(),
-            "switch_label" | "default_label"
-        ) {
+        if matches!(child.kind(), "switch_label" | "default_label") {
             if let Ok(t) = child.utf8_text(source) {
                 if t.trim().starts_with("default") {
                     return true;
@@ -3144,9 +3151,18 @@ fn find_child_kind<'a>(node: Node<'a>, kind: &str) -> Option<Node<'a>> {
 
 fn collect_switch_cases<'a>(node: Node<'a>, cases: &mut Vec<Node<'a>>) {
     match node.kind() {
-        "expression_case" | "type_case" | "case_clause" | "default_case" | "default_statement"
-        | "case_statement" | "communication_case" | "switch_section" | "switch_case"
-        | "switch_default" | "switch_block_statement_group" | "switch_rule" => cases.push(node),
+        "expression_case"
+        | "type_case"
+        | "case_clause"
+        | "default_case"
+        | "default_statement"
+        | "case_statement"
+        | "communication_case"
+        | "switch_section"
+        | "switch_case"
+        | "switch_default"
+        | "switch_block_statement_group"
+        | "switch_rule" => cases.push(node),
         _ => {
             let mut cursor = node.walk();
             for child in node.children(&mut cursor) {
@@ -3224,10 +3240,7 @@ fn is_diverging_macro(node: Node, source: &[u8]) -> bool {
         .and_then(|n| n.utf8_text(source).ok())
         .unwrap_or("")
         .trim();
-    matches!(
-        name,
-        "panic" | "todo" | "unimplemented" | "unreachable"
-    )
+    matches!(name, "panic" | "todo" | "unimplemented" | "unreachable")
 }
 
 fn call_callee_name<'a>(node: Node<'a>, source: &'a [u8]) -> Option<&'a str> {
@@ -3243,9 +3256,8 @@ fn call_callee_name<'a>(node: Node<'a>, source: &'a [u8]) -> Option<&'a str> {
 }
 
 fn is_terminating_call(node: Node, source: &[u8]) -> bool {
-    call_callee_name(node, source).is_some_and(|s| {
-        matches!(s, "abort" | "exit" | "_Exit" | "quick_exit")
-    })
+    call_callee_name(node, source)
+        .is_some_and(|s| matches!(s, "abort" | "exit" | "_Exit" | "quick_exit"))
 }
 
 fn is_setjmp_call(node: Node, source: &[u8]) -> bool {
@@ -3253,7 +3265,8 @@ fn is_setjmp_call(node: Node, source: &[u8]) -> bool {
 }
 
 fn is_longjmp_call(node: Node, source: &[u8]) -> bool {
-    call_callee_name(node, source).is_some_and(|s| matches!(s, "longjmp" | "_longjmp" | "siglongjmp"))
+    call_callee_name(node, source)
+        .is_some_and(|s| matches!(s, "longjmp" | "_longjmp" | "siglongjmp"))
 }
 
 fn logical_operator<'a>(node: Node<'a>, source: &'a [u8]) -> Option<&'a str> {
@@ -3517,9 +3530,7 @@ fn il(opt: Option<i32>) -> i32 {
 "#;
         let cfg = build_cfg_for_function("rust", code, "il").unwrap();
         assert!(
-            cfg.edges
-                .iter()
-                .any(|e| e.edge_type == CfgEdgeType::IfTrue)
+            cfg.edges.iter().any(|e| e.edge_type == CfgEdgeType::IfTrue)
                 && cfg
                     .edges
                     .iter()
@@ -3527,9 +3538,7 @@ fn il(opt: Option<i32>) -> i32 {
             "if let must split true/false"
         );
         assert!(
-            rust_kinds(&cfg)
-                .iter()
-                .any(|k| *k == StatementKind::Return),
+            rust_kinds(&cfg).iter().any(|k| *k == StatementKind::Return),
             "if-let body return must lower"
         );
         assert!(
@@ -3557,7 +3566,11 @@ fn m(opt: Option<i32>) -> i32 {
             .iter()
             .filter(|k| **k == StatementKind::Return)
             .count();
-        assert!(returns >= 3, "each arm return must lower, kinds={:?}", rust_kinds(&cfg));
+        assert!(
+            returns >= 3,
+            "each arm return must lower, kinds={:?}",
+            rust_kinds(&cfg)
+        );
         assert!(
             !rust_texts(&cfg)
                 .iter()
@@ -3593,7 +3606,9 @@ fn foo() -> Result<i32, ()> { Ok(1) }
         let cfg = build_cfg_for_function("rust", code, "t").unwrap();
         let texts = rust_texts(&cfg);
         assert!(
-            texts.iter().any(|t| t.contains("foo()?") || t.contains("?")),
+            texts
+                .iter()
+                .any(|t| t.contains("foo()?") || t.contains("?")),
             "? must appear as branch, got {texts:?}"
         );
         assert!(
@@ -3607,7 +3622,9 @@ fn foo() -> Result<i32, ()> { Ok(1) }
         );
         // Success path should still reach Ok(y) / trailing result.
         assert!(
-            texts.iter().any(|t| t.contains("Ok(y)") || t.contains("let y")),
+            texts
+                .iter()
+                .any(|t| t.contains("Ok(y)") || t.contains("let y")),
             "success path must continue after ?, got {texts:?}"
         );
     }
@@ -3649,11 +3666,15 @@ fn sum(n: i32) -> i32 {
         assert!(cfg.has_cycle());
         let texts = rust_texts(&cfg);
         assert!(
-            texts.iter().any(|t| t.contains("0..n") || t.contains("for")),
+            texts
+                .iter()
+                .any(|t| t.contains("0..n") || t.contains("for")),
             "iterator value must appear, got {texts:?}"
         );
         assert!(
-            texts.iter().any(|t| t.contains("t += i") || t.contains("t+=i")),
+            texts
+                .iter()
+                .any(|t| t.contains("t += i") || t.contains("t+=i")),
             "body must lower, got {texts:?}"
         );
     }
@@ -3681,7 +3702,10 @@ fn nested(n: i32) -> i32 {
         let cfg = build_cfg_for_function("rust", code, "nested").unwrap();
         let cont = rust_block_ids(&cfg, "continue 'outer");
         let brk = rust_block_ids(&cfg, "break 'outer");
-        assert!(!cont.is_empty() && !brk.is_empty(), "labeled jumps must lower");
+        assert!(
+            !cont.is_empty() && !brk.is_empty(),
+            "labeled jumps must lower"
+        );
         // continue 'outer should Jump to outer for header (not inner loop).
         assert!(
             cont.iter().any(|c| {
@@ -3729,9 +3753,7 @@ fn boom() {
 "#;
         let cfg = build_cfg_for_function("rust", code, "boom").unwrap();
         assert!(
-            rust_texts(&cfg)
-                .iter()
-                .any(|t| t.contains("panic")),
+            rust_texts(&cfg).iter().any(|t| t.contains("panic")),
             "panic! must appear, got {:?}",
             rust_texts(&cfg)
         );
@@ -3756,9 +3778,7 @@ async fn aw() -> i32 {
 "#;
         let cfg = build_cfg_for_function("rust", code, "aw").unwrap();
         assert!(
-            rust_texts(&cfg)
-                .iter()
-                .any(|t| t.contains("await")),
+            rust_texts(&cfg).iter().any(|t| t.contains("await")),
             "await must appear, got {:?}",
             rust_texts(&cfg)
         );
@@ -3877,11 +3897,15 @@ func IfInit(err error) int {
         let cfg = build_cfg_for_function("go", code, "IfInit").unwrap();
         let texts = go_stmt_texts(&cfg);
         assert!(
-            texts.iter().any(|t| t.contains("e := err") || t.contains("e:=err")),
+            texts
+                .iter()
+                .any(|t| t.contains("e := err") || t.contains("e:=err")),
             "if initializer must be its own CFG statement, got {texts:?}"
         );
         assert!(
-            texts.iter().any(|t| t.contains("e != nil") || t.contains("e!=nil")),
+            texts
+                .iter()
+                .any(|t| t.contains("e != nil") || t.contains("e!=nil")),
             "condition should appear as branch text, got {texts:?}"
         );
         assert!(
@@ -3889,9 +3913,7 @@ func IfInit(err error) int {
             "whole if_statement should not be one Branch blob, got {texts:?}"
         );
         assert!(
-            cfg.edges
-                .iter()
-                .any(|e| e.edge_type == CfgEdgeType::Return),
+            cfg.edges.iter().any(|e| e.edge_type == CfgEdgeType::Return),
             "return in then-branch must create Return edge"
         );
     }
@@ -3915,11 +3937,15 @@ func Sum(n int) int {
         let cfg = build_cfg_for_function("go", code, "Sum").unwrap();
         let texts = go_stmt_texts(&cfg);
         assert!(
-            texts.iter().any(|t| t.contains("i := 0") || t.contains("i:=0")),
+            texts
+                .iter()
+                .any(|t| t.contains("i := 0") || t.contains("i:=0")),
             "for init must be visited, got {texts:?}"
         );
         assert!(
-            texts.iter().any(|t| t.contains("i < n") || t.contains("i<n")),
+            texts
+                .iter()
+                .any(|t| t.contains("i < n") || t.contains("i<n")),
             "for condition must be header branch, got {texts:?}"
         );
         assert!(
@@ -3979,7 +4005,11 @@ func Pick(x int) int {
         let cfg = build_cfg_for_function("go", code, "Pick").unwrap();
         let kinds = go_stmt_kinds(&cfg);
         assert!(
-            kinds.iter().filter(|k| **k == StatementKind::Return).count() >= 3,
+            kinds
+                .iter()
+                .filter(|k| **k == StatementKind::Return)
+                .count()
+                >= 3,
             "each case return must be a Return statement, got {kinds:?}"
         );
         let returns = cfg
@@ -4016,7 +4046,9 @@ func Pick(err error) int {
         let cfg = build_cfg_for_function("go", code, "Pick").unwrap();
         let texts = go_stmt_texts(&cfg);
         assert!(
-            texts.iter().any(|t| t.contains("e := err") || t.contains("e:=err")),
+            texts
+                .iter()
+                .any(|t| t.contains("e := err") || t.contains("e:=err")),
             "switch initializer must be visited, got {texts:?}"
         );
         assert!(
@@ -4068,7 +4100,9 @@ func Ft(x int) int {
 "#;
         let cfg = build_cfg_for_function("go", code, "Ft").unwrap();
         assert!(
-            go_stmt_texts(&cfg).iter().any(|t| t.contains("fallthrough")),
+            go_stmt_texts(&cfg)
+                .iter()
+                .any(|t| t.contains("fallthrough")),
             "fallthrough must be a CFG statement"
         );
         assert!(
@@ -4082,9 +4116,10 @@ func Ft(x int) int {
         );
         // Case 1 must not only merge-exit past case 2 without a jump into it.
         let ft_blocks = block_ids_containing(&cfg, "fallthrough");
-        let merge_only = cfg.edges.iter().any(|e| {
-            ft_blocks.contains(&e.from) && e.edge_type == CfgEdgeType::Next
-        });
+        let merge_only = cfg
+            .edges
+            .iter()
+            .any(|e| ft_blocks.contains(&e.from) && e.edge_type == CfgEdgeType::Next);
         assert!(
             !merge_only || has_edge_from_text_to_text(&cfg, "fallthrough", "return x"),
             "fallthrough should Jump into next case, not only Next-merge"
@@ -4226,9 +4261,7 @@ Outer:
         let reaches_outer_update = cont.iter().any(|c| {
             updates.iter().any(|u| can_reach(&cfg, *c, *u))
                 && cfg.edges.iter().any(|e| {
-                    e.from == *c
-                        && e.edge_type == CfgEdgeType::Jump
-                        && updates.contains(&e.to)
+                    e.from == *c && e.edge_type == CfgEdgeType::Jump && updates.contains(&e.to)
                 })
         });
         assert!(
@@ -4242,7 +4275,9 @@ Outer:
             cfg.edges.iter().any(|e| {
                 e.from == *b
                     && e.edge_type == CfgEdgeType::Jump
-                    && !updates.iter().any(|u| can_reach(&cfg, e.to, *u) && e.to != *u)
+                    && !updates
+                        .iter()
+                        .any(|u| can_reach(&cfg, e.to, *u) && e.to != *u)
                     && updates.iter().all(|u| e.to != *u)
             })
         });
@@ -4279,25 +4314,25 @@ func WithDefer() {
             .blocks
             .values()
             .filter(|b| {
-                b.statements.iter().any(|s| {
-                    s.text.contains("cleanup") && !s.text.contains("defer")
-                })
+                b.statements
+                    .iter()
+                    .any(|s| s.text.contains("cleanup") && !s.text.contains("defer"))
             })
             .map(|b| b.id)
             .collect();
         assert!(!rets.is_empty() && !cleanups.is_empty());
         // From return block, must reach a cleanup invocation before / on the way to a Return edge target.
         let ok = rets.iter().any(|r| {
-            cleanups.iter().any(|c| can_reach(&cfg, *r, *c) || {
-                // cleanup block may be after return stmt via Next, then Return edge
-                cfg.edges.iter().any(|e| e.from == *r && e.to == *c)
+            cleanups.iter().any(|c| {
+                can_reach(&cfg, *r, *c) || {
+                    // cleanup block may be after return stmt via Next, then Return edge
+                    cfg.edges.iter().any(|e| e.from == *r && e.to == *c)
+                }
             })
         });
         assert!(ok, "return must route into deferred cleanup before exit");
         assert!(
-            cfg.edges
-                .iter()
-                .any(|e| e.edge_type == CfgEdgeType::Return),
+            cfg.edges.iter().any(|e| e.edge_type == CfgEdgeType::Return),
             "must still have a Return edge to exit"
         );
     }
@@ -4347,10 +4382,7 @@ func PanicDefer() {
         assert!(!panic_blocks.is_empty() && !b_blocks.is_empty() && !a_blocks.is_empty());
         let lifo = panic_blocks.iter().any(|p| {
             b_blocks.iter().any(|b| {
-                can_reach(&cfg, *p, *b)
-                    && a_blocks
-                        .iter()
-                        .any(|a| can_reach(&cfg, *b, *a))
+                can_reach(&cfg, *p, *b) && a_blocks.iter().any(|a| can_reach(&cfg, *b, *a))
             })
         });
         assert!(
@@ -4434,10 +4466,7 @@ public class Demo {
 "#;
         let cfg = build_cfg_for_function("csharp", code, "Abs").unwrap();
         assert!(cfg.blocks.len() >= 4);
-        assert!(cfg
-            .edges
-            .iter()
-            .any(|e| e.edge_type == CfgEdgeType::IfTrue));
+        assert!(cfg.edges.iter().any(|e| e.edge_type == CfgEdgeType::IfTrue));
     }
 
     #[test]
@@ -4538,7 +4567,9 @@ public class Demo {
         let cfg = build_cfg_for_function("csharp", code, "Fe").unwrap();
         assert!(cfg.has_cycle(), "foreach must cycle");
         assert!(
-            cs_texts(&cfg).iter().any(|t| t.contains("t += v") || t.contains("t+=v")),
+            cs_texts(&cfg)
+                .iter()
+                .any(|t| t.contains("t += v") || t.contains("t+=v")),
             "body must lower, got {:?}",
             cs_texts(&cfg)
         );
@@ -4627,9 +4658,7 @@ public class Demo {
 "#;
         let cfg = build_cfg_for_function("csharp", code, "Nc").unwrap();
         assert!(
-            cfg.edges
-                .iter()
-                .any(|e| e.edge_type == CfgEdgeType::IfTrue)
+            cfg.edges.iter().any(|e| e.edge_type == CfgEdgeType::IfTrue)
                 && cfg
                     .edges
                     .iter()
@@ -4637,7 +4666,9 @@ public class Demo {
             "?? must split"
         );
         assert!(
-            cs_texts(&cfg).iter().any(|t| t.contains("a") || t.contains("??")),
+            cs_texts(&cfg)
+                .iter()
+                .any(|t| t.contains("a") || t.contains("??")),
             "?? operands must appear, got {:?}",
             cs_texts(&cfg)
         );
@@ -4654,9 +4685,7 @@ public class Demo {
 "#;
         let cfg = build_cfg_for_function("csharp", code, "Na").unwrap();
         assert!(
-            cfg.edges
-                .iter()
-                .any(|e| e.edge_type == CfgEdgeType::IfTrue)
+            cfg.edges.iter().any(|e| e.edge_type == CfgEdgeType::IfTrue)
                 && cfg
                     .edges
                     .iter()
@@ -4913,9 +4942,7 @@ public class Demo {
         assert!(
             goto_case.iter().any(|g| {
                 cfg.edges.iter().any(|e| {
-                    e.from == *g
-                        && e.edge_type == CfgEdgeType::Jump
-                        && case2.contains(&e.to)
+                    e.from == *g && e.edge_type == CfgEdgeType::Jump && case2.contains(&e.to)
                 })
             }),
             "goto case 2 must Jump into case 2 block"
@@ -4923,27 +4950,28 @@ public class Demo {
         assert!(
             goto_def.iter().any(|g| {
                 ret0.iter().any(|r| {
-                    cfg.edges.iter().any(|e| {
-                        e.from == *g && e.to == *r && e.edge_type == CfgEdgeType::Jump
-                    }) || {
-                        use std::collections::{HashSet, VecDeque};
-                        let mut seen = HashSet::new();
-                        let mut q = VecDeque::from([*g]);
-                        while let Some(n) = q.pop_front() {
-                            if n == *r {
-                                return true;
-                            }
-                            if !seen.insert(n) {
-                                continue;
-                            }
-                            for e in &cfg.edges {
-                                if e.from == n && e.edge_type == CfgEdgeType::Jump {
-                                    q.push_back(e.to);
+                    cfg.edges
+                        .iter()
+                        .any(|e| e.from == *g && e.to == *r && e.edge_type == CfgEdgeType::Jump)
+                        || {
+                            use std::collections::{HashSet, VecDeque};
+                            let mut seen = HashSet::new();
+                            let mut q = VecDeque::from([*g]);
+                            while let Some(n) = q.pop_front() {
+                                if n == *r {
+                                    return true;
+                                }
+                                if !seen.insert(n) {
+                                    continue;
+                                }
+                                for e in &cfg.edges {
+                                    if e.from == n && e.edge_type == CfgEdgeType::Jump {
+                                        q.push_back(e.to);
+                                    }
                                 }
                             }
+                            false
                         }
-                        false
-                    }
                 })
             }),
             "goto default must reach default body"
@@ -4976,9 +5004,9 @@ public class Demo {
         // Parent sequential flow must not enter Inner's body before calling it.
         assert!(
             !parent_ret.iter().any(|p| {
-                inner_ret.iter().any(|i| {
-                    cfg.edges.iter().any(|e| e.from == *p && e.to == *i)
-                })
+                inner_ret
+                    .iter()
+                    .any(|i| cfg.edges.iter().any(|e| e.from == *p && e.to == *i))
             }),
             "parent return must not fall into Inner body"
         );
@@ -5027,9 +5055,7 @@ public class Demo {
 "#;
         let cfg = build_cfg_for_function("csharp", code, "Lam").unwrap();
         assert!(
-            cfg.edges
-                .iter()
-                .any(|e| e.edge_type == CfgEdgeType::IfTrue),
+            cfg.edges.iter().any(|e| e.edge_type == CfgEdgeType::IfTrue),
             "lambda body if must lower, edges={:?}",
             cfg.edges.iter().map(|e| e.edge_type).collect::<Vec<_>>()
         );
@@ -5059,12 +5085,13 @@ public class Demo {
         assert!(!await_blocks.is_empty());
         assert!(
             await_blocks.iter().any(|a| {
-                cfg.edges.iter().any(|e| {
-                    e.from == *a && e.edge_type == CfgEdgeType::IfTrue
-                }) && cfg.edges.iter().any(|e| {
-                    e.from == *a
-                        && matches!(e.edge_type, CfgEdgeType::IfFalse | CfgEdgeType::Return)
-                })
+                cfg.edges
+                    .iter()
+                    .any(|e| e.from == *a && e.edge_type == CfgEdgeType::IfTrue)
+                    && cfg.edges.iter().any(|e| {
+                        e.from == *a
+                            && matches!(e.edge_type, CfgEdgeType::IfFalse | CfgEdgeType::Return)
+                    })
             }),
             "await must split resume (IfTrue) vs suspend (IfFalse/Return)"
         );
@@ -5087,9 +5114,7 @@ public class Demo {
             cs_texts(&cfg)
         );
         assert!(
-            cfg.edges
-                .iter()
-                .any(|e| e.edge_type == CfgEdgeType::IfTrue)
+            cfg.edges.iter().any(|e| e.edge_type == CfgEdgeType::IfTrue)
                 && cfg
                     .edges
                     .iter()
@@ -5110,10 +5135,7 @@ int abs_val(int x) {
 "#;
         let cfg = build_cfg_for_function("c", code, "abs_val").unwrap();
         assert!(cfg.blocks.len() >= 4);
-        assert!(cfg
-            .edges
-            .iter()
-            .any(|e| e.edge_type == CfgEdgeType::IfTrue));
+        assert!(cfg.edges.iter().any(|e| e.edge_type == CfgEdgeType::IfTrue));
     }
 
     #[test]
@@ -5211,11 +5233,15 @@ int sum(int n) {
         let cfg = build_cfg_for_function("c", code, "sum").unwrap();
         let texts = c_texts(&cfg);
         assert!(
-            texts.iter().any(|t| t.contains("i = 0") || t.contains("i=0")),
+            texts
+                .iter()
+                .any(|t| t.contains("i = 0") || t.contains("i=0")),
             "for init, got {texts:?}"
         );
         assert!(
-            texts.iter().any(|t| t.contains("i < n") || t.contains("i<n")),
+            texts
+                .iter()
+                .any(|t| t.contains("i < n") || t.contains("i<n")),
             "for condition, got {texts:?}"
         );
         assert!(
@@ -5287,12 +5313,16 @@ int sw(int x) {
             c_texts(&cfg)
         );
         assert!(
-            c_texts(&cfg).iter().any(|t| t.contains("y = 10") || t.contains("y=10")),
+            c_texts(&cfg)
+                .iter()
+                .any(|t| t.contains("y = 10") || t.contains("y=10")),
             "case 1 body must lower, got {:?}",
             c_texts(&cfg)
         );
         assert!(
-            c_texts(&cfg).iter().any(|t| t.contains("y = 20") || t.contains("y=20")),
+            c_texts(&cfg)
+                .iter()
+                .any(|t| t.contains("y = 20") || t.contains("y=20")),
             "case 2 body must lower, got {:?}",
             c_texts(&cfg)
         );
@@ -5305,17 +5335,15 @@ int sw(int x) {
         assert!(
             froms.iter().any(|f| {
                 tos.iter().any(|t| {
-                    cfg.edges.iter().any(|e| {
-                        e.from == *f && e.to == *t && e.edge_type == CfgEdgeType::Jump
-                    })
+                    cfg.edges
+                        .iter()
+                        .any(|e| e.from == *f && e.to == *t && e.edge_type == CfgEdgeType::Jump)
                 })
             }),
             "case 1 must fall through (Jump) into case 2"
         );
         assert!(
-            c_kinds(&cfg)
-                .iter()
-                .any(|k| *k == StatementKind::Return),
+            c_kinds(&cfg).iter().any(|k| *k == StatementKind::Return),
             "default return must lower"
         );
     }
@@ -5344,26 +5372,25 @@ done:
         assert!(
             froms.iter().any(|f| {
                 rets.iter().any(|r| {
-                    cfg.edges.iter().any(|e| e.from == *f && e.to == *r)
-                        || {
-                            use std::collections::{HashSet, VecDeque};
-                            let mut seen = HashSet::new();
-                            let mut q = VecDeque::from([*f]);
-                            while let Some(n) = q.pop_front() {
-                                if n == *r {
-                                    return true;
-                                }
-                                if !seen.insert(n) {
-                                    continue;
-                                }
-                                for e in &cfg.edges {
-                                    if e.from == n {
-                                        q.push_back(e.to);
-                                    }
+                    cfg.edges.iter().any(|e| e.from == *f && e.to == *r) || {
+                        use std::collections::{HashSet, VecDeque};
+                        let mut seen = HashSet::new();
+                        let mut q = VecDeque::from([*f]);
+                        while let Some(n) = q.pop_front() {
+                            if n == *r {
+                                return true;
+                            }
+                            if !seen.insert(n) {
+                                continue;
+                            }
+                            for e in &cfg.edges {
+                                if e.from == n {
+                                    q.push_back(e.to);
                                 }
                             }
-                            false
                         }
+                        false
+                    }
                 })
             }),
             "goto done must reach labeled return"
@@ -5386,9 +5413,7 @@ int t(int y) {
 "#;
         let cfg = build_cfg_for_function("c", code, "t").unwrap();
         assert!(
-            cfg.edges
-                .iter()
-                .any(|e| e.edge_type == CfgEdgeType::IfTrue)
+            cfg.edges.iter().any(|e| e.edge_type == CfgEdgeType::IfTrue)
                 && cfg
                     .edges
                     .iter()
@@ -5472,10 +5497,7 @@ int sj(void) {
                     cfg.edges.iter().any(|e| {
                         e.from == *l
                             && e.to == *s
-                            && matches!(
-                                e.edge_type,
-                                CfgEdgeType::Jump | CfgEdgeType::Exception
-                            )
+                            && matches!(e.edge_type, CfgEdgeType::Jump | CfgEdgeType::Exception)
                     })
                 })
             }),
@@ -5495,10 +5517,7 @@ int abs_val(int x) {
 "#;
         let cfg = build_cfg_for_function("cpp", code, "abs_val").unwrap();
         assert!(cfg.blocks.len() >= 4);
-        assert!(cfg
-            .edges
-            .iter()
-            .any(|e| e.edge_type == CfgEdgeType::IfTrue));
+        assert!(cfg.edges.iter().any(|e| e.edge_type == CfgEdgeType::IfTrue));
     }
 
     #[test]
@@ -5580,7 +5599,9 @@ int demo(int x) {
             "C++17 if initializer must appear before condition, got {texts:?}"
         );
         assert!(
-            texts.iter().any(|t| t.contains("y > 0") || t.trim() == "y > 0"),
+            texts
+                .iter()
+                .any(|t| t.contains("y > 0") || t.trim() == "y > 0"),
             "condition value must be its own branch, got {texts:?}"
         );
         assert!(
@@ -5646,9 +5667,9 @@ int sw(int x) {
         assert!(
             c1.iter().any(|f| {
                 c2.iter().any(|t| {
-                    cfg.edges.iter().any(|e| {
-                        e.from == *f && e.to == *t && e.edge_type == CfgEdgeType::Jump
-                    })
+                    cfg.edges
+                        .iter()
+                        .any(|e| e.from == *f && e.to == *t && e.edge_type == CfgEdgeType::Jump)
                 })
             }),
             "case 1 must fall through into case 2"
@@ -5669,7 +5690,9 @@ int range_sum(int* a, int n) {
         let cfg = build_cfg_for_function("cpp", code, "range_sum").unwrap();
         assert!(cfg.has_cycle(), "range-for must cycle");
         assert!(
-            cpp_texts(&cfg).iter().any(|t| t.contains("t += v") || t.contains("t+=v")),
+            cpp_texts(&cfg)
+                .iter()
+                .any(|t| t.contains("t += v") || t.contains("t+=v")),
             "body must lower, got {:?}",
             cpp_texts(&cfg)
         );
@@ -5707,9 +5730,7 @@ int throws() {
             cpp_texts(&cfg)
         );
         assert!(
-            cpp_kinds(&cfg)
-                .iter()
-                .any(|k| *k == StatementKind::Return),
+            cpp_kinds(&cfg).iter().any(|k| *k == StatementKind::Return),
             "catch return must lower"
         );
     }
@@ -5723,9 +5744,7 @@ int t(int y) {
 "#;
         let cfg = build_cfg_for_function("cpp", code, "t").unwrap();
         assert!(
-            cfg.edges
-                .iter()
-                .any(|e| e.edge_type == CfgEdgeType::IfTrue)
+            cfg.edges.iter().any(|e| e.edge_type == CfgEdgeType::IfTrue)
                 && cfg
                     .edges
                     .iter()
@@ -5802,7 +5821,9 @@ generator gen() {
 "#;
         let cfg = build_cfg_for_function("cpp", code, "gen").unwrap();
         assert!(
-            cpp_texts(&cfg).iter().any(|t| t.contains("co_yield") || t.contains("yield")),
+            cpp_texts(&cfg)
+                .iter()
+                .any(|t| t.contains("co_yield") || t.contains("yield")),
             "co_yield must appear, got {:?}",
             cpp_texts(&cfg)
         );
@@ -5876,10 +5897,7 @@ public class Demo {
 "#;
         let cfg = build_cfg_for_function("java", code, "abs").unwrap();
         assert!(cfg.blocks.len() >= 4);
-        assert!(cfg
-            .edges
-            .iter()
-            .any(|e| e.edge_type == CfgEdgeType::IfTrue));
+        assert!(cfg.edges.iter().any(|e| e.edge_type == CfgEdgeType::IfTrue));
         assert!(
             java_kinds(&cfg)
                 .iter()
@@ -5936,11 +5954,15 @@ public class Demo {
         let cfg = build_cfg_for_function("java", code, "sum").unwrap();
         let texts = java_texts(&cfg);
         assert!(
-            texts.iter().any(|t| t.contains("i = 0") || t.contains("i=0")),
+            texts
+                .iter()
+                .any(|t| t.contains("i = 0") || t.contains("i=0")),
             "for init, got {texts:?}"
         );
         assert!(
-            texts.iter().any(|t| t.contains("i < n") || t.contains("i<n")),
+            texts
+                .iter()
+                .any(|t| t.contains("i < n") || t.contains("i<n")),
             "for condition, got {texts:?}"
         );
         assert!(
@@ -5952,9 +5974,9 @@ public class Demo {
         let updates = java_block_ids(&cfg, "i++");
         assert!(
             cont.iter().any(|c| {
-                cfg.edges
-                    .iter()
-                    .any(|e| e.from == *c && updates.contains(&e.to) && e.edge_type == CfgEdgeType::Jump)
+                cfg.edges.iter().any(|e| {
+                    e.from == *c && updates.contains(&e.to) && e.edge_type == CfgEdgeType::Jump
+                })
             }),
             "continue must Jump to i++"
         );
@@ -5983,7 +6005,9 @@ public class Demo {
             java_texts(&cfg)
         );
         assert!(
-            java_texts(&cfg).iter().any(|t| t.contains("t += v") || t.contains("t+=v")),
+            java_texts(&cfg)
+                .iter()
+                .any(|t| t.contains("t += v") || t.contains("t+=v")),
             "body must be lowered"
         );
     }
@@ -6161,9 +6185,7 @@ public class Demo {
             cfg.edges
                 .iter()
                 .any(|e| e.edge_type == CfgEdgeType::Exception)
-                || java_kinds(&cfg)
-                    .iter()
-                    .any(|k| *k == StatementKind::Return),
+                || java_kinds(&cfg).iter().any(|k| *k == StatementKind::Return),
             "twr should lower body/catch"
         );
     }
@@ -6204,26 +6226,25 @@ public class Demo {
         assert!(
             ret.iter().any(|r| {
                 close_s.iter().any(|c| {
-                    cfg.edges.iter().any(|e| e.from == *r && e.to == *c)
-                        || {
-                            use std::collections::{HashSet, VecDeque};
-                            let mut seen = HashSet::new();
-                            let mut q = VecDeque::from([*r]);
-                            while let Some(n) = q.pop_front() {
-                                if n == *c {
-                                    return true;
-                                }
-                                if !seen.insert(n) {
-                                    continue;
-                                }
-                                for e in &cfg.edges {
-                                    if e.from == n {
-                                        q.push_back(e.to);
-                                    }
+                    cfg.edges.iter().any(|e| e.from == *r && e.to == *c) || {
+                        use std::collections::{HashSet, VecDeque};
+                        let mut seen = HashSet::new();
+                        let mut q = VecDeque::from([*r]);
+                        while let Some(n) = q.pop_front() {
+                            if n == *c {
+                                return true;
+                            }
+                            if !seen.insert(n) {
+                                continue;
+                            }
+                            for e in &cfg.edges {
+                                if e.from == n {
+                                    q.push_back(e.to);
                                 }
                             }
-                            false
                         }
+                        false
+                    }
                 })
             }),
             "return must reach resource close before exit"
@@ -6252,28 +6273,26 @@ public class Demo {
         assert!(
             throw_sites.iter().any(|from| {
                 cfg.edges.iter().any(|e| {
-                    e.from == *from
-                        && e.edge_type == CfgEdgeType::Exception
-                        && {
-                            // Exception target can reach catch return
-                            use std::collections::{HashSet, VecDeque};
-                            let mut seen = HashSet::new();
-                            let mut q = VecDeque::from([e.to]);
-                            while let Some(n) = q.pop_front() {
-                                if catch_rets.contains(&n) {
-                                    return true;
-                                }
-                                if !seen.insert(n) {
-                                    continue;
-                                }
-                                for edge in &cfg.edges {
-                                    if edge.from == n {
-                                        q.push_back(edge.to);
-                                    }
+                    e.from == *from && e.edge_type == CfgEdgeType::Exception && {
+                        // Exception target can reach catch return
+                        use std::collections::{HashSet, VecDeque};
+                        let mut seen = HashSet::new();
+                        let mut q = VecDeque::from([e.to]);
+                        while let Some(n) = q.pop_front() {
+                            if catch_rets.contains(&n) {
+                                return true;
+                            }
+                            if !seen.insert(n) {
+                                continue;
+                            }
+                            for edge in &cfg.edges {
+                                if edge.from == n {
+                                    q.push_back(edge.to);
                                 }
                             }
-                            false
                         }
+                        false
+                    }
                 })
             }),
             "Exception edge must leave the body statement block, not only try entry"
@@ -6296,7 +6315,9 @@ public class Demo {
         let cfg = build_cfg_for_function("java", code, "withFinally").unwrap();
         let texts = java_texts(&cfg);
         assert!(
-            texts.iter().any(|t| t.contains("cleanup") || t.contains("println")),
+            texts
+                .iter()
+                .any(|t| t.contains("cleanup") || t.contains("println")),
             "finally body must run on return path, got {texts:?}"
         );
         let ret = java_block_ids(&cfg, "return 1");
@@ -6307,26 +6328,25 @@ public class Demo {
         assert!(
             ret.iter().any(|r| {
                 cleans.iter().any(|c| {
-                    cfg.edges.iter().any(|e| e.from == *r && e.to == *c)
-                        || {
-                            use std::collections::{HashSet, VecDeque};
-                            let mut seen = HashSet::new();
-                            let mut q = VecDeque::from([*r]);
-                            while let Some(n) = q.pop_front() {
-                                if n == *c {
-                                    return true;
-                                }
-                                if !seen.insert(n) {
-                                    continue;
-                                }
-                                for e in &cfg.edges {
-                                    if e.from == n {
-                                        q.push_back(e.to);
-                                    }
+                    cfg.edges.iter().any(|e| e.from == *r && e.to == *c) || {
+                        use std::collections::{HashSet, VecDeque};
+                        let mut seen = HashSet::new();
+                        let mut q = VecDeque::from([*r]);
+                        while let Some(n) = q.pop_front() {
+                            if n == *c {
+                                return true;
+                            }
+                            if !seen.insert(n) {
+                                continue;
+                            }
+                            for e in &cfg.edges {
+                                if e.from == n {
+                                    q.push_back(e.to);
                                 }
                             }
-                            false
                         }
+                        false
+                    }
                 })
             }),
             "return must reach finally cleanup"
@@ -6455,4 +6475,3 @@ public class Printer {
         );
     }
 }
-

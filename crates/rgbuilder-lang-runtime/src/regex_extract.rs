@@ -1,9 +1,9 @@
 //! Shared regex-based symbol extraction for regex and hybrid tree-sitter plugins.
 
 use crate::config::RegexPatternConfig;
+use regex::Regex;
 use rgbuilder_plugin_api::Result;
 use rgbuilder_plugin_api::{SourceLocation, Symbol};
-use regex::Regex;
 use std::path::Path;
 
 /// Extract symbols from source using configured regex patterns (line-oriented).

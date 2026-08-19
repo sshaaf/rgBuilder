@@ -4,7 +4,7 @@
 mod analysis_helpers;
 
 use analysis_helpers::large_graph;
-use rgbuilder::gql::{execute, execute_explain, parse, QueryExecutor, QueryOptimizer};
+use rgbuilder::gql::{QueryExecutor, QueryOptimizer, execute, execute_explain, parse};
 use rgbuilder::graph::backend::{GraphBackend, MemoryBackend};
 use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
 use std::collections::HashSet;
@@ -37,10 +37,12 @@ gql_test!(optimizer_pushdown_report_message, {
     let query = parse("MATCH (n:Function) WHERE n.name = 'foo' RETURN n").unwrap();
     let backend = MemoryBackend::new();
     let (_, report) = QueryOptimizer::new(&backend).optimize(query);
-    assert!(report
-        .optimizations
-        .iter()
-        .any(|o| o.contains("predicate pushdown")));
+    assert!(
+        report
+            .optimizations
+            .iter()
+            .any(|o| o.contains("predicate pushdown"))
+    );
 });
 
 gql_test!(optimizer_selectivity_rare_node, {
@@ -169,10 +171,12 @@ gql_test!(optimizer_single_pattern_no_reorder, {
     let query = parse("MATCH (f:Function) WHERE f.name = 'fn_1' RETURN f").unwrap();
     let (optimized, report) = QueryOptimizer::new(&backend).optimize(query);
     assert_eq!(optimized.patterns.len(), 1);
-    assert!(!report
-        .optimizations
-        .iter()
-        .any(|o| o.contains("join reordering")));
+    assert!(
+        !report
+            .optimizations
+            .iter()
+            .any(|o| o.contains("join reordering"))
+    );
 });
 
 gql_test!(optimizer_result_equivalence_chain, {

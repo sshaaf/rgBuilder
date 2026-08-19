@@ -2,12 +2,12 @@
 //!
 //! Run: `cargo bench --bench analysis_benchmarks`
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use rgbuilder::analysis::{
-    build_cfg_for_function, CallGraph, DominatorTree, InterproceduralCFG, InterproceduralSlicer,
-    ProgramDependenceGraph, SliceCriterion, TaintAnalyzer, TypeInferenceEngine,
+    CallGraph, DominatorTree, InterproceduralCFG, InterproceduralSlicer, ProgramDependenceGraph,
+    SliceCriterion, TaintAnalyzer, TypeInferenceEngine, build_cfg_for_function,
 };
-use rgbuilder::gql::{execute, parse, QueryExecutor};
+use rgbuilder::gql::{QueryExecutor, execute, parse};
 use rgbuilder::graph::backend::{GraphBackend, MemoryBackend};
 use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
 use std::collections::HashMap;

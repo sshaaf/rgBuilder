@@ -207,7 +207,9 @@ fn jf05_lambda_is_lambda_property() {
     );
     let props = binding_props(&v, "f");
     assert!(
-        props.iter().any(|p| p.get("is_lambda").and_then(|x| x.as_str()) == Some("true")),
+        props
+            .iter()
+            .any(|p| p.get("is_lambda").and_then(|x| x.as_str()) == Some("true")),
         "expected projected is_lambda property, got {props:?} in {v}"
     );
 }
@@ -223,7 +225,9 @@ fn jf06_generic_throws_properties() {
     assert!(row_count(&v) >= 1, "expected genericThrows, got {v}");
     let props = binding_props(&v, "f");
     assert!(
-        props.iter().any(|p| p.get("type_params").is_some() || p.get("throws").is_some()),
+        props
+            .iter()
+            .any(|p| p.get("type_params").is_some() || p.get("throws").is_some()),
         "expected type_params and/or throws in projected properties, got {props:?} in {v}"
     );
 }

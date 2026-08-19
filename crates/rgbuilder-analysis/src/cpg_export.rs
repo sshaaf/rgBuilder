@@ -160,7 +160,7 @@ fn collect_export_graph(
                 }
                 // CFG NEXT as self-loop annotation nodes would explode; emit PDG FLOW
                 // as edges between synthetic statement ids scoped under the function.
-                    for dep in &record.pdg.data_deps {
+                for dep in &record.pdg.data_deps {
                     if dep.dep_type != crate::pdg::DataDepType::Flow {
                         continue;
                     }
@@ -231,7 +231,12 @@ fn collect_export_graph(
     Ok((nodes, edges))
 }
 
-fn ensure_stmt_node(nodes: &mut Vec<GraphSonNode>, id: &str, line: usize, function_id: &uuid::Uuid) {
+fn ensure_stmt_node(
+    nodes: &mut Vec<GraphSonNode>,
+    id: &str,
+    line: usize,
+    function_id: &uuid::Uuid,
+) {
     if nodes.iter().any(|n| n.id == id) {
         return;
     }

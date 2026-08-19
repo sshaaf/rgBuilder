@@ -1,4 +1,4 @@
-import { NODE_TYPE_FILTER_OPTIONS } from "./types";
+import { NODE_TYPE_FILTER_OPTIONS, GRAPH_TYPE_MASK_WITH_DOC_HEADINGS } from "./types";
 import { nodeTypeColorForBit } from "./graphColors";
 
 export interface NodeTypeFilterProps {
@@ -22,6 +22,16 @@ export function NodeTypeFilter({
   if (layout === "sidebar") {
     return (
       <div class="d-flex flex-column gap-1">
+        <div class="d-flex flex-wrap gap-1 mb-2">
+          <button
+            type="button"
+            class="btn btn-outline-secondary btn-sm"
+            disabled={disabled}
+            onClick={() => onChange(GRAPH_TYPE_MASK_WITH_DOC_HEADINGS)}
+          >
+            Code + doc headings
+          </button>
+        </div>
         {NODE_TYPE_FILTER_OPTIONS.map((opt) => (
           <label key={opt.label} class="form-check small mb-0">
             <input

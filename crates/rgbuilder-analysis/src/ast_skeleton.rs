@@ -141,7 +141,9 @@ pub fn build_function_skeleton(
     let tree = parse_source(language, bytes)?;
     let kinds = function_kinds_for(language)?;
     let func = find_function(tree.root_node(), bytes, function_name, kinds).ok_or_else(|| {
-        Error::NotFound(format!("function '{function_name}' not found for AST skeleton"))
+        Error::NotFound(format!(
+            "function '{function_name}' not found for AST skeleton"
+        ))
     })?;
     let mut nodes = Vec::new();
     let root_id = 0u32;
@@ -192,7 +194,8 @@ fn walk_skeleton(
     next_id: &mut u32,
 ) {
     let kind = classify(node.kind());
-    let emit = kind.is_some() && node.kind() != "method_declaration"
+    let emit = kind.is_some()
+        && node.kind() != "method_declaration"
         && node.kind() != "function_item"
         && node.kind() != "function_declaration"
         && node.kind() != "constructor_declaration"
@@ -225,17 +228,11 @@ fn classify(kind: &str) -> Option<AstSkeletonKind> {
     Some(match kind {
         "block" | "compound_statement" | "statement_block" | "body" => AstSkeletonKind::Block,
         "if_statement" | "if_expression" => AstSkeletonKind::If,
-        "while_statement"
-        | "while_expression"
-        | "for_statement"
-        | "for_expression"
-        | "loop_expression"
-        | "do_statement"
-        | "foreach_statement" => AstSkeletonKind::Loop,
-        "call_expression"
-        | "method_invocation"
-        | "invocation_expression"
-        | "function_call" => AstSkeletonKind::Call,
+        "while_statement" | "while_expression" | "for_statement" | "for_expression"
+        | "loop_expression" | "do_statement" | "foreach_statement" => AstSkeletonKind::Loop,
+        "call_expression" | "method_invocation" | "invocation_expression" | "function_call" => {
+            AstSkeletonKind::Call
+        }
         "assignment_expression"
         | "assignment"
         | "assignment_statement"
