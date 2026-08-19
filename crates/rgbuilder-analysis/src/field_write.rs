@@ -655,9 +655,9 @@ public class Dual {
         let cfg_second = build_cfg_for_function("java", source, "second").expect("second cfg");
 
         let mut first_fn = Node::new(NodeType::Function, "first");
-        first_fn.file_path = Some(file.clone());
+        first_fn.file_path = Some(file.clone().into());
         let mut second_fn = Node::new(NodeType::Function, "second");
-        second_fn.file_path = Some(file.clone());
+        second_fn.file_path = Some(file.clone().into());
 
         let id_first = first_fn.id;
         let id_second = second_fn.id;
@@ -794,7 +794,7 @@ public class OrderProcessor {
         params: Vec<(&str, &str)>,
     ) -> Node {
         use rgbuilder_graph::schema::{GraphParameter, NodeType};
-        let mut n = Node::new(NodeType::Function, name.into());
+        let mut n = Node::new(NodeType::Function, name);
         n.qualified_name = Some(qn.into());
         n.file_path = Some(file.into());
         if is_ctor {

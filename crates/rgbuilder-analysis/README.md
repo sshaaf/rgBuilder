@@ -61,3 +61,4 @@ cargo bench --bench community_benchmarks    # Label propagation
 - Prefer `BlastRadiusEngine` over `BlastRadiusAnalyzer` for large graphs needing full transitive closure.
 - Discover uses **`analyze_columnar`** for centrality; profile with `RUST_LOG=profile=info discover -v`.
 - No `unwrap()` in production paths; propagate errors with `rgbuilder_error::Result`.
+- `Node` string-like fields (`name`, `qualified_name`, `file_path`) use `SharedStr`; in tests prefer passing `&str` directly to builders (e.g. `Node::new(..., "name")`) and only call `.into()` when assigning owned `String` values into `Option<SharedStr>` fields.

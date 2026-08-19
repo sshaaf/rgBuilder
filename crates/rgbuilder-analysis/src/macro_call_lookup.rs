@@ -868,8 +868,8 @@ mod tests {
     #[test]
     fn canonical_fqn_java_dot_notation() {
         use rgbuilder_graph::schema::{Node, NodeType};
-        let node = Node::new(NodeType::Function, "process")
-            .with_qualified_name("com.example.OrderService.process".into());
+        let node =
+            Node::new(NodeType::Function, "process").with_qualified_name("com.example.OrderService.process");
         assert_eq!(canonical_fqn_from_node(&node), "OrderService::process");
     }
 

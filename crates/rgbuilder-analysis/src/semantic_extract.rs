@@ -129,7 +129,7 @@ mod tests {
         std::fs::write(&abs, "fn process_sk_buff() {\n    ntohs(value);\n}\n").unwrap();
 
         let node = Node::new(NodeType::Function, "process_sk_buff")
-            .with_file_path(rel.into())
+            .with_file_path(rel)
             .with_location(1, 2);
 
         let tokens = extract_body_tokens_for_node(dir.path(), &node).unwrap();

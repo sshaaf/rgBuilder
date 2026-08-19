@@ -130,7 +130,7 @@ impl ProcessingPipeline {
         builder.set_content_store(ContentStore::load(ContentStore::default_path(root))?);
 
         let progress_for_stream = progress.clone();
-        let (files_processed, tails) = stream_into_graph(
+        let (stream_stats, tails) = stream_into_graph(
             self.config.thread_count,
             &extractor,
             Arc::clone(&self.registry),
@@ -149,7 +149,8 @@ impl ProcessingPipeline {
             pb.finish_with_message("done");
         }
 
-        let files_failed = files_discovered.saturating_sub(files_processed);
+        let files_processed = stream_stats.files_processed;
+        let files_failed = stream_stats.extraction_failures.len();
 
         let graph_start = Instant::now();
         builder.build_resolution_indexes();
@@ -215,7 +216,7 @@ impl ProcessingPipeline {
         builder.set_code_index(CodeIndex::load(CodeIndex::default_cache_path(root))?);
         builder.set_content_store(ContentStore::load(ContentStore::default_path(root))?);
         let progress_for_stream = progress.clone();
-        let (files_processed, tails) = stream_into_graph(
+        let (stream_stats, tails) = stream_into_graph(
             self.config.thread_count,
             &extractor,
             Arc::clone(&self.registry),
@@ -234,7 +235,8 @@ impl ProcessingPipeline {
             pb.finish_with_message("done");
         }
 
-        let files_failed = files_discovered.saturating_sub(files_processed);
+        let files_processed = stream_stats.files_processed;
+        let files_failed = stream_stats.extraction_failures.len();
 
         let graph_start = Instant::now();
         builder.build_resolution_indexes();

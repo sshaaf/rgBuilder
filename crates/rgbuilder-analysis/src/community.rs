@@ -1019,6 +1019,52 @@ mod tests {
     }
 
     #[test]
+    fn mixed_code_and_docs_graph_forms_communities() {
+        let mut backend = MemoryBackend::new();
+        let f_checkout = Node::new(NodeType::Function, "checkout");
+        let f_publish = Node::new(NodeType::Function, "publishEvent");
+        let h_checkout = Node::new(NodeType::Module, "Checkout Flow")
+            .with_file_path("docs/guide.md")
+            .with_property("kind".to_string(), "heading".to_string());
+        let h_payments = Node::new(NodeType::Module, "Payments")
+            .with_file_path("docs/adr.md")
+            .with_property("kind".to_string(), "heading".to_string());
+
+        let id_checkout = f_checkout.id;
+        let id_publish = f_publish.id;
+        let id_h_checkout = h_checkout.id;
+        let id_h_payments = h_payments.id;
+
+        backend.insert_node(f_checkout).unwrap();
+        backend.insert_node(f_publish).unwrap();
+        backend.insert_node(h_checkout).unwrap();
+        backend.insert_node(h_payments).unwrap();
+
+        backend
+            .insert_edge(Edge::new(id_checkout, id_publish, EdgeType::Calls))
+            .unwrap();
+        backend
+            .insert_edge(Edge::new(id_h_checkout, id_h_payments, EdgeType::References))
+            .unwrap();
+        backend
+            .insert_edge(Edge::new(id_h_checkout, id_h_payments, EdgeType::Contains))
+            .unwrap();
+
+        let view = PetGraphView::from_backend(&backend).unwrap();
+        let detector = CommunityDetector::new();
+        let result = detector
+            .detect_with_view_filtered(&view, default_community_edge_types())
+            .unwrap();
+
+        assert!(!result.communities.is_empty());
+        assert_eq!(result.assignments.len(), 4);
+        assert!(result.assignments.contains_key(&id_checkout));
+        assert!(result.assignments.contains_key(&id_publish));
+        assert!(result.assignments.contains_key(&id_h_checkout));
+        assert!(result.assignments.contains_key(&id_h_payments));
+    }
+
+    #[test]
     fn test_statistical_hub_threshold_respects_sigma() {
         let degrees = vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 50];
         let hubs = select_hubs(&degrees, HubStripPolicy::Statistical { k: 2.0 }, 0.05, 5);

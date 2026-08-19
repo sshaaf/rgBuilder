@@ -1074,13 +1074,19 @@ fn symbol_type_to_node_type(symbol_type: SymbolType) -> NodeType {
     }
 }
 
+const MAX_FILE_LOOKUP_SUFFIX_KEYS: usize = 8;
+
 fn register_file_lookup_keys(index: &mut HashMap<String, Uuid>, norm_path: &str, id: Uuid) {
     if norm_path.is_empty() {
         return;
     }
     index.entry(norm_path.to_string()).or_insert(id);
-    for (i, b) in norm_path.bytes().enumerate() {
-        if b == b'/' && i + 1 < norm_path.len() {
+    let slash_positions: Vec<usize> = norm_path.match_indices('/').map(|(i, _)| i).collect();
+    let start = slash_positions
+        .len()
+        .saturating_sub(MAX_FILE_LOOKUP_SUFFIX_KEYS);
+    for i in slash_positions.into_iter().skip(start) {
+        if i + 1 < norm_path.len() {
             let suffix = &norm_path[i + 1..];
             index.entry(suffix.to_string()).or_insert(id);
         }
@@ -2050,6 +2056,30 @@ mod tests {
         assert!(
             bare.is_none() || bare.is_some_and(|v| v.is_empty()),
             "bare field suffix must not be indexed for C struct fields"
+        );
+    }
+
+    #[test]
+    fn test_file_lookup_suffix_keys_are_bounded() {
+        let mut index = HashMap::new();
+        let id = Uuid::new_v4();
+        let deep = "a/b/c/d/e/f/g/h/i/j/k/l/m.rs";
+        register_file_lookup_keys(&mut index, deep, id);
+
+        assert_eq!(index.get(deep), Some(&id));
+        assert_eq!(
+            index.get("m.rs"),
+            Some(&id),
+            "shortest suffix should still resolve"
+        );
+        assert_eq!(
+            index.get("l/m.rs"),
+            Some(&id),
+            "near-tail multi-segment suffix should resolve"
+        );
+        assert!(
+            !index.contains_key("b/c/d/e/f/g/h/i/j/k/l/m.rs"),
+            "far-prefix suffix should be skipped when depth exceeds bound"
         );
     }
 }

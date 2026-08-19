@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use rgbuilder_registry::LanguageRegistry;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Duration;
 
 /// Extracts symbols and relationships from a single file.
 pub struct Extractor {
@@ -41,6 +42,18 @@ pub struct ExtractionTail {
     pub relations: Vec<Relation>,
     /// Config usages linked in pass 2
     pub config_usages: Vec<ConfigUsage>,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct Pass1Profile {
+    symbol_processing: Duration,
+    config_key_processing: Duration,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct Pass2Profile {
+    relation_resolution: Duration,
+    config_usage_resolution: Duration,
 }
 
 impl Extractor {
@@ -111,6 +124,18 @@ impl Extractor {
         extraction: &mut FileExtraction,
         builder: &mut GraphBuilder,
     ) -> Result<ExtractionTail> {
+        let (tail, _profile) = self.populate_pass1_profiled(extraction, builder)?;
+        Ok(tail)
+    }
+
+    fn populate_pass1_profiled(
+        &self,
+        extraction: &mut FileExtraction,
+        builder: &mut GraphBuilder,
+    ) -> Result<(ExtractionTail, Pass1Profile)> {
+        use std::time::Instant;
+
+        let mut profile = Pass1Profile::default();
         let file_id = builder.ensure_file_node_with_source(
             &extraction.path,
             (!extraction.source.is_empty()).then_some(extraction.source.as_slice()),
@@ -119,20 +144,28 @@ impl Extractor {
         let source = (!extraction.source.is_empty()).then_some(extraction.source.as_slice());
         let line_offsets = source.map(line_start_offsets);
 
-        for symbol in &extraction.symbols {
-            let body = source.and_then(|bytes| {
-                let offsets = line_offsets.as_ref()?;
-                symbol_body_from_source(bytes, offsets, symbol)
-            });
-            if let Some(body) = body.as_deref() {
-                builder.add_symbol_with_body(symbol, file_id, Some(body));
-            } else {
-                builder.add_symbol(symbol, file_id);
+        if !extraction.symbols.is_empty() {
+            let symbol_start = Instant::now();
+            for symbol in &extraction.symbols {
+                let body = source.and_then(|bytes| {
+                    let offsets = line_offsets.as_ref()?;
+                    symbol_body_from_source(bytes, offsets, symbol)
+                });
+                if let Some(body) = body.as_deref() {
+                    builder.add_symbol_with_body(symbol, file_id, Some(body));
+                } else {
+                    builder.add_symbol(symbol, file_id);
+                }
             }
+            profile.symbol_processing += symbol_start.elapsed();
         }
 
-        for key in &extraction.config_keys {
-            builder.add_config_key(key, file_id);
+        if !extraction.config_keys.is_empty() {
+            let config_key_start = Instant::now();
+            for key in &extraction.config_keys {
+                builder.add_config_key(key, file_id);
+            }
+            profile.config_key_processing += config_key_start.elapsed();
         }
 
         extraction.content_blobs.clear();
@@ -140,10 +173,13 @@ impl Extractor {
         extraction.symbols.clear();
         extraction.config_keys.clear();
 
-        Ok(ExtractionTail {
-            relations: std::mem::take(&mut extraction.relations),
-            config_usages: std::mem::take(&mut extraction.config_usages),
-        })
+        Ok((
+            ExtractionTail {
+                relations: std::mem::take(&mut extraction.relations),
+                config_usages: std::mem::take(&mut extraction.config_usages),
+            },
+            profile,
+        ))
     }
 
     /// Pass 2: resolve relations and config usages (requires [`GraphBuilder::build_resolution_indexes`]).
@@ -152,15 +188,36 @@ impl Extractor {
         tails: &[ExtractionTail],
         builder: &mut GraphBuilder,
     ) -> Result<()> {
+        let _ = self.populate_pass2_profiled(tails, builder)?;
+        Ok(())
+    }
+
+    fn populate_pass2_profiled(
+        &self,
+        tails: &[ExtractionTail],
+        builder: &mut GraphBuilder,
+    ) -> Result<Pass2Profile> {
+        use std::time::Instant;
+
+        let mut profile = Pass2Profile::default();
         for tail in tails {
-            for relation in &tail.relations {
-                builder.add_relation(relation)?;
+            if !tail.relations.is_empty() {
+                let relation_start = Instant::now();
+                for relation in &tail.relations {
+                    builder.add_relation(relation)?;
+                }
+                profile.relation_resolution += relation_start.elapsed();
             }
-            for usage in &tail.config_usages {
-                builder.link_config_usage(&usage.file, usage.line, &usage.key, usage.usage_type);
+
+            if !tail.config_usages.is_empty() {
+                let config_usage_start = Instant::now();
+                for usage in &tail.config_usages {
+                    builder.link_config_usage(&usage.file, usage.line, &usage.key, usage.usage_type);
+                }
+                profile.config_usage_resolution += config_usage_start.elapsed();
             }
         }
-        Ok(())
+        Ok(profile)
     }
 
     /// Merge extracted files into a graph builder.
@@ -196,20 +253,18 @@ impl Extractor {
 
         let mut tails = Vec::with_capacity(file_count);
         for extraction in extractions {
-            let sym_start = Instant::now();
             let mut owned = extraction.clone();
-            let tail = self.populate_pass1(&mut owned, builder)?;
-            symbol_time += sym_start.elapsed();
-            config_key_time += sym_start.elapsed();
+            let (tail, pass1_profile) = self.populate_pass1_profiled(&mut owned, builder)?;
+            symbol_time += pass1_profile.symbol_processing;
+            config_key_time += pass1_profile.config_key_processing;
             tails.push(tail);
         }
 
         builder.build_resolution_indexes();
 
-        let rel_start = Instant::now();
-        self.populate_pass2(&tails, builder)?;
-        relation_time += rel_start.elapsed();
-        config_usage_time += rel_start.elapsed();
+        let pass2_profile = self.populate_pass2_profiled(&tails, builder)?;
+        relation_time += pass2_profile.relation_resolution;
+        config_usage_time += pass2_profile.config_usage_resolution;
 
         let total_elapsed = total_start.elapsed();
         info!(
@@ -267,6 +322,7 @@ fn symbol_body_from_source(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Duration;
     use std::fs;
     use tempfile::TempDir;
 
@@ -356,5 +412,28 @@ mod tests {
                 .any(|r| { r.relation_type == rgbuilder_plugin_api::RelationType::References }),
             "References relation"
         );
+    }
+
+    #[test]
+    fn profiling_keeps_empty_buckets_zero() {
+        let temp = TempDir::new().unwrap();
+        let path = temp.path().join("lib.rs");
+        fs::write(&path, "pub fn add(a: i32, b: i32) -> i32 { a + b }\n").unwrap();
+
+        let registry = Arc::new(rgbuilder_languages::default_registry());
+        let extractor = Extractor::new(registry);
+        let mut extraction = extractor.extract_file(&path).unwrap();
+        let mut builder = GraphBuilder::new();
+
+        let (tail, pass1) = extractor
+            .populate_pass1_profiled(&mut extraction, &mut builder)
+            .unwrap();
+        assert_eq!(pass1.config_key_processing, Duration::ZERO);
+
+        builder.build_resolution_indexes();
+        let pass2 = extractor
+            .populate_pass2_profiled(&[tail], &mut builder)
+            .unwrap();
+        assert_eq!(pass2.config_usage_resolution, Duration::ZERO);
     }
 }

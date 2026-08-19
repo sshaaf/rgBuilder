@@ -807,7 +807,7 @@ mod tests {
     #[test]
     fn embed_text_for_function_includes_signature() {
         let node = Node::new(NodeType::Function, "run")
-            .with_qualified_name("auth::run".into())
+            .with_qualified_name("auth::run")
             .with_signature("async fn run(token: &str) -> bool");
         let text = embed_text_for_node(&node).unwrap();
         assert!(text.contains("auth::run"));
@@ -818,7 +818,7 @@ mod tests {
     fn embed_text_skips_markup_heading_modules() {
         let heading = Node::new(NodeType::Module, "Checkout Flow")
             .with_property("kind".to_string(), "heading".to_string())
-            .with_file_path("docs/guide.md".into());
+            .with_file_path("docs/guide.md");
         assert!(embed_text_for_function(&heading, None).is_none());
         assert!(embed_text_for_node(&heading).is_none());
     }
@@ -827,10 +827,10 @@ mod tests {
     fn build_and_query_from_backend() {
         let mut backend = MemoryBackend::new();
         let n1 = Node::new(NodeType::Function, "authenticate")
-            .with_qualified_name("auth::authenticate".into())
+            .with_qualified_name("auth::authenticate")
             .with_signature("fn authenticate(token: &str) -> bool");
         let n2 = Node::new(NodeType::Function, "revoke")
-            .with_qualified_name("auth::revoke".into())
+            .with_qualified_name("auth::revoke")
             .with_signature("fn revoke(token: &str)");
         let class = Node::new(NodeType::Class, "AuthService");
         backend.insert_node(n1.clone()).unwrap();

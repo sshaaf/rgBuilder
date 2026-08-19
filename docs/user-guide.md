@@ -307,6 +307,8 @@ rg-build discover . -v
 
 With `-v`, discover emits a **`[profile] discover summary`** line (wall time, peak RSS, node count) and per-stage timings.
 
+Extraction internals also emit `populate_graph` timing buckets in profile logs. These buckets are intentionally distinct (`symbol_processing_secs`, `config_key_secs`, `relation_resolution_secs`, `config_usage_secs`) and are measured independently to avoid double-counting when one bucket is empty.
+
 ```bash
 RUST_LOG=info,profile=info rg-build discover . --with-cfg -v -l java -e target 2>&1 \
   | tee discover-profile.log
