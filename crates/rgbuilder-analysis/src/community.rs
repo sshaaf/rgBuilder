@@ -548,12 +548,29 @@ pub fn build_community_neighbor_lists(
     let base = default_community_edge_types();
     let mut neighbors = build_filtered_neighbor_lists(view, base);
     let mut function_count = 0usize;
+    let mut is_heading = vec![false; neighbors.len()];
+    let mut heading_count = 0usize;
     for id in store.all_node_ids() {
         if let Some(node) = store.get_node(id)? {
             if node.node_type == NodeType::Function {
                 function_count += 1;
             }
+            if node.node_type == NodeType::Module && node.get_property("kind") == Some("heading") {
+                if let Some(idx) = view.uuid_to_index.get(&id) {
+                    let pos = idx.index();
+                    if !is_heading[pos] {
+                        is_heading[pos] = true;
+                        heading_count += 1;
+                    }
+                }
+            }
         }
+    }
+    // Mixed code+doc graphs can contain huge numbers of `Contains` edges (file->class,
+    // class->function, etc.). If there are functions but no markdown headings in the
+    // snapshot, scoped-Contains contributes nothing, so skip the pass entirely.
+    if function_count > 0 && heading_count == 0 {
+        return Ok(neighbors);
     }
     store.for_each_edge(|from, to, ty| {
         if ty != EdgeType::Contains {
@@ -571,14 +588,7 @@ pub fn build_community_neighbor_lists(
             push_undirected_neighbor(&mut neighbors, u, v);
             return Ok(());
         }
-        let from_node = store.get_node(from)?;
-        let to_node = store.get_node(to)?;
-        let heading_contains = from_node.is_some_and(|n| {
-            n.node_type == NodeType::Module && n.get_property("kind") == Some("heading")
-        }) && to_node.is_some_and(|n| {
-            n.node_type == NodeType::Module && n.get_property("kind") == Some("heading")
-        });
-        if heading_contains {
+        if is_heading[u] && is_heading[v] {
             push_undirected_neighbor(&mut neighbors, u, v);
         }
         Ok(())
