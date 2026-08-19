@@ -566,12 +566,19 @@ pub fn build_community_neighbor_lists(
             }
         }
     }
-    // Mixed code+doc graphs can contain huge numbers of `Contains` edges (file->class,
-    // class->function, etc.). If there are functions but no markdown headings in the
-    // snapshot, scoped-Contains contributes nothing, so skip the pass entirely.
+
+    // Fast path for code-heavy graphs without markdown headings: behavioral edges
+    // are sufficient and avoid scanning massive `Contains` edge sets on repos like linux.
     if function_count > 0 && heading_count == 0 {
         return Ok(neighbors);
     }
+
+    // Keep adjacency dedupe O(1) during augmentation.
+    let mut dedup_neighbors: Vec<HashSet<usize>> = neighbors
+        .iter()
+        .map(|adj| adj.iter().copied().collect::<HashSet<_>>())
+        .collect();
+
     store.for_each_edge(|from, to, ty| {
         if ty != EdgeType::Contains {
             return Ok(());
@@ -584,28 +591,24 @@ pub fn build_community_neighbor_lists(
         };
         let u = from_idx.index();
         let v = to_idx.index();
-        if function_count == 0 {
-            push_undirected_neighbor(&mut neighbors, u, v);
-            return Ok(());
-        }
         if is_heading[u] && is_heading[v] {
-            push_undirected_neighbor(&mut neighbors, u, v);
+            push_undirected_neighbor_set(&mut dedup_neighbors, u, v);
         }
         Ok(())
     })?;
+
+    for (idx, set) in dedup_neighbors.into_iter().enumerate() {
+        neighbors[idx] = set.into_iter().collect();
+    }
     Ok(neighbors)
 }
 
-fn push_undirected_neighbor(neighbors: &mut [Vec<usize>], u: usize, v: usize) {
+fn push_undirected_neighbor_set(neighbors: &mut [HashSet<usize>], u: usize, v: usize) {
     if u == v {
         return;
     }
-    if !neighbors[u].contains(&v) {
-        neighbors[u].push(v);
-    }
-    if !neighbors[v].contains(&u) {
-        neighbors[v].push(u);
-    }
+    neighbors[u].insert(v);
+    neighbors[v].insert(u);
 }
 
 /// Dashboard community with inferred metadata (Phase 14 A+).

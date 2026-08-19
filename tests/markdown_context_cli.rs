@@ -13,14 +13,25 @@ use std::str;
 const SNAPSHOT_REL: &str = ".rgbuilder/graph.snapshot.bin";
 
 fn rgbuilder_bin() -> PathBuf {
+    if let Some(bin) = std::env::var_os("CARGO_BIN_EXE_rg-build") {
+        return PathBuf::from(bin);
+    }
     if let Some(bin) = std::env::var_os("CARGO_BIN_EXE_rg_build") {
         return PathBuf::from(bin);
     }
     if let Some(target) = std::env::var_os("CARGO_TARGET_DIR") {
+        let release_candidate = PathBuf::from(&target).join("release/rg-build");
+        if release_candidate.is_file() {
+            return release_candidate;
+        }
         let candidate = PathBuf::from(target).join("debug/rg-build");
         if candidate.is_file() {
             return candidate;
         }
+    }
+    let release_default = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/release/rg-build");
+    if release_default.is_file() {
+        return release_default;
     }
     if let Some(bin) = option_env!("CARGO_BIN_EXE_rg_build") {
         return PathBuf::from(bin);
