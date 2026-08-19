@@ -1,7 +1,7 @@
 //! Bounded-channel streaming between parallel extractors and sequential graph merge.
 
 use crate::parallel::with_pool;
-use crossbeam::channel::{bounded, Receiver};
+use crossbeam::channel::{Receiver, bounded};
 use rayon::prelude::*;
 use rgbuilder_error::Result;
 use rgbuilder_extraction::{ExtractionTail, Extractor, FileExtraction, GraphBuilder};

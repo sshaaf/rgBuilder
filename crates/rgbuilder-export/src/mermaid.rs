@@ -1,6 +1,6 @@
 //! Mermaid diagram export (Phase 14.1).
 
-use crate::{escape_label, node_diagram_id, select_subgraph, Subgraph};
+use crate::{Subgraph, escape_label, node_diagram_id, select_subgraph};
 use rgbuilder_error::{Error, Result};
 use rgbuilder_graph::backend::MemoryBackend;
 use rgbuilder_graph::schema::{EdgeType, NodeType};

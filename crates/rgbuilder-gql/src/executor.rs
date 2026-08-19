@@ -5,7 +5,7 @@ use crate::ast::{
 };
 use crate::explain::{ExplainPlan, ExplainStep};
 use rgbuilder_analysis::graph_utils::PetGraphView;
-use rgbuilder_analysis::{is_virtual_community, CommunityQueryContext};
+use rgbuilder_analysis::{CommunityQueryContext, is_virtual_community};
 use rgbuilder_error::{Error, Result};
 use rgbuilder_graph::backend::{GraphBackend, MemoryBackend};
 use rgbuilder_graph::schema::Node;
@@ -349,9 +349,10 @@ fn resolve_property(
                 Some(format!("{:?}", node.node_type))
             }
         }
-        "label" if is_virtual_community(node) => {
-            node.get_property("label").map(String::from).or_else(|| Some(node.name.to_string()))
-        }
+        "label" if is_virtual_community(node) => node
+            .get_property("label")
+            .map(String::from)
+            .or_else(|| Some(node.name.to_string())),
         "signature" => node.signature_text().map(str::to_string),
         "return_type" => node.return_type_text().map(str::to_string),
         "community_id" => {
@@ -496,15 +497,18 @@ mod tests {
 
         let by_simple = parse("MATCH (n:Class) WHERE n.name = 'Context' RETURN n").unwrap();
         assert_eq!(
-            QueryExecutor::new(&backend).execute(&by_simple).unwrap().rows.len(),
+            QueryExecutor::new(&backend)
+                .execute(&by_simple)
+                .unwrap()
+                .rows
+                .len(),
             1,
             "simple name should match"
         );
 
-        let by_fqn_on_name = parse(
-            "MATCH (n:Class) WHERE n.name = 'org.openmrs.api.context.Context' RETURN n",
-        )
-        .unwrap();
+        let by_fqn_on_name =
+            parse("MATCH (n:Class) WHERE n.name = 'org.openmrs.api.context.Context' RETURN n")
+                .unwrap();
         assert!(
             QueryExecutor::new(&backend)
                 .execute(&by_fqn_on_name)
@@ -519,7 +523,11 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            QueryExecutor::new(&backend).execute(&by_qn).unwrap().rows.len(),
+            QueryExecutor::new(&backend)
+                .execute(&by_qn)
+                .unwrap()
+                .rows
+                .len(),
             1,
             "WHERE n.qualified_name should resolve Node.qualified_name"
         );
@@ -529,15 +537,18 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            QueryExecutor::new(&backend).execute(&by_like).unwrap().rows.len(),
+            QueryExecutor::new(&backend)
+                .execute(&by_like)
+                .unwrap()
+                .rows
+                .len(),
             1,
             "LIKE on qualified_name should work"
         );
 
-        let by_inline = parse(
-            "MATCH (n:Class {qualified_name: 'org.openmrs.api.context.Context'}) RETURN n",
-        )
-        .unwrap();
+        let by_inline =
+            parse("MATCH (n:Class {qualified_name: 'org.openmrs.api.context.Context'}) RETURN n")
+                .unwrap();
         assert_eq!(
             QueryExecutor::new(&backend)
                 .execute(&by_inline)
@@ -560,9 +571,7 @@ mod tests {
     #[test]
     fn test_virtual_community_list() {
         let backend = call_chain();
-        let ids: Vec<_> = backend
-            .find_node_ids_by_type(NodeType::Function)
-            .unwrap();
+        let ids: Vec<_> = backend.find_node_ids_by_type(NodeType::Function).unwrap();
         let mut analysis = AnalysisResults::new(ids.clone());
         let c0 = analysis.get_compact_id(ids[0]).unwrap();
         let c1 = analysis.get_compact_id(ids[1]).unwrap();
@@ -600,8 +609,7 @@ mod tests {
             .with_property("kind".to_string(), "heading".to_string());
         backend.insert_node(node).unwrap();
 
-        let query =
-            parse("MATCH (n:Module) WHERE n.file_path = 'docs/guide.md' RETURN n").unwrap();
+        let query = parse("MATCH (n:Module) WHERE n.file_path = 'docs/guide.md' RETURN n").unwrap();
         let result = QueryExecutor::new(&backend).execute(&query).unwrap();
         assert_eq!(result.rows.len(), 1);
     }
@@ -614,10 +622,7 @@ mod tests {
             .with_property("kind".to_string(), "heading".to_string());
         backend.insert_node(node).unwrap();
 
-        let query = parse(
-            "MATCH (n:Module) WHERE n.file_path LIKE '*guide.md' RETURN n",
-        )
-        .unwrap();
+        let query = parse("MATCH (n:Module) WHERE n.file_path LIKE '*guide.md' RETURN n").unwrap();
         let result = QueryExecutor::new(&backend).execute(&query).unwrap();
         assert_eq!(result.rows.len(), 1);
     }
@@ -629,9 +634,17 @@ mod tests {
             .with_property("kind".to_string(), "heading".to_string());
         backend.insert_node(node).unwrap();
 
-        let query = parse("MATCH (n:Module) WHERE n.kind = 'heading' AND n.name = 'Payments' RETURN n")
-            .unwrap();
-        assert_eq!(QueryExecutor::new(&backend).execute(&query).unwrap().rows.len(), 1);
+        let query =
+            parse("MATCH (n:Module) WHERE n.kind = 'heading' AND n.name = 'Payments' RETURN n")
+                .unwrap();
+        assert_eq!(
+            QueryExecutor::new(&backend)
+                .execute(&query)
+                .unwrap()
+                .rows
+                .len(),
+            1
+        );
     }
 
     #[test]

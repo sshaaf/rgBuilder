@@ -503,10 +503,7 @@ fn k8s_website_obsidian_export_to_vault() {
 
     let note_count = count_files_recursive(&vault);
 
-    let headings = run_json_gql(
-        &repo,
-        "MATCH (n:Module) WHERE n.kind = 'heading' RETURN n",
-    );
+    let headings = run_json_gql(&repo, "MATCH (n:Module) WHERE n.kind = 'heading' RETURN n");
     let heading_count = headings.get("count").and_then(|c| c.as_u64()).unwrap_or(0);
 
     eprintln!(
@@ -517,8 +514,7 @@ fn k8s_website_obsidian_export_to_vault() {
         baseline
     );
     assert_eq!(
-        note_count as u64,
-        heading_count,
+        note_count as u64, heading_count,
         "vault note count should match heading modules"
     );
     assert!(

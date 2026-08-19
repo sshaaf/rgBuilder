@@ -2,7 +2,7 @@
 #![allow(dead_code, unused_imports, unused_macros)]
 
 use rgbuilder::analysis::{
-    build_cfg_for_function, BackwardSlicer, ProgramDependenceGraph, SliceCriterion,
+    BackwardSlicer, ProgramDependenceGraph, SliceCriterion, build_cfg_for_function,
 };
 #[test]
 fn test_rust_backward_slice_excludes_dead_assignments() {

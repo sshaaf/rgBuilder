@@ -5,8 +5,8 @@ use crate::graph_builder::GraphBuilder;
 use crate::usage_detector::{ConfigUsage, ConfigUsageDetector};
 use rgbuilder_error::{Error, Result};
 use rgbuilder_plugin_api::{ConfigKey, Relation, Symbol};
-use std::collections::HashMap;
 use rgbuilder_registry::LanguageRegistry;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -212,7 +212,12 @@ impl Extractor {
             if !tail.config_usages.is_empty() {
                 let config_usage_start = Instant::now();
                 for usage in &tail.config_usages {
-                    builder.link_config_usage(&usage.file, usage.line, &usage.key, usage.usage_type);
+                    builder.link_config_usage(
+                        &usage.file,
+                        usage.line,
+                        &usage.key,
+                        usage.usage_type,
+                    );
                 }
                 profile.config_usage_resolution += config_usage_start.elapsed();
             }
@@ -322,8 +327,8 @@ fn symbol_body_from_source(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
     use std::fs;
+    use std::time::Duration;
     use tempfile::TempDir;
 
     #[test]

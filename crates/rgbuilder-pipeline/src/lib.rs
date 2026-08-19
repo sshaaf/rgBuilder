@@ -6,7 +6,7 @@ pub mod stream;
 
 pub use parallel::{par_filter_map, par_map, thread_pool, with_pool};
 pub use pipeline::{PipelineConfig, PipelineStats, ProcessingPipeline};
-pub use stream::{stream_into_graph, DEFAULT_STREAM_CHANNEL_CAPACITY};
+pub use stream::{DEFAULT_STREAM_CHANNEL_CAPACITY, stream_into_graph};
 
 use rgbuilder_error::Result;
 use rgbuilder_graph::CodeGraph;

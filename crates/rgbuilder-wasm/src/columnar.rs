@@ -12,11 +12,7 @@ const CALLS_EDGE: u8 = 0;
 
 /// Bitmask bit for each node type (matches columnar u16 encoding).
 pub fn node_type_bit(node_type: u16) -> u32 {
-    if node_type < 32 {
-        1u32 << node_type
-    } else {
-        0
-    }
+    if node_type < 32 { 1u32 << node_type } else { 0 }
 }
 
 pub fn node_type_name(node_type: u16) -> &'static str {

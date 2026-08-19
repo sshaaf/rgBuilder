@@ -1,6 +1,6 @@
 use rgbuilder::cli::metrics_output::{
-    build_metrics_response, fixture_metrics_json, metrics_response_to_json, MetricsPagerankSection,
-    METRICS_SCHEMA_VERSION,
+    METRICS_SCHEMA_VERSION, MetricsPagerankSection, build_metrics_response, fixture_metrics_json,
+    metrics_response_to_json,
 };
 use serde_json::json;
 

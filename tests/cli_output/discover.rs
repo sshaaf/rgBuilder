@@ -1,5 +1,5 @@
 use rgbuilder::cli::discover_output::{
-    build_discover_response, fixture_discover_json, DISCOVER_SCHEMA_VERSION,
+    DISCOVER_SCHEMA_VERSION, build_discover_response, fixture_discover_json,
 };
 use rgbuilder::pipeline::PipelineStats;
 

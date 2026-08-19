@@ -54,6 +54,10 @@ mod tests {
     #[test]
     fn markdown_not_treated_as_yaml_config() {
         let registry = default_registry();
-        assert!(registry.get_config_plugin_for_file(Path::new("readme.md")).is_err());
+        assert!(
+            registry
+                .get_config_plugin_for_file(Path::new("readme.md"))
+                .is_err()
+        );
     }
 }

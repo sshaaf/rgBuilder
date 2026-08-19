@@ -1,7 +1,7 @@
 //! `rg-build discover` — index and analyze a repository.
 
 use super::context::CliContext;
-use super::discover_impl::{run_full_analysis, AnalysisOptions};
+use super::discover_impl::{AnalysisOptions, run_full_analysis};
 use anyhow::Result;
 
 pub struct DiscoverArgs {

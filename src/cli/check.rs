@@ -105,7 +105,10 @@ fn changed_function_symbols(
                         continue;
                     }
                     if let Some(ref fp) = node.file_path {
-                        if paths.iter().any(|p| fp.ends_with(p) || p.ends_with(fp.as_str())) {
+                        if paths
+                            .iter()
+                            .any(|p| fp.ends_with(p) || p.ends_with(fp.as_str()))
+                        {
                             symbols.push(node.name.to_string());
                         }
                     }

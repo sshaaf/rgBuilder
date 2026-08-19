@@ -1,11 +1,11 @@
 //! Structured semantic search CLI JSON response.
 
 use rgbuilder_analysis::{
-    SemanticBuildStats, SemanticEntry, SemanticExpansion, SemanticHit,
-    SEMANTIC_INDEX_SCHEMA_VERSION,
+    SEMANTIC_INDEX_SCHEMA_VERSION, SemanticBuildStats, SemanticEntry, SemanticExpansion,
+    SemanticHit,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// Current semantic CLI JSON schema version for index responses.
 pub const SEMANTIC_INDEX_CLI_SCHEMA_VERSION: u32 = 2;

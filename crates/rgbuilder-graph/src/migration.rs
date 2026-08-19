@@ -105,13 +105,15 @@ pub fn plugin_parameter_from_graph(param: &GraphParameter) -> Parameter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schema::{CallType, EdgeType, NodeType, GRAPH_SCHEMA_VERSION};
+    use crate::schema::{CallType, EdgeType, GRAPH_SCHEMA_VERSION, NodeType};
     use uuid::Uuid;
 
     #[test]
     fn test_migrate_v1_signature_from_properties() {
-        let mut nodes = vec![Node::new(NodeType::Function, "add".to_string())
-            .with_property("signature".to_string(), "fn add(a: i32) -> i32".to_string())];
+        let mut nodes = vec![
+            Node::new(NodeType::Function, "add".to_string())
+                .with_property("signature".to_string(), "fn add(a: i32) -> i32".to_string()),
+        ];
         migrate_v1_to_v2(&mut nodes, &mut []);
         assert_eq!(nodes[0].signature.as_deref(), Some("fn add(a: i32) -> i32"));
     }
@@ -126,8 +128,10 @@ mod tests {
 
     #[test]
     fn test_migrate_edge_call_type_from_property() {
-        let mut edges = vec![Edge::new(Uuid::new_v4(), Uuid::new_v4(), EdgeType::Calls)
-            .with_property("call_type".to_string(), "Virtual".to_string())];
+        let mut edges = vec![
+            Edge::new(Uuid::new_v4(), Uuid::new_v4(), EdgeType::Calls)
+                .with_property("call_type".to_string(), "Virtual".to_string()),
+        ];
         migrate_v1_to_v2(&mut [], &mut edges);
         assert_eq!(edges[0].call_type, Some(CallType::Virtual));
     }

@@ -498,8 +498,9 @@ impl AnalysisResults {
     /// Load analysis results from a binary file.
     pub fn load(path: &Path) -> Result<Self> {
         let file = std::fs::File::open(path)?;
-        bincode::deserialize_from(file)
-            .map_err(|e| rgbuilder_error::Error::SerdeError(format!("Failed to deserialize: {}", e)))
+        bincode::deserialize_from(file).map_err(|e| {
+            rgbuilder_error::Error::SerdeError(format!("Failed to deserialize: {}", e))
+        })
     }
 }
 

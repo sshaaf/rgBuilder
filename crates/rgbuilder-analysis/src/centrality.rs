@@ -4,7 +4,7 @@
 //! from behavioral centrality by default so module containment cannot inflate
 //! PageRank or betweenness scores.
 
-use crate::graph_utils::{edge_type_set, PetGraphView};
+use crate::graph_utils::{PetGraphView, edge_type_set};
 use petgraph::graph::NodeIndex;
 use rgbuilder_error::Result;
 use rgbuilder_graph::backend::MemoryBackend;
@@ -330,8 +330,7 @@ impl BetweennessCentrality {
 
         let mut betweenness = vec![0.0f64; n];
         for source in 0..n {
-            let partial =
-                crate::centrality_approx::brandes_single_source(out_adj, source, n);
+            let partial = crate::centrality_approx::brandes_single_source(out_adj, source, n);
             for (node, score) in partial.iter().enumerate() {
                 betweenness[node] += score;
             }

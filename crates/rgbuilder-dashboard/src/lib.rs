@@ -20,23 +20,23 @@ mod slice_export;
 mod source_catalog;
 mod taint_export;
 
-pub use bundle::{default_dashboard_path, dist_embedded, DASHBOARD_DIR_NAME};
-pub use communities::{CommunitiesPayload, COMMUNITIES_FILE, COMMUNITIES_SCHEMA_VERSION};
-pub use dataflow_export::{DataflowExportSummary, DATAFLOW_INDEX_FILE};
+pub use bundle::{DASHBOARD_DIR_NAME, default_dashboard_path, dist_embedded};
+pub use communities::{COMMUNITIES_FILE, COMMUNITIES_SCHEMA_VERSION, CommunitiesPayload};
+pub use dataflow_export::{DATAFLOW_INDEX_FILE, DataflowExportSummary};
 pub use export_context::DashboardExportContext;
 pub use manifest::{
-    AnalysisSection, DashboardManifest, MetricsSection, SemanticSection, ViewSection,
-    MANIFEST_SCHEMA_VERSION,
+    AnalysisSection, DashboardManifest, MANIFEST_SCHEMA_VERSION, MetricsSection, SemanticSection,
+    ViewSection,
 };
-pub use metagraph::{MetagraphExport, MetagraphPayload, COMMUNITY_ONLY_THRESHOLD, METAGRAPH_FILE};
+pub use metagraph::{COMMUNITY_ONLY_THRESHOLD, METAGRAPH_FILE, MetagraphExport, MetagraphPayload};
 pub use migration_export::{
+    MIGRATION_GRAPH_FILE, MIGRATION_PLAN_FILE, MigrationExportSummary,
     export_default_migration_plan, export_migration_graph, write_migration_plan,
     write_migration_plan_from_repo, write_migration_plan_from_repo_with_context,
-    MigrationExportSummary, MIGRATION_GRAPH_FILE, MIGRATION_PLAN_FILE,
 };
-pub use mutations_export::{MutationsExportSummary, MUTATIONS_INDEX_FILE};
-pub use slice_export::{SliceExportSummary, SLICE_INDEX_FILE};
-pub use taint_export::{TaintExportSummary, TAINT_INDEX_FILE};
+pub use mutations_export::{MUTATIONS_INDEX_FILE, MutationsExportSummary};
+pub use slice_export::{SLICE_INDEX_FILE, SliceExportSummary};
+pub use taint_export::{TAINT_INDEX_FILE, TaintExportSummary};
 
 use blast_export::{export_blast_bundle, load_columnar_uuid_indices};
 use bundle::{extract_static_assets, inject_manifest_bootstrap};

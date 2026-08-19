@@ -32,7 +32,10 @@ fn main() {
     println!("cargo:rerun-if-changed={}", tokens_path.display());
 
     let text = fs::read_to_string(&tokens_path).unwrap_or_else(|err| {
-        panic!("missing vocab_tokens.txt at {}: {err}", tokens_path.display())
+        panic!(
+            "missing vocab_tokens.txt at {}: {err}",
+            tokens_path.display()
+        )
     });
 
     let mut tokens: Vec<String> = text
@@ -47,7 +50,10 @@ fn main() {
     if tokens.len() > 40_000 {
         tokens.truncate(40_000);
     }
-    assert!(!tokens.is_empty(), "vocab_tokens.txt produced empty vocabulary");
+    assert!(
+        !tokens.is_empty(),
+        "vocab_tokens.txt produced empty vocabulary"
+    );
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let out_path = out_dir.join("vocab_matrix.bin");
@@ -77,5 +83,8 @@ fn main() {
         }
     }
 
-    println!("cargo:rustc-env=RGBUILDER_VOCAB_MATRIX={}", out_path.display());
+    println!(
+        "cargo:rustc-env=RGBUILDER_VOCAB_MATRIX={}",
+        out_path.display()
+    );
 }

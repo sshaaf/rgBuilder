@@ -3,7 +3,7 @@
 use rgbuilder_error::{Error, Result};
 use rgbuilder_graph::schema::Node;
 pub use rgbuilder_graph::{
-    tokenize_string_into, MIN_TOKEN_LEN, TOKEN_BLOOM_BITS, TOKEN_BLOOM_WORDS,
+    MIN_TOKEN_LEN, TOKEN_BLOOM_BITS, TOKEN_BLOOM_WORDS, tokenize_string_into,
 };
 use std::collections::HashSet;
 use std::fs::File;

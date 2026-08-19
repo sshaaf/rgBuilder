@@ -298,10 +298,12 @@ fn test_all_cli_commands_json_schema_sanity() {
     let metrics_bc_str = str::from_utf8(&metrics_bc.stdout).unwrap();
     let metrics_bc_doc = sandbox.parse_stdout_json(&metrics_bc);
     assert_schema_version(&metrics_bc_doc, 1);
-    assert!(metrics_bc_doc
-        .get("betweenness")
-        .and_then(|v| v.as_array())
-        .is_some());
+    assert!(
+        metrics_bc_doc
+            .get("betweenness")
+            .and_then(|v| v.as_array())
+            .is_some()
+    );
     assert_keys_absent_in_str(metrics_bc_str, &["pagerank", "communities"]);
 
     // --- metrics: communities-only omits other sections ---
@@ -445,10 +447,11 @@ fn test_all_cli_commands_json_schema_sanity() {
     if let Some(idom) = dom_doc["idom"].as_array() {
         for rel in idom {
             assert!(rel.get("block").and_then(|v| v.as_u64()).is_some());
-            assert!(rel
-                .get("immediate_dominator")
-                .and_then(|v| v.as_u64())
-                .is_some());
+            assert!(
+                rel.get("immediate_dominator")
+                    .and_then(|v| v.as_u64())
+                    .is_some()
+            );
         }
     }
 

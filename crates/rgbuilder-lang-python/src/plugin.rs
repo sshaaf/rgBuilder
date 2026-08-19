@@ -105,11 +105,7 @@ impl PythonPlugin {
                 serde_json::json!({ "language": "python", "is_constructor": true }),
             )
         } else {
-            (
-                raw_name,
-                None,
-                serde_json::json!({ "language": "python" }),
-            )
+            (raw_name, None, serde_json::json!({ "language": "python" }))
         };
 
         Ok(Symbol {
@@ -382,8 +378,9 @@ impl PythonPlugin {
                         .and_then(|o| o.utf8_text(source).ok())
                         .is_some_and(|t| t == "self");
                     if is_self {
-                        if let Some(name) =
-                            attr.and_then(|a| a.utf8_text(source).ok()).map(str::to_string)
+                        if let Some(name) = attr
+                            .and_then(|a| a.utf8_text(source).ok())
+                            .map(str::to_string)
                         {
                             if seen.insert(name.clone()) {
                                 fields.push(Field {
@@ -628,11 +625,7 @@ impl LanguagePlugin for PythonPlugin {
         self.relations_from_tree(tree.root_node(), source, file_path, symbols)
     }
 
-    fn extract_all(
-        &self,
-        file_path: &Path,
-        source: &[u8],
-    ) -> Result<ExtractAllResult> {
+    fn extract_all(&self, file_path: &Path, source: &[u8]) -> Result<ExtractAllResult> {
         let tree = self.parse(file_path, source)?;
         let root = tree.root_node();
         let symbols = self.symbols_from_tree(root, source, file_path)?;
@@ -777,10 +770,7 @@ class User:
             .iter()
             .find(|s| {
                 s.symbol_type == SymbolType::Function
-                    && s.metadata
-                        .get("is_constructor")
-                        .and_then(|v| v.as_bool())
-                        == Some(true)
+                    && s.metadata.get("is_constructor").and_then(|v| v.as_bool()) == Some(true)
             })
             .expect("constructor");
         assert_eq!(ctor.name, "__init__");

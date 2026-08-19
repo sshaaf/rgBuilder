@@ -5,9 +5,7 @@
 //! topology `Vec`, keeping only endpoints present in the alive set.
 //! Output is written to a temp path then atomically renamed.
 
-use crate::columnar_snapshot::{
-    write_columnar_assembled, ColumnarGraphMmap, EdgeRow, StringPool,
-};
+use crate::columnar_snapshot::{ColumnarGraphMmap, EdgeRow, StringPool, write_columnar_assembled};
 use crate::csr::{edge_type_from_u8, edge_type_to_u8};
 use crate::normalize_path_str;
 use crate::schema::{Edge, Node};
@@ -89,11 +87,7 @@ impl<'a> GraphCompactor<'a> {
     ///
     /// Base nodes copy extension bytes from mmap without bincode re-encode; delta nodes
     /// are encoded normally. Scratch dir is unused (kept for API stability).
-    pub fn compact_to_path(
-        self,
-        output_path: &Path,
-        _scratch_dir: &Path,
-    ) -> Result<CompactStats> {
+    pub fn compact_to_path(self, output_path: &Path, _scratch_dir: &Path) -> Result<CompactStats> {
         if let Some(parent) = output_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -176,11 +170,7 @@ impl<'a> GraphCompactor<'a> {
 
         for edge in &self.delta.new_edges {
             if alive.contains(&edge.from) && alive.contains(&edge.to) {
-                edge_meta.push((
-                    edge.from,
-                    edge.to,
-                    edge_type_to_u8(edge.edge_type),
-                ));
+                edge_meta.push((edge.from, edge.to, edge_type_to_u8(edge.edge_type)));
                 stats.edges_from_delta += 1;
             }
         }
@@ -293,8 +283,7 @@ mod tests {
     #[test]
     fn compact_drops_invalidated_file_and_appends_delta() {
         let keep = Node::new(NodeType::Function, "keep").with_file_path("a.rs");
-        let drop_n =
-            Node::new(NodeType::Function, "drop_me").with_file_path("b.rs");
+        let drop_n = Node::new(NodeType::Function, "drop_me").with_file_path("b.rs");
         let keep_id = keep.id;
         let drop_id = drop_n.id;
         let e_keep = Edge::new(keep_id, keep_id, EdgeType::Calls);
@@ -302,15 +291,10 @@ mod tests {
 
         let tmp = TempDir::new().unwrap();
         let base_path = tmp.path().join("base.bin");
-        write_columnar_from_nodes_edges(
-            vec![keep, drop_n],
-            vec![e_keep, e_drop],
-            &base_path,
-        )
-        .unwrap();
+        write_columnar_from_nodes_edges(vec![keep, drop_n], vec![e_keep, e_drop], &base_path)
+            .unwrap();
 
-        let replacement =
-            Node::new(NodeType::Function, "fresh").with_file_path("b.rs");
+        let replacement = Node::new(NodeType::Function, "fresh").with_file_path("b.rs");
         let fresh_id = replacement.id;
         let mut delta = DeltaSegment::new();
         delta.invalidate_file("b.rs");
@@ -347,8 +331,7 @@ mod tests {
 
     #[test]
     fn node_matches_invalidated_basename() {
-        let node = Node::new(NodeType::Function, "foo")
-            .with_file_path("src/deep/b.rs");
+        let node = Node::new(NodeType::Function, "foo").with_file_path("src/deep/b.rs");
         let mut invalidated = HashSet::new();
         invalidated.insert("b.rs".to_string());
         assert!(node_matches_invalidated(&node, &invalidated));

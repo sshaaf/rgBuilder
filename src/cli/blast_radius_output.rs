@@ -1,14 +1,14 @@
 //! Structured blast-radius CLI response (JSON and text).
 
 use crate::analysis::{
-    canonical_fqn_from_node, check_policies, inferred_target_metadata, language_from_node,
     BlastRadiusResult, CentralityAnalyzer, MacroIndexEntry, PetGraphView, PolicyRegistry,
-    PolicyViolation, SliceHandoffSeed,
+    PolicyViolation, SliceHandoffSeed, canonical_fqn_from_node, check_policies,
+    inferred_target_metadata, language_from_node,
 };
 use anyhow::Result;
+use rgbuilder_graph::SnapshotNodeStore;
 use rgbuilder_graph::backend::{GraphBackend, MemoryBackend};
 use rgbuilder_graph::schema::Node;
-use rgbuilder_graph::SnapshotNodeStore;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

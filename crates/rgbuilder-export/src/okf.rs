@@ -4,7 +4,7 @@ use rgbuilder_error::Result;
 use rgbuilder_graph::backend::MemoryBackend;
 use rgbuilder_graph::content_store::ContentStore;
 use rgbuilder_graph::schema::{EdgeType, Node, NodeType};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// Stats from an OKF JSON export.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -52,7 +52,9 @@ pub fn export_okf_json(
             return;
         }
         let from_qn = backend
-            .with_node(edge.from, |n| n.qualified_name.as_ref().map(|s| s.to_string()))
+            .with_node(edge.from, |n| {
+                n.qualified_name.as_ref().map(|s| s.to_string())
+            })
             .ok()
             .flatten();
         let to_label = backend

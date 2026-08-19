@@ -2,7 +2,7 @@
 //!
 //! Task 1.6.2: Parallel file parsing with rayon
 
-use crate::stream::{stream_into_graph, DEFAULT_STREAM_CHANNEL_CAPACITY};
+use crate::stream::{DEFAULT_STREAM_CHANNEL_CAPACITY, stream_into_graph};
 use indicatif::{ProgressBar, ProgressStyle};
 use rgbuilder_error::Result;
 use rgbuilder_extraction::discovery::{DiscoveryConfig, FileDiscoverer};

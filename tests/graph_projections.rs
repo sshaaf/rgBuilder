@@ -6,10 +6,10 @@ mod graph_audit;
 use graph_audit::{deep_chain, mixed_edge_hub, random_call_graph, star, structural_topology};
 use rgbuilder::analysis::graph_utils::PetGraphView;
 use rgbuilder::analysis::{
-    check_policies, resolve_unique_symbol, BlastRadiusAnalyzer, BlastRadiusEngine,
-    CentralityScores, PolicyRegistry, PolicyViolation,
+    BlastRadiusAnalyzer, BlastRadiusEngine, CentralityScores, PolicyRegistry, PolicyViolation,
+    check_policies, resolve_unique_symbol,
 };
-use rgbuilder::gql::{parse, QueryExecutor};
+use rgbuilder::gql::{QueryExecutor, parse};
 use rgbuilder::graph::backend::{GraphBackend, MemoryBackend};
 use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
 use std::collections::HashMap;
@@ -174,17 +174,17 @@ fn test_phantom_symbol_rejects_ambiguous_name() {
     let mut backend = MemoryBackend::new();
     for ns in ["pkg::a", "pkg::b", "pkg::c"] {
         backend
-            .insert_node(
-                Node::new(NodeType::Function, "handler").with_qualified_name(ns),
-            )
+            .insert_node(Node::new(NodeType::Function, "handler").with_qualified_name(ns))
             .unwrap();
     }
 
     let err = resolve_unique_symbol(&backend, "handler").unwrap_err();
     assert!(err.to_string().contains("ambiguous"));
-    assert!(BlastRadiusAnalyzer::new(&backend)
-        .analyze("handler")
-        .is_err());
+    assert!(
+        BlastRadiusAnalyzer::new(&backend)
+            .analyze("handler")
+            .is_err()
+    );
 }
 
 #[test]

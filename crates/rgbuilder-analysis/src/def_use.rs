@@ -56,7 +56,12 @@ fn collect_field_access_base_uses(node: Node, source: &[u8], used: &mut HashSet<
     }
 }
 
-fn collect_assignment_lhs(left: Node, source: &[u8], defined: &mut HashSet<String>, used: &mut HashSet<String>) {
+fn collect_assignment_lhs(
+    left: Node,
+    source: &[u8],
+    defined: &mut HashSet<String>,
+    used: &mut HashSet<String>,
+) {
     if is_field_access_kind(left.kind()) {
         if let Some(compound) = field_access_compound(left, source) {
             defined.insert(compound);
@@ -516,7 +521,10 @@ mod tests {
             defs.contains("order.status"),
             "defs should include order.status, got {defs:?}"
         );
-        assert!(uses.contains("order"), "uses should include order, got {uses:?}");
+        assert!(
+            uses.contains("order"),
+            "uses should include order, got {uses:?}"
+        );
     }
 
     #[test]
@@ -527,12 +535,19 @@ mod tests {
             .set_language(&tree_sitter_java::LANGUAGE.into())
             .unwrap();
         let tree = parser.parse(source, None).unwrap();
-        let decl =
-            find_kind(tree.root_node(), "local_variable_declaration").expect("local decl");
+        let decl = find_kind(tree.root_node(), "local_variable_declaration").expect("local decl");
         let (defs, uses) = extract_def_use(decl, source.as_bytes());
-        assert!(defs.contains("other"), "defs should include other, got {defs:?}");
-        assert!(uses.contains("order"), "uses should include order, got {uses:?}");
-        assert!(!uses.contains("other"), "declarator name must not be a use, got {uses:?}");
+        assert!(
+            defs.contains("other"),
+            "defs should include other, got {defs:?}"
+        );
+        assert!(
+            uses.contains("order"),
+            "uses should include order, got {uses:?}"
+        );
+        assert!(
+            !uses.contains("other"),
+            "declarator name must not be a use, got {uses:?}"
+        );
     }
 }
-

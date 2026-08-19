@@ -53,8 +53,7 @@ pub fn export_mutations_index(
     repo_root: &Path,
     out_dir: &Path,
 ) -> Result<MutationsExportSummary, String> {
-    let Some(index) = FieldWriteIndex::open_if_exists(repo_root).map_err(|e| e.to_string())?
-    else {
+    let Some(index) = FieldWriteIndex::open_if_exists(repo_root).map_err(|e| e.to_string())? else {
         let empty = MutationsIndexPayload {
             schema_version: 1,
             available: false,
@@ -89,7 +88,10 @@ pub fn export_mutations_index(
             let unresolved = matches!(w.kind, FieldWriteKind::Unresolved);
             (unresolved, w.is_constructor, w.file.as_str(), w.line)
         });
-        ranked.into_iter().take(MAX_WRITES_EXPORTED).collect::<Vec<_>>()
+        ranked
+            .into_iter()
+            .take(MAX_WRITES_EXPORTED)
+            .collect::<Vec<_>>()
     } else {
         index.writes.iter().collect()
     };

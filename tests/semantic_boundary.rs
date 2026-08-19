@@ -6,10 +6,10 @@ mod analysis_helpers;
 
 use analysis_helpers::build_dominance;
 use rgbuilder::analysis::{
+    BackwardSlicer, BlastRadiusEngine, ControlFlowGraph, DominatorTree, InterproceduralCFG,
+    InterproceduralSlicer, ProgramDependenceGraph, SliceCriterion, TaintAnalyzer,
     build_cfg_for_function, criterion_for_parameter, filter_handoff_seeds_by_index,
-    resolve_handoff_seeds, verify_idom_acyclic, BackwardSlicer, BlastRadiusEngine,
-    ControlFlowGraph, DominatorTree, InterproceduralCFG, InterproceduralSlicer,
-    ProgramDependenceGraph, SliceCriterion, TaintAnalyzer,
+    resolve_handoff_seeds, verify_idom_acyclic,
 };
 use rgbuilder::graph::backend::{GraphBackend, MemoryBackend};
 use rgbuilder::graph::schema::{Edge, EdgeType, GraphParameter, Node, NodeType};

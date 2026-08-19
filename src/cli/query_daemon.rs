@@ -4,10 +4,10 @@
 //! - Unix: domain socket at `<repo>/.rgbuilder/query.sock`
 //! - Windows: loopback TCP; port stored in `<repo>/.rgbuilder/query.port`
 
-use super::blast_radius::{build_lite_response, BlastRadiusArgs};
+use super::blast_radius::{BlastRadiusArgs, build_lite_response};
 use super::blast_radius_output::BlastRadiusResponse;
 use super::context::CliContext;
-use crate::analysis::{parse_fqn_symbol, try_load_engine, BlastRadiusEngine};
+use crate::analysis::{BlastRadiusEngine, parse_fqn_symbol, try_load_engine};
 use anyhow::{Context, Result};
 use rgbuilder_graph::SnapshotNodeStore;
 use serde::{Deserialize, Serialize};
@@ -231,8 +231,9 @@ mod transport {
                     socket_path.display()
                 );
             }
-            Err(err) => Err(err)
-                .with_context(|| format!("bind query socket {}", socket_path.display()))?,
+            Err(err) => {
+                Err(err).with_context(|| format!("bind query socket {}", socket_path.display()))?
+            }
         };
         eprintln!(
             "rg-build query daemon listening on {} (idle exit {}s)",

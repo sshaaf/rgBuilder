@@ -2,7 +2,7 @@
 //!
 //! Run: `cargo bench -p rgbuilder-graph --bench columnar_snapshot`
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use memmap2::Mmap;
 use rgbuilder_graph::backend::GraphBackend;
 use rgbuilder_graph::backend::MemoryBackend;
@@ -56,12 +56,7 @@ fn bench_edge_lookup(c: &mut Criterion) {
     let mut group = c.benchmark_group("edge_lookup");
     for (nodes, degree) in [(5_000, 8), (20_000, 16)] {
         let backend = build_dense_backend(nodes, degree);
-        let hub = backend
-            .find_nodes_by_name("fn0")
-            .unwrap()
-            .pop()
-            .unwrap()
-            .id;
+        let hub = backend.find_nodes_by_name("fn0").unwrap().pop().unwrap().id;
         group.bench_with_input(
             BenchmarkId::new("outgoing_adj", format!("{nodes}n_{degree}d")),
             &hub,
@@ -78,41 +73,39 @@ fn bench_snapshot_open(c: &mut Criterion) {
     for nodes in [10_000, 50_000] {
         let edges = nodes * 4;
         let (_tmp, path) = build_columnar_snapshot(nodes, edges);
-        group.bench_with_input(BenchmarkId::new("metadata_only", nodes), &path, |b, path| {
-            b.iter(|| {
-                let file = File::open(path).unwrap();
-                let mmap = Arc::new(unsafe { Mmap::map(&file).unwrap() });
-                let col = ColumnarGraphMmap::open(mmap).unwrap();
-                black_box((col.node_count(), col.edge_count()))
-            });
-        });
-        group.bench_with_input(BenchmarkId::new("first_get_node", nodes), &path, |b, path| {
-            b.iter(|| {
-                let file = File::open(path).unwrap();
-                let mmap = Arc::new(unsafe { Mmap::map(&file).unwrap() });
-                let col = ColumnarGraphMmap::open(mmap).unwrap();
-                let id = col.materialize_node_at(0).unwrap().id;
-                black_box(col.get_node(id).unwrap().unwrap().name.to_string())
-            });
-        });
+        group.bench_with_input(
+            BenchmarkId::new("metadata_only", nodes),
+            &path,
+            |b, path| {
+                b.iter(|| {
+                    let file = File::open(path).unwrap();
+                    let mmap = Arc::new(unsafe { Mmap::map(&file).unwrap() });
+                    let col = ColumnarGraphMmap::open(mmap).unwrap();
+                    black_box((col.node_count(), col.edge_count()))
+                });
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("first_get_node", nodes),
+            &path,
+            |b, path| {
+                b.iter(|| {
+                    let file = File::open(path).unwrap();
+                    let mmap = Arc::new(unsafe { Mmap::map(&file).unwrap() });
+                    let col = ColumnarGraphMmap::open(mmap).unwrap();
+                    let id = col.materialize_node_at(0).unwrap().id;
+                    black_box(col.get_node(id).unwrap().unwrap().name.to_string())
+                });
+            },
+        );
     }
     group.finish();
 }
 
 fn bench_has_edge(c: &mut Criterion) {
     let backend = build_dense_backend(10_000, 4);
-    let from = backend
-        .find_nodes_by_name("fn0")
-        .unwrap()
-        .pop()
-        .unwrap()
-        .id;
-    let to = backend
-        .find_nodes_by_name("fn1")
-        .unwrap()
-        .pop()
-        .unwrap()
-        .id;
+    let from = backend.find_nodes_by_name("fn0").unwrap().pop().unwrap().id;
+    let to = backend.find_nodes_by_name("fn1").unwrap().pop().unwrap().id;
     c.bench_function("has_edge_10k", |b| {
         b.iter(|| black_box(backend.has_edge(from, to, EdgeType::Calls)));
     });

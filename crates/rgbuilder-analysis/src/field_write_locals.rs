@@ -142,8 +142,10 @@ fn visit_java(
     }
     if now_in && kind == "formal_parameter" {
         if let (Some(name), Some(ty)) = (
-            node.child_by_field_name("name").and_then(|n| text_of(n, source)),
-            node.child_by_field_name("type").and_then(|n| text_of(n, source)),
+            node.child_by_field_name("name")
+                .and_then(|n| text_of(n, source)),
+            node.child_by_field_name("type")
+                .and_then(|n| text_of(n, source)),
         ) {
             insert_ty(env, &name, &ty);
         }
@@ -229,8 +231,10 @@ fn visit_csharp(
     }
     if now_in && kind == "parameter" {
         if let (Some(name), Some(ty)) = (
-            node.child_by_field_name("name").and_then(|n| text_of(n, source)),
-            node.child_by_field_name("type").and_then(|n| text_of(n, source)),
+            node.child_by_field_name("name")
+                .and_then(|n| text_of(n, source)),
+            node.child_by_field_name("type")
+                .and_then(|n| text_of(n, source)),
         ) {
             insert_ty(env, &name, &ty);
         }
@@ -728,7 +732,9 @@ func Process(order *OrderDTO) {
         let mut env = HashMap::new();
         merge_local_types("go", source, "Process", &mut env);
         assert!(
-            env.get("order").map(|s| s.contains("OrderDTO")).unwrap_or(false),
+            env.get("order")
+                .map(|s| s.contains("OrderDTO"))
+                .unwrap_or(false),
             "env={env:?}"
         );
     }
@@ -752,12 +758,18 @@ public class Dual {
         ctx.merge_into("first", &mut env_first);
         assert_eq!(env_first.get("a").map(String::as_str), Some("OrderDTO"));
         assert_eq!(env_first.get("x").map(String::as_str), Some("OrderDTO"));
-        assert!(env_first.get("y").is_none(), "first must not see second locals");
+        assert!(
+            env_first.get("y").is_none(),
+            "first must not see second locals"
+        );
 
         let mut env_second = HashMap::new();
         ctx.merge_into("second", &mut env_second);
         assert_eq!(env_second.get("b").map(String::as_str), Some("OrderDTO"));
         assert_eq!(env_second.get("y").map(String::as_str), Some("OrderDTO"));
-        assert!(env_second.get("x").is_none(), "second must not see first locals");
+        assert!(
+            env_second.get("x").is_none(),
+            "second must not see first locals"
+        );
     }
 }

@@ -76,14 +76,12 @@ fn ambiguous_bare_name_fails_closed() {
     let mut backend = MemoryBackend::new();
     backend
         .insert_node(
-                Node::new(NodeType::Function, "collide")
-                .with_qualified_name("AmbiguousA::collide"),
+            Node::new(NodeType::Function, "collide").with_qualified_name("AmbiguousA::collide"),
         )
         .unwrap();
     backend
         .insert_node(
-                Node::new(NodeType::Function, "collide")
-                .with_qualified_name("AmbiguousB::collide"),
+            Node::new(NodeType::Function, "collide").with_qualified_name("AmbiguousB::collide"),
         )
         .unwrap();
 

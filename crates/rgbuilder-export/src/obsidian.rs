@@ -4,12 +4,12 @@ use rgbuilder_error::Result;
 use rgbuilder_graph::backend::MemoryBackend;
 use rgbuilder_graph::content_store::ContentStore;
 use rgbuilder_graph::schema::{EdgeType, Node, NodeType};
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::fs;
 use std::hash::{Hash, Hasher};
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -105,7 +105,7 @@ pub fn export_obsidian_vault(
                 if let Ok(label) = backend
                     .with_node(target, |n| obsidian_wikilink_for_node(n, &repo_prefix))
                     .map(|inner| inner.flatten())
-                && let Some(label) = label
+                    && let Some(label) = label
                 {
                     wikilinks.push(format!("[[{label}]]"));
                 }
@@ -229,10 +229,7 @@ fn note_relpath_for_heading(node: &Node, repo_prefix: &str) -> Option<String> {
 }
 
 fn obsidian_link_from_relpath(note_rel: &str) -> String {
-    note_rel
-        .strip_suffix(".md")
-        .unwrap_or(note_rel)
-        .to_string()
+    note_rel.strip_suffix(".md").unwrap_or(note_rel).to_string()
 }
 
 fn resolve_body(node: &Node, store: &ContentStore) -> Option<String> {
@@ -246,15 +243,12 @@ fn resolve_body(node: &Node, store: &ContentStore) -> Option<String> {
 }
 
 fn strip_repo_prefix(path: &str, repo_prefix: &str) -> String {
-    let mut p = path.replace('\\', "/");
-    if let Some(rest) = p.strip_prefix(repo_prefix) {
-        p = rest.to_string();
-    }
-    p = p.strip_prefix('/').unwrap_or(&p).to_string();
-    while p.starts_with("./") {
-        p = p[2..].to_string();
-    }
-    p
+    let normalized_path = normalize_path(path);
+    let normalized_repo = normalize_path(repo_prefix);
+    let rel_path = normalized_path
+        .strip_prefix(&normalized_repo)
+        .unwrap_or(&normalized_path);
+    path_to_relative_string(rel_path)
 }
 
 fn note_relpath_from_parts(file_path: &str, fragment: &str, hash_seed: &str) -> String {
@@ -275,7 +269,9 @@ fn note_relpath_from_parts(file_path: &str, fragment: &str, hash_seed: &str) -> 
 fn sanitize_relpath(path: &str, hash_seed: &str) -> String {
     path.split('/')
         .filter(|s| !s.is_empty())
-        .map(|seg| sanitize_path_component(seg, &format!("{hash_seed}/{seg}"), MAX_PATH_SEGMENT_LEN))
+        .map(|seg| {
+            sanitize_path_component(seg, &format!("{hash_seed}/{seg}"), MAX_PATH_SEGMENT_LEN)
+        })
         .collect::<Vec<_>>()
         .join("/")
 }
@@ -311,15 +307,60 @@ fn sanitize_path_component(raw: &str, hash_seed: &str, max_len: usize) -> String
     if cleaned.is_empty() {
         cleaned = "section".to_string();
     }
-    if cleaned.chars().count() > max_len {
+    if cleaned.len() > max_len {
         let hash = short_hash(hash_seed);
         let keep = max_len.saturating_sub(hash.len() + 1);
-        let truncated: String = cleaned.chars().take(keep).collect();
+        let truncated = truncate_utf8_bytes(&cleaned, keep);
         let truncated = truncated.trim_end_matches('-');
         format!("{truncated}-{hash}")
     } else {
         cleaned
     }
+}
+
+fn normalize_path(input: &str) -> PathBuf {
+    let mut out = PathBuf::new();
+    for component in Path::new(input).components() {
+        match component {
+            Component::Prefix(prefix) => out = PathBuf::from(prefix.as_os_str()),
+            Component::RootDir => out.push(std::path::MAIN_SEPARATOR_STR),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                out.pop();
+            }
+            Component::Normal(part) => out.push(part),
+        }
+    }
+    out
+}
+
+fn path_to_relative_string(path: &Path) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    for component in path.components() {
+        match component {
+            Component::Normal(part) => parts.push(part.to_string_lossy().to_string()),
+            Component::ParentDir => {
+                let _ = parts.pop();
+            }
+            Component::CurDir | Component::RootDir | Component::Prefix(_) => {}
+        }
+    }
+    parts.join("/")
+}
+
+fn truncate_utf8_bytes(text: &str, max_bytes: usize) -> &str {
+    if text.len() <= max_bytes {
+        return text;
+    }
+    let mut end = 0usize;
+    for (idx, ch) in text.char_indices() {
+        let next = idx + ch.len_utf8();
+        if next > max_bytes {
+            break;
+        }
+        end = next;
+    }
+    &text[..end]
 }
 
 fn short_hash(seed: &str) -> String {
@@ -358,11 +399,21 @@ mod tests {
             frag,
             "blog/_posts/2015/using-kubernetes-namespaces-to-manage.md#full",
         );
-        let max_comp = rel
-            .split('/')
-            .map(|c| c.chars().count())
-            .max()
-            .unwrap_or(0);
+        let max_comp = rel.split('/').map(|c| c.len()).max().unwrap_or(0);
         assert!(max_comp <= 255);
+    }
+
+    #[test]
+    fn sanitize_truncates_multibyte_segments_by_byte_length() {
+        let long = "界".repeat(200);
+        let out = sanitize_path_component(&long, "docs/guide.md#section", 252);
+        assert!(out.len() <= 252);
+    }
+
+    #[test]
+    fn strip_repo_prefix_normalizes_parent_segments() {
+        let root = "/repo/site";
+        let path = "/repo/site/docs/../guide/./index.md";
+        assert_eq!(strip_repo_prefix(path, root), "guide/index.md");
     }
 }

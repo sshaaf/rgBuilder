@@ -6,7 +6,7 @@
 
 use crate::backend::MemoryBackend;
 use crate::columnar_snapshot::ColumnarGraphMmap;
-use crate::schema::{Edge, EdgeType, Node, NodeType, GRAPH_SCHEMA_VERSION};
+use crate::schema::{Edge, EdgeType, GRAPH_SCHEMA_VERSION, Node, NodeType};
 use memmap2::Mmap;
 use rgbuilder_error::{Error, Result};
 use serde::{Deserialize, Serialize};
@@ -293,10 +293,7 @@ impl SnapshotNodeStore {
     }
 
     /// Stream edges without allocating a full topology `Vec`.
-    pub fn for_each_edge(
-        &self,
-        f: impl FnMut(Uuid, Uuid, EdgeType) -> Result<()>,
-    ) -> Result<()> {
+    pub fn for_each_edge(&self, f: impl FnMut(Uuid, Uuid, EdgeType) -> Result<()>) -> Result<()> {
         self.snapshot.for_each_edge(f)
     }
 

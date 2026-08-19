@@ -1,7 +1,7 @@
 //! High-level code graph API
 
 use crate::backend::MemoryBackend;
-use crate::export::{export_json, import_json, GraphSnapshot};
+use crate::export::{GraphSnapshot, export_json, import_json};
 use crate::query;
 use crate::schema::{Edge, Node, NodeType};
 use rgbuilder_error::{Error, Result};

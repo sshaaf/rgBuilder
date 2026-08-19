@@ -60,9 +60,11 @@ def q(request):
 "#,
     "q",
     |flows: Vec<TaintFlow>| {
-        assert!(flows
-            .iter()
-            .any(|f| f.severity == 10 && f.sink_type == TaintSink::SqlQuery));
+        assert!(
+            flows
+                .iter()
+                .any(|f| f.severity == 10 && f.sink_type == TaintSink::SqlQuery)
+        );
     }
 );
 taint_test!(
@@ -230,9 +232,11 @@ def show(request):
 "#,
     "show",
     |flows: Vec<TaintFlow>| {
-        assert!(flows
-            .iter()
-            .any(|f| !f.sanitizers.is_empty() || !f.is_vulnerable()));
+        assert!(
+            flows
+                .iter()
+                .any(|f| !f.sanitizers.is_empty() || !f.is_vulnerable())
+        );
     }
 );
 taint_test!(
@@ -246,10 +250,11 @@ def run(request):
 "#,
     "run",
     |flows: Vec<TaintFlow>| {
-        assert!(flows.iter().any(|f| f
-            .sanitizers
-            .iter()
-            .any(|s| matches!(s, rgbuilder::analysis::Sanitizer::ShellEscape))));
+        assert!(flows.iter().any(|f| {
+            f.sanitizers
+                .iter()
+                .any(|s| matches!(s, rgbuilder::analysis::Sanitizer::ShellEscape))
+        }));
     }
 );
 taint_test!(
@@ -283,9 +288,11 @@ def load():
 "#,
     "load",
     |flows: Vec<TaintFlow>| {
-        assert!(flows
-            .iter()
-            .any(|f| f.source_type == TaintSource::FileInput));
+        assert!(
+            flows
+                .iter()
+                .any(|f| f.source_type == TaintSource::FileInput)
+        );
     }
 );
 taint_test!(
@@ -298,9 +305,11 @@ def load():
 "#,
     "load",
     |flows: Vec<TaintFlow>| {
-        assert!(flows
-            .iter()
-            .any(|f| f.source_type == TaintSource::EnvironmentVar));
+        assert!(
+            flows
+                .iter()
+                .any(|f| f.source_type == TaintSource::EnvironmentVar)
+        );
     }
 );
 taint_test!(
@@ -313,9 +322,11 @@ def main():
 "#,
     "main",
     |flows: Vec<TaintFlow>| {
-        assert!(flows
-            .iter()
-            .any(|f| f.source_type == TaintSource::CommandLineArg));
+        assert!(
+            flows
+                .iter()
+                .any(|f| f.source_type == TaintSource::CommandLineArg)
+        );
         assert!(flows.iter().any(|f| f.sink_type == TaintSink::CodeEval));
     }
 );
@@ -330,9 +341,11 @@ fn run() {
 "#,
     "run",
     |flows: Vec<TaintFlow>| {
-        assert!(flows
-            .iter()
-            .any(|f| f.source_type == TaintSource::EnvironmentVar));
+        assert!(
+            flows
+                .iter()
+                .any(|f| f.source_type == TaintSource::EnvironmentVar)
+        );
     }
 );
 taint_test!(
@@ -461,9 +474,11 @@ def forward(request):
 "#,
     "forward",
     |flows: Vec<TaintFlow>| {
-        assert!(flows
-            .iter()
-            .any(|f| f.source_type == TaintSource::HttpParameter));
+        assert!(
+            flows
+                .iter()
+                .any(|f| f.source_type == TaintSource::HttpParameter)
+        );
     }
 );
 taint_vuln_test!(
@@ -483,7 +498,7 @@ def run(request):
 #[test]
 fn test_partial_dominance_bypass() {
     use rgbuilder::analysis::{
-        build_cfg_for_function, PolicyViolation, ProgramDependenceGraph, TaintAnalyzer,
+        PolicyViolation, ProgramDependenceGraph, TaintAnalyzer, build_cfg_for_function,
     };
 
     let code = r#"
@@ -506,7 +521,7 @@ def handle(request):
 #[test]
 fn test_sanitizer_after_sink_trap() {
     use rgbuilder::analysis::{
-        build_cfg_for_function, PolicyViolation, ProgramDependenceGraph, TaintAnalyzer,
+        PolicyViolation, ProgramDependenceGraph, TaintAnalyzer, build_cfg_for_function,
     };
 
     let code = r#"
@@ -527,7 +542,7 @@ def handle(request):
 }
 #[test]
 fn test_dominating_sanitizer_passes_policy() {
-    use rgbuilder::analysis::{build_cfg_for_function, ProgramDependenceGraph, TaintAnalyzer};
+    use rgbuilder::analysis::{ProgramDependenceGraph, TaintAnalyzer, build_cfg_for_function};
 
     let code = r#"
 def safe(request):

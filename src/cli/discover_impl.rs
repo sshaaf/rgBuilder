@@ -3,16 +3,16 @@
 use super::args::OutputFormat;
 use super::context::CliContext;
 use super::discover_cfg::{
-    preload_file_sources, run_cfg_analysis_batch, CfgAnalysisOptions, FileSourceCache,
+    CfgAnalysisOptions, FileSourceCache, preload_file_sources, run_cfg_analysis_batch,
 };
 use super::discover_output::build_discover_response;
-use super::stage_profile::{secs, DiscoverStageReport};
+use super::stage_profile::{DiscoverStageReport, secs};
 use crate::analysis::graph_utils::PetGraphView;
 use crate::analysis::{
-    build_function_skeleton, cfg_language_id_from_path, cfg_language_list, AnalysisResults,
-    AnalysisStorage, AstSkeletonArchive, BlastEngineSnapshot, BlastRadiusEngine,
+    AnalysisResults, AnalysisStorage, AstSkeletonArchive, BlastEngineSnapshot, BlastRadiusEngine,
     CentralityAnalyzer, CfgPdgArchive, CommunityDetector, ComplexityAnalyzer, DependencyAnalyzer,
-    MacroCallIndex, MacroCallLookupDb, NodeLookup,
+    MacroCallIndex, MacroCallLookupDb, NodeLookup, build_function_skeleton,
+    cfg_language_id_from_path, cfg_language_list,
 };
 use crate::config::secret_detector::{DetectedSecret, SecretDetector};
 use crate::discovery::{DiscoveryConfig, FileDiscoverer};
@@ -303,8 +303,8 @@ pub(crate) fn run_full_analysis(
 
     // Community detection - write to columnar table
     let community_start = Instant::now();
-    let community_result = CommunityDetector::new()
-        .detect_with_view_defaults(&petgraph_view, cold.store())?;
+    let community_result =
+        CommunityDetector::new().detect_with_view_defaults(&petgraph_view, cold.store())?;
     analysis_results.fill_community(&community_result);
     profile.community.secs = secs(community_start.elapsed());
     if human_output {
@@ -367,10 +367,12 @@ pub(crate) fn run_full_analysis(
             .as_ref()
             .and_then(|c| c.infrastructure_community_id);
         let _ = rgbuilder_analysis::fill_community_labels(&mut analysis_results, infra, |uuid| {
-            cold.get_node(uuid)
-                .ok()
-                .flatten()
-                .map(|n| (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())))
+            cold.get_node(uuid).ok().flatten().map(|n| {
+                (
+                    n.name.to_string(),
+                    n.file_path.as_ref().map(|s| s.to_string()),
+                )
+            })
         });
     }
 
@@ -569,13 +571,9 @@ pub(crate) fn run_full_analysis(
                 let Some(source) = sources.get(file) else {
                     continue;
                 };
-                if let Ok(rec) = build_function_skeleton(
-                    lang,
-                    source,
-                    &func.name,
-                    file,
-                    Some(func.id),
-                ) {
+                if let Ok(rec) =
+                    build_function_skeleton(lang, source, &func.name, file, Some(func.id))
+                {
                     skel.records.push(rec);
                 }
             }
@@ -583,10 +581,7 @@ pub(crate) fn run_full_analysis(
             match skel.write_to_path(&skel_path) {
                 Ok(()) => {
                     if human_output {
-                        println!(
-                            "  AST skeletons: {} functions",
-                            skel.records.len()
-                        );
+                        println!("  AST skeletons: {} functions", skel.records.len());
                     }
                 }
                 Err(err) => warn!(error = %err, "Failed to save AST skeleton archive"),

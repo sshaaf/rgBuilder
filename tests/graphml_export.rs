@@ -8,9 +8,7 @@ use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
 fn test_graphml_header_and_keys() {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
     backend
-        .insert_node(
-            Node::new(NodeType::Function, "main").with_file_path("src/main.rs"),
-        )
+        .insert_node(Node::new(NodeType::Function, "main").with_file_path("src/main.rs"))
         .unwrap();
 
     let xml = export_graphml(&backend, "all").unwrap();
@@ -23,8 +21,7 @@ fn test_graphml_header_and_keys() {
 #[test]
 fn test_graphml_node_data() {
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
-    let node =
-        Node::new(NodeType::Function, "main").with_property("cyclomatic".into(), "5".into());
+    let node = Node::new(NodeType::Function, "main").with_property("cyclomatic".into(), "5".into());
     backend.insert_node(node).unwrap();
 
     let xml = export_graphml(&backend, "functions").unwrap();

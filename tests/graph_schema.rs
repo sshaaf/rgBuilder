@@ -7,7 +7,7 @@ use rgbuilder::graph::code_index::CodeIndex;
 use rgbuilder::graph::export::{export_json, import_json};
 use rgbuilder::graph::migration::migrate_v1_to_v2;
 use rgbuilder::graph::query;
-use rgbuilder::graph::schema::{CallType, Edge, EdgeType, Node, NodeType, GRAPH_SCHEMA_VERSION};
+use rgbuilder::graph::schema::{CallType, Edge, EdgeType, GRAPH_SCHEMA_VERSION, Node, NodeType};
 use rgbuilder::languages::registry::LanguageRegistry;
 use rgbuilder::semantic::signature::SignatureExtractor;
 use tempfile::TempDir;
@@ -75,8 +75,10 @@ fn test_graph_export_import_schema_version() {
 
 #[test]
 fn test_migration_promotes_legacy_properties() {
-    let mut nodes = vec![Node::new(NodeType::Function, "legacy".to_string())
-        .with_property("return_type".to_string(), "i32".to_string())];
+    let mut nodes = vec![
+        Node::new(NodeType::Function, "legacy".to_string())
+            .with_property("return_type".to_string(), "i32".to_string()),
+    ];
     migrate_v1_to_v2(&mut nodes, &mut []);
     assert_eq!(nodes[0].return_type.as_deref(), Some("i32"));
 }

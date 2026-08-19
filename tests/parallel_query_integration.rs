@@ -1,10 +1,10 @@
 //! Phase 8 integration tests: parallel processing, batch APIs, query optimization
 #![allow(dead_code, unused_imports, unused_macros)]
 
+use rgbuilder::graph::CodeGraph;
 use rgbuilder::graph::backend::GraphBackend;
 use rgbuilder::graph::query::{execute, execute_chunks};
 use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rgbuilder::graph::CodeGraph;
 use rgbuilder::incremental::{FileTracker, IncrementalUpdater, UpdateOptions};
 use rgbuilder::languages::registry::LanguageRegistry;
 use rgbuilder::pipeline::{PipelineConfig, ProcessingPipeline};
@@ -220,8 +220,7 @@ fn test_compound_repo_and_type_query() {
         .unwrap();
     backend
         .insert_node(
-            Node::new(NodeType::Class, "ApiService")
-                .with_property("repo".into(), "backend".into()),
+            Node::new(NodeType::Class, "ApiService").with_property("repo".into(), "backend".into()),
         )
         .unwrap();
     backend
@@ -293,8 +292,7 @@ fn build_selectivity_graph() -> CodeGraph {
     // Single unique target
     backend
         .insert_node(
-            Node::new(NodeType::Function, "needle")
-                .with_property("repo".into(), "backend".into()),
+            Node::new(NodeType::Function, "needle").with_property("repo".into(), "backend".into()),
         )
         .unwrap();
 

@@ -310,8 +310,8 @@ ip_test!(topological_order_preserves_edge_direction, {
 });
 ip_test!(test_multi_argument_index_isolation, {
     use rgbuilder::analysis::{
-        criterion_for_parameter, filter_handoff_seeds_by_index, resolve_handoff_seeds,
-        BlastRadiusEngine, InterproceduralCFG, InterproceduralSlicer,
+        BlastRadiusEngine, InterproceduralCFG, InterproceduralSlicer, criterion_for_parameter,
+        filter_handoff_seeds_by_index, resolve_handoff_seeds,
     };
 
     let mut backend = rgbuilder::graph::backend::MemoryBackend::new();
@@ -363,15 +363,21 @@ fn foo(x: i32, y: i32, z: i32) -> i32 {
     let engine = BlastRadiusEngine::build(&backend).unwrap();
     let blast = engine.analyze(id_foo).unwrap();
     let seeds = resolve_handoff_seeds(&backend, &blast, id_foo).unwrap();
-    assert!(seeds
-        .iter()
-        .any(|s| s.param_index == 0 && s.param_name == "x"));
-    assert!(seeds
-        .iter()
-        .any(|s| s.param_index == 1 && s.param_name == "y"));
-    assert!(seeds
-        .iter()
-        .any(|s| s.param_index == 2 && s.param_name == "z"));
+    assert!(
+        seeds
+            .iter()
+            .any(|s| s.param_index == 0 && s.param_name == "x")
+    );
+    assert!(
+        seeds
+            .iter()
+            .any(|s| s.param_index == 1 && s.param_name == "y")
+    );
+    assert!(
+        seeds
+            .iter()
+            .any(|s| s.param_index == 2 && s.param_name == "z")
+    );
 
     let y_only = filter_handoff_seeds_by_index(&seeds, 1);
     assert_eq!(y_only.len(), 1);

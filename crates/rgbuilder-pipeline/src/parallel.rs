@@ -1,7 +1,7 @@
 //! Parallel execution helpers (Phase 8.1)
 
-use rayon::prelude::*;
 use rayon::ThreadPool;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
 

@@ -1,9 +1,9 @@
 //! Security vulnerability reporting (Phase 13.5).
 
-use crate::cve_patterns::{default_cwe_patterns, CwePattern};
+use crate::cve_patterns::{CwePattern, default_cwe_patterns};
+use regex::Regex;
 use rgbuilder_analysis::pdg::ProgramDependenceGraph;
 use rgbuilder_analysis::taint::{TaintFlow, TaintSink, TaintSource};
-use regex::Regex;
 
 /// A reported security vulnerability.
 #[derive(Debug, Clone)]

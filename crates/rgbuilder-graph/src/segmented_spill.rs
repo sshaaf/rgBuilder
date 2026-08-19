@@ -8,7 +8,7 @@
 //! and hashes the spilled bincode blobs for digest identity.
 
 use crate::columnar_snapshot::{
-    append_node_columnar_prehashed, write_columnar_assembled, EdgeRow, StringPool,
+    EdgeRow, StringPool, append_node_columnar_prehashed, write_columnar_assembled,
 };
 use crate::csr::edge_type_to_u8;
 use crate::schema::{Edge, Node, NodeType};
@@ -47,14 +47,8 @@ impl SegmentedSpill {
     pub fn create(dir: impl AsRef<Path>) -> Result<Self> {
         let dir = dir.as_ref().to_path_buf();
         fs::create_dir_all(&dir)?;
-        let nodes = BufWriter::with_capacity(
-            8 * 1024 * 1024,
-            File::create(dir.join("nodes.seg"))?,
-        );
-        let edges = BufWriter::with_capacity(
-            8 * 1024 * 1024,
-            File::create(dir.join("edges.seg"))?,
-        );
+        let nodes = BufWriter::with_capacity(8 * 1024 * 1024, File::create(dir.join("nodes.seg"))?);
+        let edges = BufWriter::with_capacity(8 * 1024 * 1024, File::create(dir.join("edges.seg"))?);
         Ok(Self {
             dir,
             nodes,
@@ -81,9 +75,8 @@ impl SegmentedSpill {
 
     /// Append a node as length-prefixed bincode with UUID key prefix.
     pub fn append_node(&mut self, node: &Node) -> Result<()> {
-        let blob = bincode::serialize(node).map_err(|e| {
-            Error::SerdeError(format!("segmented spill node serialize: {e}"))
-        })?;
+        let blob = bincode::serialize(node)
+            .map_err(|e| Error::SerdeError(format!("segmented spill node serialize: {e}")))?;
         self.nodes.write_all(node.id.as_bytes())?;
         self.nodes.write_all(&(blob.len() as u64).to_le_bytes())?;
         self.nodes.write_all(&blob)?;
@@ -97,9 +90,8 @@ impl SegmentedSpill {
     /// columnar rows after rematerialize/compact.
     pub fn append_edge(&mut self, edge: &Edge) -> Result<()> {
         let canonical = edge.for_columnar_digest();
-        let blob = bincode::serialize(&canonical).map_err(|e| {
-            Error::SerdeError(format!("segmented spill edge serialize: {e}"))
-        })?;
+        let blob = bincode::serialize(&canonical)
+            .map_err(|e| Error::SerdeError(format!("segmented spill edge serialize: {e}")))?;
         let mut key = [0u8; EDGE_KEY_LEN];
         key[..16].copy_from_slice(canonical.from.as_bytes());
         key[16..32].copy_from_slice(canonical.to.as_bytes());
@@ -185,9 +177,8 @@ pub fn materialize_sorted_graph(spill: &FinishedSpill) -> Result<(Vec<Node>, Vec
             let len = u64::from_le_bytes(len_buf) as usize;
             let mut blob = vec![0u8; len];
             reader.read_exact(&mut blob)?;
-            let node: Node = bincode::deserialize(&blob).map_err(|e| {
-                Error::SerdeError(format!("segmented spill node deserialize: {e}"))
-            })?;
+            let node: Node = bincode::deserialize(&blob)
+                .map_err(|e| Error::SerdeError(format!("segmented spill node deserialize: {e}")))?;
             nodes.push(node);
         }
     }
@@ -203,9 +194,8 @@ pub fn materialize_sorted_graph(spill: &FinishedSpill) -> Result<(Vec<Node>, Vec
             let len = u64::from_le_bytes(len_buf) as usize;
             let mut blob = vec![0u8; len];
             reader.read_exact(&mut blob)?;
-            let edge: Edge = bincode::deserialize(&blob).map_err(|e| {
-                Error::SerdeError(format!("segmented spill edge deserialize: {e}"))
-            })?;
+            let edge: Edge = bincode::deserialize(&blob)
+                .map_err(|e| Error::SerdeError(format!("segmented spill edge deserialize: {e}")))?;
             edges.push(edge);
         }
     }
@@ -250,10 +240,7 @@ pub fn write_columnar_from_spill(spill: FinishedSpill, path: &Path) -> Result<St
     let mut type_index: HashMap<NodeType, Vec<Uuid>> = HashMap::new();
 
     {
-        let mut reader = BufReader::with_capacity(
-            8 * 1024 * 1024,
-            File::open(&nodes_sorted)?,
-        );
+        let mut reader = BufReader::with_capacity(8 * 1024 * 1024, File::open(&nodes_sorted)?);
         for _ in 0..node_count {
             let mut key = [0u8; NODE_KEY_LEN];
             reader.read_exact(&mut key)?;
@@ -262,9 +249,8 @@ pub fn write_columnar_from_spill(spill: FinishedSpill, path: &Path) -> Result<St
             let len = u64::from_le_bytes(len_buf) as usize;
             let mut blob = vec![0u8; len];
             reader.read_exact(&mut blob)?;
-            let node: Node = bincode::deserialize(&blob).map_err(|e| {
-                Error::SerdeError(format!("segmented spill node deserialize: {e}"))
-            })?;
+            let node: Node = bincode::deserialize(&blob)
+                .map_err(|e| Error::SerdeError(format!("segmented spill node deserialize: {e}")))?;
             append_node_columnar_prehashed(
                 &node,
                 &blob,
@@ -281,10 +267,7 @@ pub fn write_columnar_from_spill(spill: FinishedSpill, path: &Path) -> Result<St
 
     let mut edge_rows = Vec::with_capacity(edge_count);
     {
-        let mut reader = BufReader::with_capacity(
-            8 * 1024 * 1024,
-            File::open(&edges_sorted)?,
-        );
+        let mut reader = BufReader::with_capacity(8 * 1024 * 1024, File::open(&edges_sorted)?);
         for _ in 0..edge_count {
             let mut key = [0u8; EDGE_KEY_LEN];
             reader.read_exact(&mut key)?;
@@ -509,12 +492,7 @@ mod tests {
         let path_spill = tmp.path().join("from_spill.bin");
         let path_vecs = tmp.path().join("from_vecs.bin");
         let d_spill = write_columnar_from_spill(finished, &path_spill).unwrap();
-        let d_vecs = write_columnar_from_nodes_edges(
-            vec![a, b],
-            vec![e1, e2],
-            &path_vecs,
-        )
-        .unwrap();
+        let d_vecs = write_columnar_from_nodes_edges(vec![a, b], vec![e1, e2], &path_vecs).unwrap();
         assert_eq!(d_spill, d_vecs);
     }
 }

@@ -2,10 +2,10 @@
 //!
 //! Run with: cargo bench --bench graph
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
+use rgbuilder::graph::CodeGraph;
 use rgbuilder::graph::backend::GraphBackend;
 use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rgbuilder::graph::CodeGraph;
 
 fn build_labeled_graph(count: usize) -> CodeGraph {
     let mut graph = CodeGraph::new();
@@ -148,8 +148,7 @@ fn build_compound_query_graph() -> CodeGraph {
 
     backend
         .insert_node(
-            Node::new(NodeType::Function, "needle")
-                .with_property("repo".into(), "backend".into()),
+            Node::new(NodeType::Function, "needle").with_property("repo".into(), "backend".into()),
         )
         .unwrap();
 

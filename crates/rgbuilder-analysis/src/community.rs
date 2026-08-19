@@ -1044,7 +1044,11 @@ mod tests {
             .insert_edge(Edge::new(id_checkout, id_publish, EdgeType::Calls))
             .unwrap();
         backend
-            .insert_edge(Edge::new(id_h_checkout, id_h_payments, EdgeType::References))
+            .insert_edge(Edge::new(
+                id_h_checkout,
+                id_h_payments,
+                EdgeType::References,
+            ))
             .unwrap();
         backend
             .insert_edge(Edge::new(id_h_checkout, id_h_payments, EdgeType::Contains))

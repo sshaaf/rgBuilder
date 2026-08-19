@@ -1,9 +1,9 @@
 //! Phase 3 integration tests: rule engine and plugins
 
+use rgbuilder::graph::CodeGraph;
 use rgbuilder::graph::backend::GraphBackend;
 use rgbuilder::graph::schema::{Node, NodeType};
-use rgbuilder::graph::CodeGraph;
-use rgbuilder::languages::plugin_loader::{PluginLoader, PluginRegistry, PLUGIN_REGISTRY_FILE};
+use rgbuilder::languages::plugin_loader::{PLUGIN_REGISTRY_FILE, PluginLoader, PluginRegistry};
 use rgbuilder::languages::registry::LanguageRegistry;
 use rgbuilder::rules::{RuleEngine, Ruleset};
 use std::fs;
@@ -78,9 +78,10 @@ fn test_plugin_registry_install() {
 
     let registry = PluginRegistry::load(temp.path()).unwrap();
     assert_eq!(registry.plugins.len(), 1);
-    assert!(temp
-        .path()
-        .join(".rgbuilder")
-        .join(PLUGIN_REGISTRY_FILE)
-        .exists());
+    assert!(
+        temp.path()
+            .join(".rgbuilder")
+            .join(PLUGIN_REGISTRY_FILE)
+            .exists()
+    );
 }

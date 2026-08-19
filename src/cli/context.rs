@@ -1,6 +1,6 @@
 //! Shared CLI context: paths, graph I/O, and output routing.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use rgbuilder_graph::CodeGraph;
 use rgbuilder_graph::SnapshotNodeStore;
 use std::cell::RefCell;
@@ -51,10 +51,7 @@ impl CliContext {
     }
 
     fn snapshot_path(&self) -> PathBuf {
-        rgbuilder_graph::paths::artifact_path(
-            &self.repo,
-            rgbuilder_graph::snapshot::SNAPSHOT_FILE,
-        )
+        rgbuilder_graph::paths::artifact_path(&self.repo, rgbuilder_graph::snapshot::SNAPSHOT_FILE)
     }
 
     fn ensure_snapshot_loaded(&self) -> Result<()> {

@@ -1,8 +1,8 @@
 //! Phase 13-style Go analysis: CFG depth, taint, and call relations.
 
 use rgbuilder::analysis::{
-    build_cfg_for_function, canonical_language_id, cfg_language_id_from_path,
-    ProgramDependenceGraph, TaintAnalyzer, TaintSink, TaintSource,
+    ProgramDependenceGraph, TaintAnalyzer, TaintSink, TaintSource, build_cfg_for_function,
+    canonical_language_id, cfg_language_id_from_path,
 };
 use rgbuilder_lang_go::GoPlugin;
 use rgbuilder_plugin_api::{LanguagePlugin, RelationType, SymbolType};

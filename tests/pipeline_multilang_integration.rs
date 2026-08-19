@@ -1,8 +1,8 @@
 //! Phase 1 end-to-end integration tests
 #![allow(dead_code, unused_imports, unused_macros)]
 
-use rgbuilder::graph::schema::NodeType;
 use rgbuilder::graph::CodeGraph;
+use rgbuilder::graph::schema::NodeType;
 use rgbuilder::languages::registry::LanguageRegistry;
 use rgbuilder::pipeline::{PipelineConfig, ProcessingPipeline};
 use std::fs;

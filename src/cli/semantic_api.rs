@@ -1,19 +1,19 @@
 //! Shared semantic search execution for CLI and HTTP API.
 
 use super::semantic::{
-    expand_gql_neighbors, EngineBlastProvider, CliSemanticScope, SemanticQueryArgs,
+    CliSemanticScope, EngineBlastProvider, SemanticQueryArgs, expand_gql_neighbors,
 };
 use super::semantic_output::{
-    build_query_response, hit_from_semantic, SemanticHitJson, SemanticQueryJsonResponse,
+    SemanticHitJson, SemanticQueryJsonResponse, build_query_response, hit_from_semantic,
 };
 use crate::analysis::{
-    expand_semantic_hits, query_communities, query_index_with_fusion, AnalysisResults,
-    BlastSummaryProvider, CommunityQueryContext, OnnxReloadOptions, SemanticExpandConfig,
-    SemanticExpandMode, SemanticFusionConfig, SemanticIndex,
+    AnalysisResults, BlastSummaryProvider, CommunityQueryContext, OnnxReloadOptions,
+    SemanticExpandConfig, SemanticExpandMode, SemanticFusionConfig, SemanticIndex,
+    expand_semantic_hits, query_communities, query_index_with_fusion,
 };
-use anyhow::{bail, Context, Result};
-use rgbuilder_graph::backend::GraphBackend;
+use anyhow::{Context, Result, bail};
 use rgbuilder_graph::CodeGraph;
+use rgbuilder_graph::backend::GraphBackend;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
@@ -111,25 +111,20 @@ pub fn execute_semantic_query(
         })?;
         let backend = graph.backend();
         let ctx = CommunityQueryContext::from_analysis(&analysis, |uuid| {
-            backend
-                .get_node(uuid)
-                .ok()
-                .flatten()
-                .map(|n| (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())))
+            backend.get_node(uuid).ok().flatten().map(|n| {
+                (
+                    n.name.to_string(),
+                    n.file_path.as_ref().map(|s| s.to_string()),
+                )
+            })
         });
         let labels: std::collections::HashMap<_, _> = ctx
             .communities
             .iter()
             .map(|c| (c.id, c.label.clone()))
             .collect();
-        let community_hits = query_communities(
-            index,
-            &analysis,
-            &labels,
-            &args.query,
-            args.limit,
-            &reload,
-        )?;
+        let community_hits =
+            query_communities(index, &analysis, &labels, &args.query, args.limit, &reload)?;
         let hits: Vec<SemanticHitJson> = community_hits
             .into_iter()
             .map(|h| SemanticHitJson {
@@ -275,8 +270,7 @@ fn validate_index_scope(index: &SemanticIndex, requested: CliSemanticScope) -> R
         .any(|e| e.node_type.as_deref() == Some("Function"));
     let has_docs = index.entries.iter().any(|e| {
         e.node_type.as_deref() == Some("Module")
-            && e
-                .kind
+            && e.kind
                 .as_deref()
                 .is_some_and(|kind| kind == "heading" || kind == "code_block")
     });

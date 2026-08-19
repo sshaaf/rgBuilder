@@ -1,10 +1,10 @@
 //! `rg-build inspect` — raw CFG / PDG / dominance debugging.
 
 use super::args::{InspectLayer, OutputFormat, PdgEdgeLayer};
-use super::markup::markup_context_unsupported;
-use super::context::{language_from_path, CliContext};
+use super::context::{CliContext, language_from_path};
 use super::inspect_output::{inspect_cfg_json, inspect_dom_json, inspect_pdg_json};
-use crate::analysis::{build_cfg_for_function, DominatorTree, ProgramDependenceGraph};
+use super::markup::markup_context_unsupported;
+use crate::analysis::{DominatorTree, ProgramDependenceGraph, build_cfg_for_function};
 use anyhow::Result;
 use std::path::Path;
 

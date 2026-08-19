@@ -1,9 +1,9 @@
 //! Phase 15 community detection audit — isolation, determinism, modularity.
 
-use rgbuilder::analysis::{default_community_edge_types, CommunityDetector, PetGraphView};
+use rgbuilder::analysis::{CommunityDetector, PetGraphView, default_community_edge_types};
+use rgbuilder::graph::CodeGraph;
 use rgbuilder::graph::backend::GraphBackend;
 use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rgbuilder::graph::CodeGraph;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use uuid::Uuid;

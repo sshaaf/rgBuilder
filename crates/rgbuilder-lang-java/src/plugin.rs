@@ -76,7 +76,7 @@ impl ExtractCtx {
             .children(&mut cursor)
             .find(|c| c.kind() == "package_declaration")?;
         let mut pcursor = package_node.walk();
-        
+
         package_node
             .children(&mut pcursor)
             .find(|c| c.kind() == "identifier" || c.kind() == "scoped_identifier")
@@ -94,7 +94,9 @@ impl ExtractCtx {
         while let Some(node) = stack.pop() {
             if node.kind() == "object_creation_expression" {
                 let mut cursor = node.walk();
-                let anon_body = node.children(&mut cursor).find(|c| c.kind() == "class_body");
+                let anon_body = node
+                    .children(&mut cursor)
+                    .find(|c| c.kind() == "class_body");
                 if let Some(body) = anon_body {
                     counter += 1;
                     map.insert(body.id(), format!("$Anonymous{counter}"));
@@ -159,7 +161,11 @@ impl JavaPlugin {
     /// Split a `modifiers` node's children into keyword strings (`public`,
     /// `static`, `sealed`, ...) and annotation usage nodes (`annotation` /
     /// `marker_annotation`), without any regex-on-source.
-    fn split_modifiers<'a>(&self, modifiers_node: Node<'a>, source: &[u8]) -> (Vec<String>, Vec<Node<'a>>) {
+    fn split_modifiers<'a>(
+        &self,
+        modifiers_node: Node<'a>,
+        source: &[u8],
+    ) -> (Vec<String>, Vec<Node<'a>>) {
         let mut keywords = Vec::new();
         let mut annotations = Vec::new();
         let mut cursor = modifiers_node.walk();
@@ -247,9 +253,10 @@ impl JavaPlugin {
         let mut tcursor = throws_node.walk();
         for t in throws_node.children(&mut tcursor) {
             if t.is_named()
-                && let Ok(text) = t.utf8_text(source) {
-                    names.push(text.trim().to_string());
-                }
+                && let Ok(text) = t.utf8_text(source)
+            {
+                names.push(text.trim().to_string());
+            }
         }
         if names.is_empty() {
             None
@@ -290,7 +297,12 @@ impl JavaPlugin {
     /// Walk ancestors of `node`, collecting enclosing type names
     /// (`Outer.Inner`) and synthesizing `$AnonymousN` levels for anonymous
     /// class bodies, innermost first then reversed to source order.
-    fn find_containing_type_name(&self, node: Node, source: &[u8], ctx: &ExtractCtx) -> Option<String> {
+    fn find_containing_type_name(
+        &self,
+        node: Node,
+        source: &[u8],
+        ctx: &ExtractCtx,
+    ) -> Option<String> {
         let mut names = Vec::new();
         let mut current = node;
         while let Some(parent) = current.parent() {
@@ -311,9 +323,9 @@ impl JavaPlugin {
                         && let Some(name) = grandparent
                             .child_by_field_name("name")
                             .and_then(|n| n.utf8_text(source).ok())
-                        {
-                            names.push(name.to_string());
-                        }
+                    {
+                        names.push(name.to_string());
+                    }
                 }
             }
             current = parent;
@@ -340,7 +352,13 @@ impl JavaPlugin {
         ctx.qualify_type(&path)
     }
 
-    fn method_qualified_name(&self, method_node: Node, name: &str, source: &[u8], ctx: &ExtractCtx) -> Option<String> {
+    fn method_qualified_name(
+        &self,
+        method_node: Node,
+        name: &str,
+        source: &[u8],
+        ctx: &ExtractCtx,
+    ) -> Option<String> {
         self.find_containing_type_name(method_node, source, ctx)
             .map(|owner| ctx.qualify_type(&format!("{owner}.{name}")))
     }
@@ -360,7 +378,12 @@ impl JavaPlugin {
 
     /// Qualified name of the nearest enclosing callable (method, constructor,
     /// compact constructor, or static initializer) containing `node`.
-    fn find_containing_callable_qn(&self, node: Node, source: &[u8], ctx: &ExtractCtx) -> Option<String> {
+    fn find_containing_callable_qn(
+        &self,
+        node: Node,
+        source: &[u8],
+        ctx: &ExtractCtx,
+    ) -> Option<String> {
         let mut current = node;
         while let Some(parent) = current.parent() {
             match parent.kind() {
@@ -416,12 +439,20 @@ impl JavaPlugin {
     // Symbol extraction: methods, constructors, static/instance init
     // ---------------------------------------------------------------
 
-    fn extract_method(&self, node: Node, source: &[u8], file_path: &str, ctx: &ExtractCtx) -> Result<Symbol> {
-        let name_node = node.child_by_field_name("name").ok_or_else(|| Error::ParseError {
-            file: file_path.into(),
-            line: node.start_position().row + 1,
-            message: "Method missing name".to_string(),
-        })?;
+    fn extract_method(
+        &self,
+        node: Node,
+        source: &[u8],
+        file_path: &str,
+        ctx: &ExtractCtx,
+    ) -> Result<Symbol> {
+        let name_node = node
+            .child_by_field_name("name")
+            .ok_or_else(|| Error::ParseError {
+                file: file_path.into(),
+                line: node.start_position().row + 1,
+                message: "Method missing name".to_string(),
+            })?;
         let name = name_node.utf8_text(source)?.to_string();
 
         let return_type = node
@@ -451,12 +482,20 @@ impl JavaPlugin {
         })
     }
 
-    fn extract_constructor(&self, node: Node, source: &[u8], file_path: &str, ctx: &ExtractCtx) -> Result<Symbol> {
-        let name_node = node.child_by_field_name("name").ok_or_else(|| Error::ParseError {
-            file: file_path.into(),
-            line: node.start_position().row + 1,
-            message: "Constructor missing name".to_string(),
-        })?;
+    fn extract_constructor(
+        &self,
+        node: Node,
+        source: &[u8],
+        file_path: &str,
+        ctx: &ExtractCtx,
+    ) -> Result<Symbol> {
+        let name_node = node
+            .child_by_field_name("name")
+            .ok_or_else(|| Error::ParseError {
+                file: file_path.into(),
+                line: node.start_position().row + 1,
+                message: "Constructor missing name".to_string(),
+            })?;
         let name = name_node.utf8_text(source)?.to_string();
 
         let owner = self
@@ -493,12 +532,20 @@ impl JavaPlugin {
     }
 
     /// `compact_constructor_declaration` (records): `record Point(int x, int y) { public Point { ... } }`.
-    fn extract_compact_constructor(&self, node: Node, source: &[u8], file_path: &str, ctx: &ExtractCtx) -> Result<Symbol> {
-        let name_node = node.child_by_field_name("name").ok_or_else(|| Error::ParseError {
-            file: file_path.into(),
-            line: node.start_position().row + 1,
-            message: "Compact constructor missing name".to_string(),
-        })?;
+    fn extract_compact_constructor(
+        &self,
+        node: Node,
+        source: &[u8],
+        file_path: &str,
+        ctx: &ExtractCtx,
+    ) -> Result<Symbol> {
+        let name_node = node
+            .child_by_field_name("name")
+            .ok_or_else(|| Error::ParseError {
+                file: file_path.into(),
+                line: node.start_position().row + 1,
+                message: "Compact constructor missing name".to_string(),
+            })?;
         let name = name_node.utf8_text(source)?.to_string();
 
         let owner = self
@@ -531,7 +578,13 @@ impl JavaPlugin {
         })
     }
 
-    fn extract_static_initializer(&self, node: Node, source: &[u8], file_path: &str, ctx: &ExtractCtx) -> Result<Symbol> {
+    fn extract_static_initializer(
+        &self,
+        node: Node,
+        source: &[u8],
+        file_path: &str,
+        ctx: &ExtractCtx,
+    ) -> Result<Symbol> {
         let owner = self.find_containing_type_name(node, source, ctx);
         let qualified_name = owner.map(|o| format!("{}.<clinit>", ctx.qualify_type(&o)));
 
@@ -555,7 +608,13 @@ impl JavaPlugin {
 
     /// Instance initializer block: a bare `block` that is a direct child of a
     /// `class_body` (tree-sitter-java has no dedicated node kind for these).
-    fn extract_instance_initializer(&self, node: Node, source: &[u8], file_path: &str, ctx: &ExtractCtx) -> Result<Symbol> {
+    fn extract_instance_initializer(
+        &self,
+        node: Node,
+        source: &[u8],
+        file_path: &str,
+        ctx: &ExtractCtx,
+    ) -> Result<Symbol> {
         let owner_qn = self
             .find_containing_type_name(node, source, ctx)
             .map(|o| ctx.qualify_type(&o));
@@ -695,14 +754,15 @@ impl JavaPlugin {
             let mut decl_cursor = child.walk();
             for field_child in child.children(&mut decl_cursor) {
                 if field_child.kind() == "variable_declarator"
-                    && let Some(name_node) = field_child.child_by_field_name("name") {
-                        let name = name_node.utf8_text(source)?.to_string();
-                        fields.push(Field {
-                            name,
-                            field_type: field_type.clone(),
-                            visibility: visibility.clone(),
-                        });
-                    }
+                    && let Some(name_node) = field_child.child_by_field_name("name")
+                {
+                    let name = name_node.utf8_text(source)?.to_string();
+                    fields.push(Field {
+                        name,
+                        field_type: field_type.clone(),
+                        visibility: visibility.clone(),
+                    });
+                }
             }
         }
         Ok(fields)
@@ -727,24 +787,24 @@ impl JavaPlugin {
             if let Some(name_node) = child.child_by_field_name("name")
                 && let Ok(name) = name_node.utf8_text(source)
             {
-                    // Arguments (`FOO(1, 2)`) have no dedicated Field slot, so
-                    // they're folded into `visibility` alongside the constant
-                    // marker; bodies (`FOO { void x() {} }`) are picked up
-                    // separately by `traverse`'s generic recursion once
-                    // `find_containing_type_name` learns to qualify through
-                    // `enum_constant` bodies (`Enum.FOO.x`).
-                    let visibility = match child
-                        .child_by_field_name("arguments")
-                        .and_then(|n| n.utf8_text(source).ok())
-                    {
-                        Some(args) => Some(format!("enum_constant{args}")),
-                        None => Some("enum_constant".to_string()),
-                    };
-                    fields.push(Field {
-                        name: name.to_string(),
-                        field_type: None,
-                        visibility,
-                    });
+                // Arguments (`FOO(1, 2)`) have no dedicated Field slot, so
+                // they're folded into `visibility` alongside the constant
+                // marker; bodies (`FOO { void x() {} }`) are picked up
+                // separately by `traverse`'s generic recursion once
+                // `find_containing_type_name` learns to qualify through
+                // `enum_constant` bodies (`Enum.FOO.x`).
+                let visibility = match child
+                    .child_by_field_name("arguments")
+                    .and_then(|n| n.utf8_text(source).ok())
+                {
+                    Some(args) => Some(format!("enum_constant{args}")),
+                    None => Some("enum_constant".to_string()),
+                };
+                fields.push(Field {
+                    name: name.to_string(),
+                    field_type: None,
+                    visibility,
+                });
             }
         }
         Ok(fields)
@@ -776,14 +836,15 @@ impl JavaPlugin {
             let mut decl_cursor = child.walk();
             for decl in child.children(&mut decl_cursor) {
                 if decl.kind() == "variable_declarator"
-                    && let Some(name_node) = decl.child_by_field_name("name") {
-                        let name = name_node.utf8_text(source)?.to_string();
-                        fields.push(Field {
-                            name,
-                            field_type: field_type.clone(),
-                            visibility: None,
-                        });
-                    }
+                    && let Some(name_node) = decl.child_by_field_name("name")
+                {
+                    let name = name_node.utf8_text(source)?.to_string();
+                    fields.push(Field {
+                        name,
+                        field_type: field_type.clone(),
+                        visibility: None,
+                    });
+                }
             }
         }
         Ok(fields)
@@ -813,11 +874,13 @@ impl JavaPlugin {
         symbol_type: SymbolType,
         ctx: &ExtractCtx,
     ) -> Result<Symbol> {
-        let name_node = node.child_by_field_name("name").ok_or_else(|| Error::ParseError {
-            file: file_path.into(),
-            line: node.start_position().row + 1,
-            message: "Type missing name".to_string(),
-        })?;
+        let name_node = node
+            .child_by_field_name("name")
+            .ok_or_else(|| Error::ParseError {
+                file: file_path.into(),
+                line: node.start_position().row + 1,
+                message: "Type missing name".to_string(),
+            })?;
         let name = name_node.utf8_text(source)?.to_string();
 
         let modifiers = self.collect_keyword_modifiers(node, source);
@@ -855,12 +918,20 @@ impl JavaPlugin {
 
     /// `record_declaration`: extracted as `SymbolType::Class` with
     /// `metadata.is_record: true` per D3 (records are JVM classes).
-    fn extract_record(&self, node: Node, source: &[u8], file_path: &str, ctx: &ExtractCtx) -> Result<Symbol> {
-        let name_node = node.child_by_field_name("name").ok_or_else(|| Error::ParseError {
-            file: file_path.into(),
-            line: node.start_position().row + 1,
-            message: "Record missing name".to_string(),
-        })?;
+    fn extract_record(
+        &self,
+        node: Node,
+        source: &[u8],
+        file_path: &str,
+        ctx: &ExtractCtx,
+    ) -> Result<Symbol> {
+        let name_node = node
+            .child_by_field_name("name")
+            .ok_or_else(|| Error::ParseError {
+                file: file_path.into(),
+                line: node.start_position().row + 1,
+                message: "Record missing name".to_string(),
+            })?;
         let name = name_node.utf8_text(source)?.to_string();
 
         let modifiers = self.collect_keyword_modifiers(node, source);
@@ -896,11 +967,13 @@ impl JavaPlugin {
         file_path: &str,
         ctx: &ExtractCtx,
     ) -> Result<Symbol> {
-        let name_node = node.child_by_field_name("name").ok_or_else(|| Error::ParseError {
-            file: file_path.into(),
-            line: node.start_position().row + 1,
-            message: "Annotation element missing name".to_string(),
-        })?;
+        let name_node = node
+            .child_by_field_name("name")
+            .ok_or_else(|| Error::ParseError {
+                file: file_path.into(),
+                line: node.start_position().row + 1,
+                message: "Annotation element missing name".to_string(),
+            })?;
         let name = name_node.utf8_text(source)?.to_string();
 
         let return_type = node
@@ -937,7 +1010,13 @@ impl JavaPlugin {
 
     /// `lambda_expression` becomes a synthetic Function under the nearest
     /// enclosing callable, QN `Owner.$lambda$N` (pre-order index per owner).
-    fn extract_lambda(&self, node: Node, source: &[u8], file_path: &str, ctx: &ExtractCtx) -> Result<Symbol> {
+    fn extract_lambda(
+        &self,
+        node: Node,
+        source: &[u8],
+        file_path: &str,
+        ctx: &ExtractCtx,
+    ) -> Result<Symbol> {
         let (owner, idx) = self.lambda_index(node, source, ctx);
         let name = format!("$lambda${idx}");
         let qualified_name = owner.map(|o| format!("{o}.{name}"));
@@ -1077,7 +1156,13 @@ impl JavaPlugin {
     ) -> Result<Vec<Symbol>> {
         let ctx = ExtractCtx::new(root, source);
         let mut symbols = Vec::new();
-        self.traverse(root, source, &file_path.to_string_lossy(), &ctx, &mut symbols)?;
+        self.traverse(
+            root,
+            source,
+            &file_path.to_string_lossy(),
+            &ctx,
+            &mut symbols,
+        )?;
         Ok(symbols)
     }
 
@@ -1117,7 +1202,9 @@ impl JavaPlugin {
         symbols: &mut Vec<Symbol>,
     ) -> Result<()> {
         match node.kind() {
-            "method_declaration" => symbols.push(self.extract_method(node, source, file_path, ctx)?),
+            "method_declaration" => {
+                symbols.push(self.extract_method(node, source, file_path, ctx)?)
+            }
             "constructor_declaration" => {
                 symbols.push(self.extract_constructor(node, source, file_path, ctx)?)
             }
@@ -1144,13 +1231,19 @@ impl JavaPlugin {
                 SymbolType::Annotation,
                 ctx,
             )?),
-            "record_declaration" => symbols.push(self.extract_record(node, source, file_path, ctx)?),
-            "annotation_type_element_declaration" => symbols.push(
-                self.extract_annotation_element(node, source, file_path, ctx)?,
-            ),
+            "record_declaration" => {
+                symbols.push(self.extract_record(node, source, file_path, ctx)?)
+            }
+            "annotation_type_element_declaration" => {
+                symbols.push(self.extract_annotation_element(node, source, file_path, ctx)?)
+            }
             "lambda_expression" => symbols.push(self.extract_lambda(node, source, file_path, ctx)?),
-            "package_declaration" => symbols.push(self.extract_package_symbol(node, source, file_path)?),
-            "module_declaration" => symbols.push(self.extract_module_symbol(node, source, file_path)?),
+            "package_declaration" => {
+                symbols.push(self.extract_package_symbol(node, source, file_path)?)
+            }
+            "module_declaration" => {
+                symbols.push(self.extract_module_symbol(node, source, file_path)?)
+            }
             "static_initializer" => {
                 symbols.push(self.extract_static_initializer(node, source, file_path, ctx)?)
             }
@@ -1242,11 +1335,7 @@ impl LanguagePlugin for JavaPlugin {
         self.relations_from_tree(tree.root_node(), source, file_path, symbols)
     }
 
-    fn extract_all(
-        &self,
-        file_path: &Path,
-        source: &[u8],
-    ) -> Result<ExtractAllResult> {
+    fn extract_all(&self, file_path: &Path, source: &[u8]) -> Result<ExtractAllResult> {
         let mut parser = Parser::new();
         parser
             .set_language(&tree_sitter_java::LANGUAGE.into())
@@ -1266,7 +1355,11 @@ impl LanguagePlugin for JavaPlugin {
         Ok(ExtractAllResult::from_parts(symbols, relations))
     }
 
-    fn calculate_complexity(&self, symbol: &Symbol, source: &[u8]) -> Result<Option<ComplexityMetrics>> {
+    fn calculate_complexity(
+        &self,
+        symbol: &Symbol,
+        source: &[u8],
+    ) -> Result<Option<ComplexityMetrics>> {
         if symbol.symbol_type != SymbolType::Function {
             return Ok(None);
         }
@@ -1328,9 +1421,10 @@ impl JavaPlugin {
                 k if BRANCH_KINDS.contains(&k) => *complexity += 1,
                 "binary_expression" => {
                     if let Some(op) = node.child_by_field_name("operator")
-                        && matches!(op.kind(), "&&" | "||") {
-                            *complexity += 1;
-                        }
+                        && matches!(op.kind(), "&&" | "||")
+                    {
+                        *complexity += 1;
+                    }
                 }
                 "switch_label" => {
                     let mut cursor = node.walk();
@@ -1357,7 +1451,10 @@ impl JavaPlugin {
 
         fn walk(node: Node, cognitive: &mut usize, nesting: usize) {
             let next_nesting = match node.kind() {
-                "if_statement" | "while_statement" | "for_statement" | "enhanced_for_statement"
+                "if_statement"
+                | "while_statement"
+                | "for_statement"
+                | "enhanced_for_statement"
                 | "do_statement" => {
                     *cognitive += 1 + nesting;
                     nesting + 1
@@ -1368,9 +1465,10 @@ impl JavaPlugin {
                 }
                 "binary_expression" => {
                     if let Some(op) = node.child_by_field_name("operator")
-                        && matches!(op.kind(), "&&" | "||") {
-                            *cognitive += 1;
-                        }
+                        && matches!(op.kind(), "&&" | "||")
+                    {
+                        *cognitive += 1;
+                    }
                     nesting
                 }
                 _ => nesting,
@@ -1401,48 +1499,47 @@ impl JavaPlugin {
 
         // Look for method invocations
         if node.kind() == "method_invocation"
-            && let Some(from_method) = &containing_method {
-                // Extract the method name being called
-                if let Some(method_name_node) = node.child_by_field_name("name") {
-                    let simple_name = method_name_node.utf8_text(source).unwrap_or("").to_string();
+            && let Some(from_method) = &containing_method
+        {
+            // Extract the method name being called
+            if let Some(method_name_node) = node.child_by_field_name("name") {
+                let simple_name = method_name_node.utf8_text(source).unwrap_or("").to_string();
 
-                    if !simple_name.is_empty() {
-                        // Try to find the qualified name from symbols in this file
-                        let local_qualified = symbols
-                            .iter()
-                            .find(|s| {
-                                s.name == simple_name && s.symbol_type == SymbolType::Function
-                            })
-                            .and_then(|s| s.qualified_name.as_ref())
-                            .cloned();
+                if !simple_name.is_empty() {
+                    // Try to find the qualified name from symbols in this file
+                    let local_qualified = symbols
+                        .iter()
+                        .find(|s| s.name == simple_name && s.symbol_type == SymbolType::Function)
+                        .and_then(|s| s.qualified_name.as_ref())
+                        .cloned();
 
-                        // Best-effort: try to infer the target class from the object
-                        // For example: helper.transform() → infer "Helper" class
-                        let (to_qualified_hint, to_type_hint) =
-                            if let Some(object_node) = node.child_by_field_name("object") {
-                                self.infer_method_target(object_node, &simple_name, source, node)
-                            } else {
-                                (None, None)
-                            };
+                    // Best-effort: try to infer the target class from the object
+                    // For example: helper.transform() → infer "Helper" class
+                    let (to_qualified_hint, to_type_hint) =
+                        if let Some(object_node) = node.child_by_field_name("object") {
+                            self.infer_method_target(object_node, &simple_name, source, node)
+                        } else {
+                            (None, None)
+                        };
 
-                        relations.push(Relation {
-                            from: from_method.clone(),
-                            to: local_qualified.unwrap_or(simple_name.clone()),
-                            relation_type: RelationType::Calls,
-                            location: SourceLocation {
-                                file: file_path.to_string_lossy().to_string(),
-                                start_line: node.start_position().row + 1,
-                                end_line: node.end_position().row + 1,
-                                start_column: node.start_position().column,
-                                end_column: node.end_position().column,
-                            },
-                            metadata: serde_json::json!({ "language": "java" }),
-                            to_qualified_hint,
-                            to_type_hint,
-                        });
-                    }
+                    relations.push(Relation {
+                        from: from_method.clone(),
+                        to: local_qualified.unwrap_or(simple_name.clone()),
+                        relation_type: RelationType::Calls,
+                        location: SourceLocation {
+                            file: file_path.to_string_lossy().to_string(),
+                            start_line: node.start_position().row + 1,
+                            end_line: node.end_position().row + 1,
+                            start_column: node.start_position().column,
+                            end_column: node.end_position().column,
+                        },
+                        metadata: serde_json::json!({ "language": "java" }),
+                        to_qualified_hint,
+                        to_type_hint,
+                    });
                 }
             }
+        }
 
         // Recurse into children
         for child in node.children(&mut cursor) {
@@ -1578,27 +1675,27 @@ impl JavaPlugin {
                         if matches!(
                             t.kind(),
                             "type_identifier" | "generic_type" | "scoped_type_identifier"
-                        )
-                            && let Ok(raw) = t.utf8_text(source) {
-                                let name = raw.split('<').next().unwrap_or(raw).to_string();
-                                if !name.is_empty() {
-                                    relations.push(Relation {
-                                        from: iface_name.clone(),
-                                        to: name,
-                                        relation_type: RelationType::Extends,
-                                        location: SourceLocation {
-                                            file: file_path.to_string_lossy().to_string(),
-                                            start_line: t.start_position().row + 1,
-                                            end_line: t.end_position().row + 1,
-                                            start_column: t.start_position().column,
-                                            end_column: t.end_position().column,
-                                        },
-                                        metadata: serde_json::json!({ "language": "java" }),
-                                        to_qualified_hint: None,
-                                        to_type_hint: None,
-                                    });
-                                }
+                        ) && let Ok(raw) = t.utf8_text(source)
+                        {
+                            let name = raw.split('<').next().unwrap_or(raw).to_string();
+                            if !name.is_empty() {
+                                relations.push(Relation {
+                                    from: iface_name.clone(),
+                                    to: name,
+                                    relation_type: RelationType::Extends,
+                                    location: SourceLocation {
+                                        file: file_path.to_string_lossy().to_string(),
+                                        start_line: t.start_position().row + 1,
+                                        end_line: t.end_position().row + 1,
+                                        start_column: t.start_position().column,
+                                        end_column: t.end_position().column,
+                                    },
+                                    metadata: serde_json::json!({ "language": "java" }),
+                                    to_qualified_hint: None,
+                                    to_type_hint: None,
+                                });
                             }
+                        }
                     }
                 }
             }
@@ -1628,7 +1725,10 @@ impl JavaPlugin {
             return Ok(());
         };
         let mut pcursor = permits.walk();
-        let Some(type_list) = permits.children(&mut pcursor).find(|c| c.kind() == "type_list") else {
+        let Some(type_list) = permits
+            .children(&mut pcursor)
+            .find(|c| c.kind() == "type_list")
+        else {
             return Ok(());
         };
         let mut tcursor = type_list.walk();
@@ -1636,27 +1736,27 @@ impl JavaPlugin {
             if matches!(
                 t.kind(),
                 "type_identifier" | "generic_type" | "scoped_type_identifier"
-            )
-                && let Ok(raw) = t.utf8_text(source) {
-                    let name = raw.split('<').next().unwrap_or(raw).to_string();
-                    if !name.is_empty() {
-                        relations.push(Relation {
-                            from: owner_name.to_string(),
-                            to: name,
-                            relation_type: RelationType::Permits,
-                            location: SourceLocation {
-                                file: file_path.to_string_lossy().to_string(),
-                                start_line: t.start_position().row + 1,
-                                end_line: t.end_position().row + 1,
-                                start_column: t.start_position().column,
-                                end_column: t.end_position().column,
-                            },
-                            metadata: serde_json::json!({ "language": "java" }),
-                            to_qualified_hint: None,
-                            to_type_hint: None,
-                        });
-                    }
+            ) && let Ok(raw) = t.utf8_text(source)
+            {
+                let name = raw.split('<').next().unwrap_or(raw).to_string();
+                if !name.is_empty() {
+                    relations.push(Relation {
+                        from: owner_name.to_string(),
+                        to: name,
+                        relation_type: RelationType::Permits,
+                        location: SourceLocation {
+                            file: file_path.to_string_lossy().to_string(),
+                            start_line: t.start_position().row + 1,
+                            end_line: t.end_position().row + 1,
+                            start_column: t.start_position().column,
+                            end_column: t.end_position().column,
+                        },
+                        metadata: serde_json::json!({ "language": "java" }),
+                        to_qualified_hint: None,
+                        to_type_hint: None,
+                    });
                 }
+            }
         }
         Ok(())
     }
@@ -1691,7 +1791,9 @@ impl JavaPlugin {
                     let name = parent
                         .child_by_field_name("name")
                         .and_then(|n| n.utf8_text(source).ok())?;
-                    return self.method_qualified_name(parent, name, source, ctx).or(Some(name.to_string()));
+                    return self
+                        .method_qualified_name(parent, name, source, ctx)
+                        .or(Some(name.to_string()));
                 }
                 "local_variable_declaration" => {
                     return self.find_containing_callable_qn(parent, source, ctx);
@@ -1715,8 +1817,11 @@ impl JavaPlugin {
         relations: &mut Vec<Relation>,
     ) -> Result<()> {
         let from = match node.kind() {
-            "class_declaration" | "interface_declaration" | "enum_declaration"
-            | "record_declaration" | "annotation_type_declaration" => {
+            "class_declaration"
+            | "interface_declaration"
+            | "enum_declaration"
+            | "record_declaration"
+            | "annotation_type_declaration" => {
                 Some(self.type_node_qualified_name(node, source, ctx))
             }
             "method_declaration" => node
@@ -1768,14 +1873,15 @@ impl JavaPlugin {
         // Type-use annotations (`List<@NonNull String>`, `@NonNull Foo[]`, ...):
         // attach to the nearest owning parameter/field/method/local per D5.
         if node.kind() == "annotated_type"
-            && let Some(from) = self.annotated_type_owner(node, source, ctx) {
-                let mut cursor = node.walk();
-                for child in node.children(&mut cursor) {
-                    if matches!(child.kind(), "annotation" | "marker_annotation") {
-                        self.push_annotated_with(&from, child, source, file_path, relations);
-                    }
+            && let Some(from) = self.annotated_type_owner(node, source, ctx)
+        {
+            let mut cursor = node.walk();
+            for child in node.children(&mut cursor) {
+                if matches!(child.kind(), "annotation" | "marker_annotation") {
+                    self.push_annotated_with(&from, child, source, file_path, relations);
                 }
             }
+        }
 
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
@@ -1835,21 +1941,22 @@ impl JavaPlugin {
         relations: &mut Vec<Relation>,
     ) -> Result<()> {
         if node.kind() == "method_reference"
-            && let Some(from) = self.find_containing_callable_qn(node, source, ctx) {
-                let mut cursor = node.walk();
-                let children: Vec<Node> = node.children(&mut cursor).collect();
-                if let (Some(first), Some(last)) = (children.first(), children.last()) {
-                    let owner = first.utf8_text(source).ok().map(str::to_string);
-                    let method_name = if last.kind() == "new" {
-                        "<init>".to_string()
-                    } else if last.kind() == "identifier" {
-                        last.utf8_text(source).unwrap_or("").to_string()
-                    } else {
-                        String::new()
-                    };
-                    if !method_name.is_empty() {
-                        let to_qualified_hint = owner.as_ref().map(|o| format!("{o}.{method_name}"));
-                        relations.push(Relation {
+            && let Some(from) = self.find_containing_callable_qn(node, source, ctx)
+        {
+            let mut cursor = node.walk();
+            let children: Vec<Node> = node.children(&mut cursor).collect();
+            if let (Some(first), Some(last)) = (children.first(), children.last()) {
+                let owner = first.utf8_text(source).ok().map(str::to_string);
+                let method_name = if last.kind() == "new" {
+                    "<init>".to_string()
+                } else if last.kind() == "identifier" {
+                    last.utf8_text(source).unwrap_or("").to_string()
+                } else {
+                    String::new()
+                };
+                if !method_name.is_empty() {
+                    let to_qualified_hint = owner.as_ref().map(|o| format!("{o}.{method_name}"));
+                    relations.push(Relation {
                             from,
                             to: method_name,
                             relation_type: RelationType::Calls,
@@ -1858,9 +1965,9 @@ impl JavaPlugin {
                             to_qualified_hint,
                             to_type_hint: owner,
                         });
-                    }
                 }
             }
+        }
 
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
@@ -1881,48 +1988,49 @@ impl JavaPlugin {
     ) -> Result<()> {
         if node.kind() == "explicit_constructor_invocation"
             && let Some(ctor_field) = node.child_by_field_name("constructor")
-                && let Some(from) = self.find_containing_callable_qn(node, source, ctx) {
-                    let to = if ctor_field.kind() == "super" {
-                        let super_name = self
-                            .find_enclosing_type_node(node)
-                            .and_then(|t| t.child_by_field_name("superclass"))
-                            .and_then(|sc| {
-                                let mut c = sc.walk();
-                                
-                                sc.children(&mut c).find(|n| {
-                                    matches!(
-                                        n.kind(),
-                                        "type_identifier" | "generic_type" | "scoped_type_identifier"
-                                    )
-                                })
-                            })
-                            .and_then(|n| n.utf8_text(source).ok())
-                            .map(|s| s.split('<').next().unwrap_or(s).to_string())
-                            .unwrap_or_else(|| "super".to_string());
-                        format!("{super_name}.<init>")
-                    } else {
-                        let owner = self
-                            .find_enclosing_type_node(node)
-                            .and_then(|t| t.child_by_field_name("name"))
-                            .and_then(|n| n.utf8_text(source).ok())
-                            .unwrap_or("")
-                            .to_string();
-                        format!("{owner}.<init>")
-                    };
+            && let Some(from) = self.find_containing_callable_qn(node, source, ctx)
+        {
+            let to = if ctor_field.kind() == "super" {
+                let super_name = self
+                    .find_enclosing_type_node(node)
+                    .and_then(|t| t.child_by_field_name("superclass"))
+                    .and_then(|sc| {
+                        let mut c = sc.walk();
 
-                    relations.push(Relation {
-                        from,
-                        to,
-                        relation_type: RelationType::Calls,
-                        location: source_location(node, &file_path.to_string_lossy()),
-                        metadata: serde_json::json!({
-                            "language": "java",
-                            "ctor_chain": ctor_field.kind(),
-                        }),
-                        to_qualified_hint: None,
-                        to_type_hint: None,
-                    });
-                }
+                        sc.children(&mut c).find(|n| {
+                            matches!(
+                                n.kind(),
+                                "type_identifier" | "generic_type" | "scoped_type_identifier"
+                            )
+                        })
+                    })
+                    .and_then(|n| n.utf8_text(source).ok())
+                    .map(|s| s.split('<').next().unwrap_or(s).to_string())
+                    .unwrap_or_else(|| "super".to_string());
+                format!("{super_name}.<init>")
+            } else {
+                let owner = self
+                    .find_enclosing_type_node(node)
+                    .and_then(|t| t.child_by_field_name("name"))
+                    .and_then(|n| n.utf8_text(source).ok())
+                    .unwrap_or("")
+                    .to_string();
+                format!("{owner}.<init>")
+            };
+
+            relations.push(Relation {
+                from,
+                to,
+                relation_type: RelationType::Calls,
+                location: source_location(node, &file_path.to_string_lossy()),
+                metadata: serde_json::json!({
+                    "language": "java",
+                    "ctor_chain": ctor_field.kind(),
+                }),
+                to_qualified_hint: None,
+                to_type_hint: None,
+            });
+        }
 
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
@@ -1944,43 +2052,46 @@ impl JavaPlugin {
         relations: &mut Vec<Relation>,
     ) -> Result<()> {
         if node.kind() == "field_access"
-            && let Some(field_node) = node.child_by_field_name("field") {
-                let field_name = field_node.utf8_text(source).unwrap_or("");
-                if field_node.kind() == "identifier" && !field_name.is_empty()
-                    && let Some(from) = self.find_containing_callable_qn(node, source, ctx) {
-                        let (to_qualified_hint, to_type_hint) = match node.child_by_field_name("object")
-                        {
-                            Some(obj) if obj.kind() == "this" => self
-                                .find_enclosing_type_node(node)
-                                .and_then(|t| t.child_by_field_name("name"))
-                                .and_then(|n| n.utf8_text(source).ok())
-                                .map(|owner| {
-                                    (Some(format!("{owner}.{field_name}")), Some(owner.to_string()))
-                                })
-                                .unwrap_or((None, None)),
-                            Some(obj) if obj.kind() == "identifier" => {
-                                let obj_text = obj.utf8_text(source).unwrap_or("");
-                                self.find_containing_class_node(node)
-                                    .and_then(|c| self.find_field_type(c, obj_text, source))
-                                    .or_else(|| self.find_local_variable_type(node, obj_text, source))
-                                    .map(|owner| {
-                                        (Some(format!("{owner}.{field_name}")), Some(owner))
-                                    })
-                                    .unwrap_or((None, None))
-                            }
-                            _ => (None, None),
-                        };
-                        relations.push(Relation {
-                            from,
-                            to: field_name.to_string(),
-                            relation_type: RelationType::References,
-                            location: source_location(node, &file_path.to_string_lossy()),
-                            metadata: serde_json::json!({ "language": "java" }),
-                            to_qualified_hint,
-                            to_type_hint,
-                        });
+            && let Some(field_node) = node.child_by_field_name("field")
+        {
+            let field_name = field_node.utf8_text(source).unwrap_or("");
+            if field_node.kind() == "identifier"
+                && !field_name.is_empty()
+                && let Some(from) = self.find_containing_callable_qn(node, source, ctx)
+            {
+                let (to_qualified_hint, to_type_hint) = match node.child_by_field_name("object") {
+                    Some(obj) if obj.kind() == "this" => self
+                        .find_enclosing_type_node(node)
+                        .and_then(|t| t.child_by_field_name("name"))
+                        .and_then(|n| n.utf8_text(source).ok())
+                        .map(|owner| {
+                            (
+                                Some(format!("{owner}.{field_name}")),
+                                Some(owner.to_string()),
+                            )
+                        })
+                        .unwrap_or((None, None)),
+                    Some(obj) if obj.kind() == "identifier" => {
+                        let obj_text = obj.utf8_text(source).unwrap_or("");
+                        self.find_containing_class_node(node)
+                            .and_then(|c| self.find_field_type(c, obj_text, source))
+                            .or_else(|| self.find_local_variable_type(node, obj_text, source))
+                            .map(|owner| (Some(format!("{owner}.{field_name}")), Some(owner)))
+                            .unwrap_or((None, None))
                     }
+                    _ => (None, None),
+                };
+                relations.push(Relation {
+                    from,
+                    to: field_name.to_string(),
+                    relation_type: RelationType::References,
+                    location: source_location(node, &file_path.to_string_lossy()),
+                    metadata: serde_json::json!({ "language": "java" }),
+                    to_qualified_hint,
+                    to_type_hint,
+                });
             }
+        }
 
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
@@ -2167,18 +2278,19 @@ impl JavaPlugin {
                 .to_string();
 
             if !module_name.is_empty()
-                && let Some(body) = node.child_by_field_name("body") {
-                    let mut cursor = body.walk();
-                    for directive in body.children(&mut cursor) {
-                        self.extract_module_directive_relations(
-                            directive,
-                            source,
-                            file_path,
-                            &module_name,
-                            relations,
-                        );
-                    }
+                && let Some(body) = node.child_by_field_name("body")
+            {
+                let mut cursor = body.walk();
+                for directive in body.children(&mut cursor) {
+                    self.extract_module_directive_relations(
+                        directive,
+                        source,
+                        file_path,
+                        &module_name,
+                        relations,
+                    );
                 }
+            }
         }
 
         let mut cursor = node.walk();
@@ -2242,7 +2354,11 @@ impl JavaPlugin {
                         continue;
                     };
                     let simple = text.rsplit('.').next().unwrap_or(text);
-                    let kind = if seen_provided { "provides_with" } else { "provides" };
+                    let kind = if seen_provided {
+                        "provides_with"
+                    } else {
+                        "provides"
+                    };
                     seen_provided = true;
                     relations.push(Relation {
                         from: module_name.to_string(),
@@ -2291,22 +2407,23 @@ impl JavaPlugin {
                 .children(&mut cursor)
                 .find(|c| c.kind() == "identifier" || c.kind() == "scoped_identifier");
             if let Some(name_node) = name_node
-                && let Ok(fqn) = name_node.utf8_text(source) {
-                    let simple = fqn.rsplit('.').next().unwrap_or(fqn).to_string();
-                    let owner = ctx
-                        .package
-                        .clone()
-                        .unwrap_or_else(|| file_path.to_string_lossy().to_string());
-                    relations.push(Relation {
-                        from: owner,
-                        to: simple,
-                        relation_type: RelationType::Uses,
-                        location: source_location(node, &file_path.to_string_lossy()),
-                        metadata: serde_json::json!({ "language": "java", "fqn": fqn }),
-                        to_qualified_hint: Some(fqn.to_string()),
-                        to_type_hint: None,
-                    });
-                }
+                && let Ok(fqn) = name_node.utf8_text(source)
+            {
+                let simple = fqn.rsplit('.').next().unwrap_or(fqn).to_string();
+                let owner = ctx
+                    .package
+                    .clone()
+                    .unwrap_or_else(|| file_path.to_string_lossy().to_string());
+                relations.push(Relation {
+                    from: owner,
+                    to: simple,
+                    relation_type: RelationType::Uses,
+                    location: source_location(node, &file_path.to_string_lossy()),
+                    metadata: serde_json::json!({ "language": "java", "fqn": fqn }),
+                    to_qualified_hint: Some(fqn.to_string()),
+                    to_type_hint: None,
+                });
+            }
         }
 
         let mut cursor = node.walk();
@@ -2466,10 +2583,11 @@ impl JavaPlugin {
                     // Check if this is the field we're looking for
                     if field_child.kind() == "variable_declarator"
                         && let Some(name_node) = field_child.child_by_field_name("name")
-                            && let Ok(name) = name_node.utf8_text(source)
-                                && name == field_name {
-                                    found_field = true;
-                                }
+                        && let Ok(name) = name_node.utf8_text(source)
+                        && name == field_name
+                    {
+                        found_field = true;
+                    }
                 }
 
                 if found_field && type_name.is_some() {
@@ -2523,10 +2641,11 @@ impl JavaPlugin {
 
                     if child.kind() == "variable_declarator"
                         && let Some(name_node) = child.child_by_field_name("name")
-                            && let Ok(name) = name_node.utf8_text(source)
-                                && name == var_name {
-                                    found_var = true;
-                                }
+                        && let Ok(name) = name_node.utf8_text(source)
+                        && name == var_name
+                    {
+                        found_var = true;
+                    }
                 }
 
                 if found_var && type_name.is_some() {
@@ -2617,10 +2736,7 @@ public class OrderDTO {
             .iter()
             .find(|s| {
                 s.symbol_type == SymbolType::Function
-                    && s.metadata
-                        .get("is_constructor")
-                        .and_then(|v| v.as_bool())
-                        == Some(true)
+                    && s.metadata.get("is_constructor").and_then(|v| v.as_bool()) == Some(true)
             })
             .expect("constructor");
         assert_eq!(ctor.qualified_name.as_deref(), Some("OrderDTO.<init>"));
@@ -2782,16 +2898,14 @@ public record Point(int x, int y) {
 
         let ctor = symbols
             .iter()
-            .find(|s| {
-                s.metadata
-                    .get("is_constructor")
-                    .and_then(|v| v.as_bool())
-                    == Some(true)
-            })
+            .find(|s| s.metadata.get("is_constructor").and_then(|v| v.as_bool()) == Some(true))
             .expect("compact constructor");
         assert_eq!(ctor.qualified_name.as_deref(), Some("Point.<init>"));
 
-        let sum = symbols.iter().find(|s| s.name == "sum").expect("sum method");
+        let sum = symbols
+            .iter()
+            .find(|s| s.name == "sum")
+            .expect("sum method");
         assert_eq!(sum.qualified_name.as_deref(), Some("Point.sum"));
     }
 
@@ -2900,13 +3014,25 @@ final class Square extends Shape {}
             .iter()
             .filter(|r| matches!(r.relation_type, RelationType::Permits))
             .collect();
-        assert!(permits.iter().any(|r| r.from == "Shape" && r.to == "Circle"));
-        assert!(permits.iter().any(|r| r.from == "Shape" && r.to == "Square"));
+        assert!(
+            permits
+                .iter()
+                .any(|r| r.from == "Shape" && r.to == "Circle")
+        );
+        assert!(
+            permits
+                .iter()
+                .any(|r| r.from == "Shape" && r.to == "Square")
+        );
 
         // Subclass Extends relations still exist.
-        assert!(relations.iter().any(|r| matches!(r.relation_type, RelationType::Extends)
-            && r.from == "Circle"
-            && r.to == "Shape"));
+        assert!(
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::Extends)
+                    && r.from == "Circle"
+                    && r.to == "Shape")
+        );
     }
 
     // ---------------------------------------------------------------
@@ -2946,8 +3072,10 @@ public class Factory {
 "#;
         let relations = relations_of(source, "Factory.java");
         assert!(
-            relations.iter().any(|r| matches!(r.relation_type, RelationType::Instantiates)
-                && r.to == "ArrayList"),
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::Instantiates)
+                    && r.to == "ArrayList"),
             "expected Instantiates relation to ArrayList"
         );
     }
@@ -2993,9 +3121,11 @@ public class Child extends Base {
 "#;
         let relations = relations_of(source, "Child.java");
         assert!(
-            relations.iter().any(|r| matches!(r.relation_type, RelationType::Calls)
-                && r.from == "Child.<init>"
-                && r.to.contains("<init>")),
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::Calls)
+                    && r.from == "Child.<init>"
+                    && r.to.contains("<init>")),
             "expected ctor-chaining Calls relation from Child.<init>"
         );
     }
@@ -3038,11 +3168,13 @@ public class Logger {
         let method = symbols.iter().find(|s| s.name == "log").expect("method");
         assert_eq!(method.parameters.len(), 1);
         assert_eq!(method.parameters[0].name, "args");
-        assert!(method.parameters[0]
-            .param_type
-            .as_deref()
-            .unwrap_or("")
-            .contains("String"));
+        assert!(
+            method.parameters[0]
+                .param_type
+                .as_deref()
+                .unwrap_or("")
+                .contains("String")
+        );
     }
 
     // ---------------------------------------------------------------
@@ -3079,13 +3211,17 @@ class Outer {
 }
 "#;
         let symbols = symbols_of(source, "Outer.java");
-        let run = symbols.iter().find(|s| s.name == "run").expect("run method");
+        let run = symbols
+            .iter()
+            .find(|s| s.name == "run")
+            .expect("run method");
         assert_ne!(run.qualified_name.as_deref(), Some("Outer.run"));
-        assert!(run
-            .qualified_name
-            .as_deref()
-            .unwrap_or("")
-            .starts_with("Outer.$Anonymous"));
+        assert!(
+            run.qualified_name
+                .as_deref()
+                .unwrap_or("")
+                .starts_with("Outer.$Anonymous")
+        );
     }
 
     // ---------------------------------------------------------------
@@ -3134,7 +3270,11 @@ public interface Svc {
             .iter()
             .find(|s| s.name == "Svc" && s.symbol_type == SymbolType::Interface)
             .expect("interface symbol");
-        let max = svc.fields.iter().find(|f| f.name == "MAX").expect("MAX field");
+        let max = svc
+            .fields
+            .iter()
+            .find(|f| f.name == "MAX")
+            .expect("MAX field");
         assert!(max.field_type.as_deref().unwrap_or("").contains("int"));
     }
 
@@ -3150,9 +3290,18 @@ public @interface Ann {
             .iter()
             .find(|s| s.name == "value" && s.symbol_type == SymbolType::Function)
             .expect("annotation element symbol");
-        assert!(value.qualified_name.as_deref().unwrap_or("").ends_with("Ann.value"));
+        assert!(
+            value
+                .qualified_name
+                .as_deref()
+                .unwrap_or("")
+                .ends_with("Ann.value")
+        );
         assert_eq!(
-            value.metadata.get("is_annotation_element").and_then(|v| v.as_bool()),
+            value
+                .metadata
+                .get("is_annotation_element")
+                .and_then(|v| v.as_bool()),
             Some(true)
         );
         assert_eq!(
@@ -3174,7 +3323,10 @@ enum E {
             .find(|s| s.name == "E" && s.symbol_type == SymbolType::Enum)
             .expect("enum symbol");
         assert!(e.fields.iter().any(|f| f.name == "A"));
-        let x = symbols.iter().find(|s| s.name == "x").expect("x method in constant body");
+        let x = symbols
+            .iter()
+            .find(|s| s.name == "x")
+            .expect("x method in constant body");
         assert!(x.qualified_name.as_deref().unwrap_or("").contains("E.A.x"));
     }
 
@@ -3213,20 +3365,26 @@ class Box<T extends Comparable<T>> {
             .iter()
             .find(|s| s.name == "Box" && s.symbol_type == SymbolType::Class)
             .expect("class symbol");
-        assert!(class
-            .metadata
-            .get("type_params")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .contains('T'));
+        assert!(
+            class
+                .metadata
+                .get("type_params")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .contains('T')
+        );
 
-        let put = symbols.iter().find(|s| s.name == "put").expect("put method");
-        assert!(put
-            .metadata
-            .get("type_params")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .contains('U'));
+        let put = symbols
+            .iter()
+            .find(|s| s.name == "put")
+            .expect("put method");
+        assert!(
+            put.metadata
+                .get("type_params")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .contains('U')
+        );
     }
 
     #[test]
@@ -3237,18 +3395,24 @@ public class Reader {
 }
 "#;
         let symbols = symbols_of(source, "Reader.java");
-        let read = symbols.iter().find(|s| s.name == "read").expect("read method");
-        assert!(read
-            .metadata
-            .get("throws")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .contains("IOException"));
+        let read = symbols
+            .iter()
+            .find(|s| s.name == "read")
+            .expect("read method");
+        assert!(
+            read.metadata
+                .get("throws")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .contains("IOException")
+        );
 
         let relations = relations_of(source, "Reader.java");
         assert!(
-            relations.iter().any(|r| matches!(r.relation_type, RelationType::References)
-                && r.to == "IOException"),
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::References)
+                    && r.to == "IOException"),
             "expected References relation to IOException"
         );
     }
@@ -3289,8 +3453,9 @@ public class Order {
 "#;
         let relations = relations_of(source, "Order.java");
         assert!(
-            relations.iter().any(|r| matches!(r.relation_type, RelationType::References)
-                && r.to == "status"),
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::References) && r.to == "status"),
             "expected References relation to status via obj.status"
         );
     }
@@ -3306,8 +3471,9 @@ public class Factory {
 "#;
         let relations = relations_of(source, "Factory.java");
         assert!(
-            relations.iter().any(|r| matches!(r.relation_type, RelationType::Instantiates)
-                && r.to == "String"),
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::Instantiates) && r.to == "String"),
             "expected Instantiates relation to String"
         );
     }
@@ -3323,8 +3489,9 @@ public class Factory {
 "#;
         let relations = relations_of(source, "Factory.java");
         assert!(
-            relations.iter().any(|r| matches!(r.relation_type, RelationType::References)
-                && r.to == "Foo"),
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::References) && r.to == "Foo"),
             "expected References relation to Foo"
         );
     }
@@ -3340,12 +3507,13 @@ public class Outer {
 "#;
         let symbols = symbols_of(source, "Outer.java");
         let m = symbols.iter().find(|s| s.name == "m").expect("m method");
-        assert!(m
-            .metadata
-            .get("receiver_type")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .contains("Inner"));
+        assert!(
+            m.metadata
+                .get("receiver_type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .contains("Inner")
+        );
     }
 
     // ---------------------------------------------------------------
@@ -3364,7 +3532,12 @@ public class Printer {
         let symbols = symbols_of(source, "Printer.java");
         let lambda = symbols
             .iter()
-            .find(|s| s.qualified_name.as_deref().unwrap_or("").contains("$lambda$"))
+            .find(|s| {
+                s.qualified_name
+                    .as_deref()
+                    .unwrap_or("")
+                    .contains("$lambda$")
+            })
             .expect("expected a lambda Function symbol");
         assert_eq!(
             lambda.metadata.get("is_lambda").and_then(|v| v.as_bool()),
@@ -3373,9 +3546,11 @@ public class Printer {
 
         let relations = relations_of(source, "Printer.java");
         assert!(
-            relations.iter().any(|r| matches!(r.relation_type, RelationType::Calls)
-                && r.from == "Printer.run"
-                && r.to.contains("$lambda$")),
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::Calls)
+                    && r.from == "Printer.run"
+                    && r.to.contains("$lambda$")),
             "expected Calls relation from Printer.run to the lambda"
         );
     }
@@ -3394,9 +3569,11 @@ public class C {
 "#;
         let relations = relations_of(source, "C.java");
         assert!(
-            relations.iter().any(|r| matches!(r.relation_type, RelationType::AnnotatedWith)
-                && r.from == "C.m"
-                && r.to == "NonNull"),
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::AnnotatedWith)
+                    && r.from == "C.m"
+                    && r.to == "NonNull"),
             "expected AnnotatedWith from method QN C.m to NonNull, got {:?}",
             relations
                 .iter()
@@ -3414,9 +3591,11 @@ public class C {
 "#;
         let relations = relations_of(source, "C.java");
         assert!(
-            relations.iter().any(|r| matches!(r.relation_type, RelationType::AnnotatedWith)
-                && r.from == "C.m"
-                && r.to == "Deprecated"),
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::AnnotatedWith)
+                    && r.from == "C.m"
+                    && r.to == "Deprecated"),
             "expected AnnotatedWith from C.m to Deprecated (not method(param))"
         );
     }
@@ -3432,27 +3611,35 @@ module M {
 "#;
         let relations = relations_of(source, "module-info.java");
         assert!(
-            relations.iter().any(|r| matches!(r.relation_type, RelationType::DependsOn)
-                && r.from == "M"
-                && r.to == "java.base"),
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::DependsOn)
+                    && r.from == "M"
+                    && r.to == "java.base"),
             "expected DependsOn relation to java.base"
         );
         assert!(
-            relations.iter().any(|r| matches!(r.relation_type, RelationType::Uses)
-                && r.from == "M"
-                && r.to == "Other"),
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::Uses)
+                    && r.from == "M"
+                    && r.to == "Other"),
             "expected Uses relation to Other (uses directive)"
         );
         assert!(
-            relations.iter().any(|r| matches!(r.relation_type, RelationType::Uses)
-                && r.from == "M"
-                && r.to == "Spi"),
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::Uses)
+                    && r.from == "M"
+                    && r.to == "Spi"),
             "expected Uses relation to Spi (provides service)"
         );
         assert!(
-            relations.iter().any(|r| matches!(r.relation_type, RelationType::Uses)
-                && r.from == "M"
-                && r.to == "SpiImpl"),
+            relations
+                .iter()
+                .any(|r| matches!(r.relation_type, RelationType::Uses)
+                    && r.from == "M"
+                    && r.to == "SpiImpl"),
             "expected Uses relation to SpiImpl (provides provider)"
         );
     }

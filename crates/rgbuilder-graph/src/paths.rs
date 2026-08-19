@@ -40,11 +40,7 @@ pub fn ensure_artifact_dir_migrated(repo_root: &Path) -> PathBuf {
     if !neu_exists && old_exists {
         match std::fs::rename(&old, &neu) {
             Ok(()) => {
-                eprintln!(
-                    "[rg-build] migrated {} → {}",
-                    old.display(),
-                    neu.display()
-                );
+                eprintln!("[rg-build] migrated {} → {}", old.display(), neu.display());
             }
             Err(e) => {
                 eprintln!(

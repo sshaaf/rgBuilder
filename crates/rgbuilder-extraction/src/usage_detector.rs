@@ -170,9 +170,11 @@ mod tests {
         "#;
 
         let usages = ConfigUsageDetector::detect("rust", source, Path::new("main.rs"));
-        assert!(usages
-            .iter()
-            .any(|u| u.key == "DB_HOST" && u.usage_type == ConfigUsageKind::EnvVar));
+        assert!(
+            usages
+                .iter()
+                .any(|u| u.key == "DB_HOST" && u.usage_type == ConfigUsageKind::EnvVar)
+        );
         assert!(usages.iter().any(|u| u.key == "database.pool_size"));
     }
 

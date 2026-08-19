@@ -45,7 +45,8 @@ impl ContentStore {
 
     /// Insert UTF-8 text under `hash`.
     pub fn insert_str(&mut self, hash: &str, text: &str) {
-        self.blobs.insert(hash.to_string(), text.as_bytes().to_vec());
+        self.blobs
+            .insert(hash.to_string(), text.as_bytes().to_vec());
     }
 
     /// Insert raw bytes under `hash`.
@@ -90,7 +91,9 @@ impl ContentStore {
         }
         let bytes = bincode::serialize(&self.blobs)
             .map_err(|e| Error::SerdeError(format!("content store encode: {e}")))?;
-        std::fs::write(path, bytes)?;
+        let tmp = path.with_extension("bin.tmp");
+        std::fs::write(&tmp, bytes)?;
+        std::fs::rename(&tmp, path)?;
         Ok(())
     }
 

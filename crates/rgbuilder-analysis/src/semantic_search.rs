@@ -4,7 +4,7 @@
 //! so the default discover path stays lean. Default semantic embedder is bundled
 //! code-daemon (requires the `semantic-onnx` feature, enabled by default).
 
-use crate::semantic_embedder::{embedder_for_index, OnnxReloadOptions, SemanticEmbedder};
+use crate::semantic_embedder::{OnnxReloadOptions, SemanticEmbedder, embedder_for_index};
 use crate::semantic_extract::extract_body_tokens_for_node;
 use rgbuilder_error::Result;
 use rgbuilder_graph::backend::MemoryBackend;
@@ -233,12 +233,7 @@ pub fn build_index(
         .and_then(|root| ContentStore::load(ContentStore::default_path(root)).ok());
     let mut candidates: Vec<(SemanticEntry, String)> = Vec::new();
     backend.for_each_node(|node| {
-        let text = embed_text_for_scope(
-            node,
-            options.scope,
-            repo_root,
-            content_store.as_ref(),
-        );
+        let text = embed_text_for_scope(node, options.scope, repo_root, content_store.as_ref());
         if let Some(text) = text {
             let code_hash = node
                 .code_hash
@@ -437,7 +432,10 @@ pub fn embed_text_for_function(node: &Node, repo_root: Option<&Path>) -> Option<
 }
 
 /// Collect embeddable text for a documentation section (`:Module` heading / code block).
-pub fn embed_text_for_doc_node(node: &Node, content_store: Option<&ContentStore>) -> Option<String> {
+pub fn embed_text_for_doc_node(
+    node: &Node,
+    content_store: Option<&ContentStore>,
+) -> Option<String> {
     if node.node_type != NodeType::Module {
         return None;
     }
@@ -679,9 +677,11 @@ pub fn query_communities(
     }
 
     hits.sort_by(|a, b| {
-        a.distance
-            .cmp(&b.distance)
-            .then_with(|| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal))
+        a.distance.cmp(&b.distance).then_with(|| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
     });
     hits.truncate(k);
     Ok(hits)

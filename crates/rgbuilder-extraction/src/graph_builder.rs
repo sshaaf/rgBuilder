@@ -2,7 +2,7 @@
 
 use rgbuilder_error::{Error, Result};
 use rgbuilder_graph::code_index::{CodeIndex, hash_code};
-use rgbuilder_graph::content_store::{hash_bytes, ContentStore, INLINE_BODY_MAX_BYTES};
+use rgbuilder_graph::content_store::{ContentStore, INLINE_BODY_MAX_BYTES, hash_bytes};
 use rgbuilder_graph::migration::graph_parameter_from_plugin;
 use rgbuilder_graph::normalize_path_str;
 use rgbuilder_graph::schema::{Edge, EdgeType, Node, NodeType};
@@ -207,7 +207,8 @@ impl GraphBuilder {
             return *id;
         }
 
-        let mut node = Node::new(NodeType::File, file_path.clone()).with_file_path(file_path.clone());
+        let mut node =
+            Node::new(NodeType::File, file_path.clone()).with_file_path(file_path.clone());
         if let Some(bytes) = source {
             let content_hash = hash_bytes(bytes);
             node = node.with_property("content_hash".to_string(), content_hash.clone());

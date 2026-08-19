@@ -4,7 +4,7 @@ use rgbuilder::changes::ChangeDetector;
 use rgbuilder::config::project::{RgbuilderConfig, RiskLevel};
 use rgbuilder::graph::backend::GraphBackend;
 use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
-use rgbuilder::incremental::{changes_for_paths, IncrementalUpdater, UpdateOptions};
+use rgbuilder::incremental::{IncrementalUpdater, UpdateOptions, changes_for_paths};
 use rgbuilder::languages::registry::LanguageRegistry;
 use rgbuilder::pipeline::{PipelineConfig, ProcessingPipeline};
 use std::fs;

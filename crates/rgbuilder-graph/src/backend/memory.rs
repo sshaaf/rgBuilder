@@ -506,7 +506,12 @@ impl MemoryBackend {
         let adj = read_lock(&self.outgoing_adj)?;
         Ok(adj
             .get(&node_id)
-            .map(|indices| indices.iter().filter_map(|&i| edges.get(i).cloned()).collect())
+            .map(|indices| {
+                indices
+                    .iter()
+                    .filter_map(|&i| edges.get(i).cloned())
+                    .collect()
+            })
             .unwrap_or_default())
     }
 
@@ -516,7 +521,12 @@ impl MemoryBackend {
         let adj = read_lock(&self.incoming_adj)?;
         Ok(adj
             .get(&node_id)
-            .map(|indices| indices.iter().filter_map(|&i| edges.get(i).cloned()).collect())
+            .map(|indices| {
+                indices
+                    .iter()
+                    .filter_map(|&i| edges.get(i).cloned())
+                    .collect()
+            })
             .unwrap_or_default())
     }
 
@@ -581,9 +591,8 @@ impl MemoryBackend {
                 }
             }
         }
-        write_lock(&self.edges)?.retain(|e| {
-            !ids_to_delete.contains(&e.from) && !ids_to_delete.contains(&e.to)
-        });
+        write_lock(&self.edges)?
+            .retain(|e| !ids_to_delete.contains(&e.from) && !ids_to_delete.contains(&e.to));
         self.rebuild_edge_index();
         self.invalidate_cache()?;
         Ok(ids_to_delete.len())

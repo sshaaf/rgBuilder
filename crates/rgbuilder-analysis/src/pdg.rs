@@ -1,7 +1,7 @@
 //! Program dependence graph construction from CFG and def-use facts.
 
 use crate::cfg::{BlockId, ControlFlowGraph, Statement};
-use crate::dataflow::{compute_reaching_definitions, ReachingDefs};
+use crate::dataflow::{ReachingDefs, compute_reaching_definitions};
 use crate::dominance::DominatorTree;
 use rgbuilder_error::Result;
 use serde::{Deserialize, Serialize};

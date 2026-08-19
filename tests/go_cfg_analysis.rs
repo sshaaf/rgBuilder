@@ -1,7 +1,7 @@
 //! Go CFG analysis against the ecommerce-go fixture (no embedded dashboard required).
 
 use rgbuilder::analysis::{
-    build_cfg_for_function, cfg_language_id_from_path, ProgramDependenceGraph,
+    ProgramDependenceGraph, build_cfg_for_function, cfg_language_id_from_path,
 };
 use std::path::Path;
 

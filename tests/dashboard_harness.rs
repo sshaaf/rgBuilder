@@ -6,7 +6,8 @@ use serde_json::Value;
 use std::path::{Path, PathBuf};
 
 fn env_rg(suffix: &str) -> Result<String, std::env::VarError> {
-    std::env::var(format!("RGBUILDER_{suffix}")).or_else(|_| std::env::var(format!("RBUILDER_{suffix}")))
+    std::env::var(format!("RGBUILDER_{suffix}"))
+        .or_else(|_| std::env::var(format!("RBUILDER_{suffix}")))
 }
 
 use std::process::{Command, Output};
@@ -116,8 +117,8 @@ pub fn ecommerce_typescript_repo_path() -> PathBuf {
 }
 
 pub fn rgbuilder_bin() -> PathBuf {
-    if let Ok(p) = std::env::var("CARGO_BIN_EXE_rg_build")
-        .or_else(|_| std::env::var("CARGO_BIN_EXE_rg-build"))
+    if let Ok(p) =
+        std::env::var("CARGO_BIN_EXE_rg_build").or_else(|_| std::env::var("CARGO_BIN_EXE_rg-build"))
     {
         return PathBuf::from(p);
     }

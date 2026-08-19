@@ -13,7 +13,7 @@
 
 mod graph_correctness_lib;
 
-use graph_correctness_lib::{run_project, ProjectSpec};
+use graph_correctness_lib::{ProjectSpec, run_project};
 use std::path::PathBuf;
 
 fn rgbuilder_tests_root() -> PathBuf {

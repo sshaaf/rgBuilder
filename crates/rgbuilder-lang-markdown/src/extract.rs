@@ -2,7 +2,9 @@
 
 use crate::parse::ParsedMarkdown;
 use crate::slug::{slugify, unique_slug};
-use rgbuilder_plugin_api::{ExtractAllResult, Relation, RelationType, SourceLocation, Symbol, SymbolType};
+use rgbuilder_plugin_api::{
+    ExtractAllResult, Relation, RelationType, SourceLocation, Symbol, SymbolType,
+};
 use serde_json::json;
 use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
@@ -784,7 +786,9 @@ mod tests {
         let path = Path::new("AGENTS.md");
         let source = "---\ntitle: Hello World\n---\n# Guide\n";
         let parsed = crate::parse::parse_markdown(source.as_bytes(), path).expect("parse");
-        let symbols = extract(&parsed, path, source.as_bytes()).expect("extract").symbols;
+        let symbols = extract(&parsed, path, source.as_bytes())
+            .expect("extract")
+            .symbols;
         let title = symbols
             .iter()
             .find(|s| s.name == "title")
@@ -892,7 +896,9 @@ mod tests {
         let path = Path::new("AGENTS.md");
         let source = "---\nmetadata:\n  author: bot\n---\n# Guide\n";
         let parsed = crate::parse::parse_markdown(source.as_bytes(), path).expect("parse");
-        let symbols = extract(&parsed, path, source.as_bytes()).expect("extract").symbols;
+        let symbols = extract(&parsed, path, source.as_bytes())
+            .expect("extract")
+            .symbols;
         assert!(symbols.iter().any(|s| {
             s.name == "metadata.author"
                 && s.symbol_type == SymbolType::Variable
@@ -1004,7 +1010,9 @@ mod tests {
         let path = Path::new("config.md");
         let source = "+++\ntitle = \"Demo\"\n+++\n# Title\n";
         let parsed = crate::parse::parse_markdown(source.as_bytes(), path).expect("parse");
-        let symbols = extract(&parsed, path, source.as_bytes()).expect("extract").symbols;
+        let symbols = extract(&parsed, path, source.as_bytes())
+            .expect("extract")
+            .symbols;
         assert!(symbols.iter().any(|s| {
             s.name == "title"
                 && s.symbol_type == SymbolType::Variable

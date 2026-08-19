@@ -8,9 +8,9 @@ mod error;
 mod registrar;
 
 pub use call_extraction::{
-    callee_name, containing_function, push_call_relation, walk_calls, CPP_CALL_KINDS,
-    CSHARP_CALL_KINDS, C_CALL_KINDS, GO_CALL_KINDS, JS_CALL_KINDS, PYTHON_CALL_KINDS,
-    RUST_CALL_KINDS, TS_CALL_KINDS,
+    C_CALL_KINDS, CPP_CALL_KINDS, CSHARP_CALL_KINDS, GO_CALL_KINDS, JS_CALL_KINDS,
+    PYTHON_CALL_KINDS, RUST_CALL_KINDS, TS_CALL_KINDS, callee_name, containing_function,
+    push_call_relation, walk_calls,
 };
 
 pub use error::{Error, Result};
@@ -399,11 +399,7 @@ pub trait LanguagePlugin: Send + Sync {
     /// Default calls [`extract_symbols`](Self::extract_symbols) then
     /// [`extract_relations`](Self::extract_relations). Plugins that parse twice
     /// SHOULD override to share one AST.
-    fn extract_all(
-        &self,
-        file_path: &Path,
-        source: &[u8],
-    ) -> Result<ExtractAllResult> {
+    fn extract_all(&self, file_path: &Path, source: &[u8]) -> Result<ExtractAllResult> {
         let symbols = self.extract_symbols(file_path, source)?;
         let relations = self.extract_relations(file_path, source, &symbols)?;
         Ok(ExtractAllResult {

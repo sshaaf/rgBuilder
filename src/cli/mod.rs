@@ -18,9 +18,9 @@ pub mod gql_output;
 mod http_serve;
 mod inspect;
 pub mod inspect_output;
+mod markup;
 mod metrics;
 pub mod metrics_output;
-mod markup;
 mod policy_file;
 mod query_daemon;
 mod semantic;
@@ -32,8 +32,8 @@ mod stage_profile;
 
 pub use args::OutputFormat;
 
-use crate::analysis::{DEFAULT_CANDIDATE_POOL, DEFAULT_EMBEDDING_DIMENSIONS};
 use crate::BUILD_INFO;
+use crate::analysis::{DEFAULT_CANDIDATE_POOL, DEFAULT_EMBEDDING_DIMENSIONS};
 use args::{ExportFormat, InspectLayer, PdgEdgeLayer, SliceDirection, SliceView};
 use clap::{Parser, Subcommand};
 use context::CliContext;
@@ -778,7 +778,7 @@ impl Cli {
                     },
                 };
                 cpg::run(&ctx, mapped)
-            },
+            }
             Commands::Check { policy_file } => check::run(&ctx, check::CheckArgs { policy_file }),
             Commands::Export {
                 export_format,
@@ -882,8 +882,8 @@ fn format_elapsed(elapsed: Duration) -> String {
 }
 
 fn init_logging(verbose: bool, discover_json: bool) {
-    use tracing_subscriber::fmt::format::FmtSpan;
     use tracing_subscriber::EnvFilter;
+    use tracing_subscriber::fmt::format::FmtSpan;
 
     if verbose {
         tracing_subscriber::fmt()
@@ -908,7 +908,9 @@ fn init_logging(verbose: bool, discover_json: bool) {
     } else {
         tracing_subscriber::fmt()
             .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                EnvFilter::new("warn,rg-build=info,rgbuilder_extraction=warn,rgbuilder_analysis=warn")
+                EnvFilter::new(
+                    "warn,rg-build=info,rgbuilder_extraction=warn,rgbuilder_analysis=warn",
+                )
             }))
             .with_target(false)
             .with_level(false)

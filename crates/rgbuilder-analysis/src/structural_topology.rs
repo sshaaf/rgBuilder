@@ -5,7 +5,7 @@
 
 use rgbuilder_error::Result;
 use rgbuilder_graph::backend::MemoryBackend;
-use rgbuilder_graph::csr::{edge_type_from_u8, edge_type_to_u8, CodeGraphCsr};
+use rgbuilder_graph::csr::{CodeGraphCsr, edge_type_from_u8, edge_type_to_u8};
 use rgbuilder_graph::schema::EdgeType;
 use rgbuilder_graph::snapshot::{PreparedGraphSnapshot, SnapshotNodeStore};
 use std::collections::{HashMap, HashSet};

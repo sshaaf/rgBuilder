@@ -1,11 +1,11 @@
 //! Two-stage semantic retrieval: Hamming pre-filter + late structural fusion.
 
 use crate::results::AnalysisResults;
-use crate::semantic_embedder::{embedder_for_index, OnnxReloadOptions};
+use crate::semantic_embedder::{OnnxReloadOptions, embedder_for_index};
 use crate::semantic_extract::tokenize_string_into;
-use crate::semantic_search::{hamming_top_k, SemanticEntry, SemanticHit, SemanticIndex};
+use crate::semantic_search::{SemanticEntry, SemanticHit, SemanticIndex, hamming_top_k};
 use rgbuilder_error::Result;
-use rgbuilder_graph::{keyword_overlap_score, satisfies_keyword_and, TokenBloom};
+use rgbuilder_graph::{TokenBloom, keyword_overlap_score, satisfies_keyword_and};
 use std::collections::HashSet;
 use std::path::Path;
 

@@ -6,6 +6,6 @@ pub mod plugin_loader;
 mod registry;
 
 pub use registry::{
-    full_registry, set_full_registry_builder, set_registry_pre_init, LanguageRegistry,
-    RegistryStats,
+    LanguageRegistry, RegistryStats, full_registry, set_full_registry_builder,
+    set_registry_pre_init,
 };

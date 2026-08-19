@@ -347,30 +347,17 @@ fn semantic_query_scope_docs_and_function_are_enforced() {
     assert_success(&docs_index, "semantic index docs");
 
     let docs_query = sandbox.run(&[
-        "-f",
-        "json",
-        "semantic",
-        "query",
-        "checkout",
-        "--scope",
-        "docs",
-        "--limit",
-        "5",
+        "-f", "json", "semantic", "query", "checkout", "--scope", "docs", "--limit", "5",
     ]);
     assert_success(&docs_query, "semantic docs query");
     let docs_hits = hit_names(&sandbox.parse_json(&docs_query));
-    assert!(!docs_hits.is_empty(), "expected docs hits for checkout query");
+    assert!(
+        !docs_hits.is_empty(),
+        "expected docs hits for checkout query"
+    );
 
     let function_query = sandbox.run(&[
-        "-f",
-        "json",
-        "semantic",
-        "query",
-        "checkout",
-        "--scope",
-        "function",
-        "--limit",
-        "5",
+        "-f", "json", "semantic", "query", "checkout", "--scope", "function", "--limit", "5",
     ]);
     assert!(
         !function_query.status.success(),

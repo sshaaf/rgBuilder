@@ -517,6 +517,9 @@ JSON (trimmed):
 `.rgbuilder/analysis_results.bin` — **not** as edges in the topology graph.
 `gql` joins that sidecar so you can list and filter communities:
 
+Community detection uses behavioral edges (`Calls`, `Uses`, `References`) by default.  
+On mixed code + markdown repos, doc `REFERENCES` participate in the same community pass as code edges; this is expected behavior.
+
 ```bash
 # Macro: list communities (id, heuristic label, member_count)
 rg-build -r "$REPO" -f json gql --macro-name all_communities unused | jq '.rows[:3]'

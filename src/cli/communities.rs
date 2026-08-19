@@ -2,10 +2,8 @@
 
 use super::args::OutputFormat;
 use super::context::CliContext;
-use anyhow::{bail, Context, Result};
-use rgbuilder_analysis::{
-    fill_community_labels, AnalysisResults, CommunityQueryContext,
-};
+use anyhow::{Context, Result, bail};
+use rgbuilder_analysis::{AnalysisResults, CommunityQueryContext, fill_community_labels};
 use rgbuilder_graph::backend::GraphBackend;
 use serde_json::json;
 
@@ -32,11 +30,12 @@ pub fn run_label(ctx: &CliContext, args: CommunitiesLabelArgs) -> Result<()> {
     let graph = ctx.load_graph()?;
     let backend = graph.backend();
     fill_community_labels(&mut analysis, infra, |uuid| {
-        backend
-            .get_node(uuid)
-            .ok()
-            .flatten()
-            .map(|n| (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())))
+        backend.get_node(uuid).ok().flatten().map(|n| {
+            (
+                n.name.to_string(),
+                n.file_path.as_ref().map(|s| s.to_string()),
+            )
+        })
     })?;
 
     if args.write {
@@ -46,11 +45,12 @@ pub fn run_label(ctx: &CliContext, args: CommunitiesLabelArgs) -> Result<()> {
     }
 
     let ctx_q = CommunityQueryContext::from_analysis(&analysis, |uuid| {
-        backend
-            .get_node(uuid)
-            .ok()
-            .flatten()
-            .map(|n| (n.name.to_string(), n.file_path.as_ref().map(|s| s.to_string())))
+        backend.get_node(uuid).ok().flatten().map(|n| {
+            (
+                n.name.to_string(),
+                n.file_path.as_ref().map(|s| s.to_string()),
+            )
+        })
     });
 
     if ctx.format == OutputFormat::Json {
@@ -77,7 +77,11 @@ pub fn run_label(ctx: &CliContext, args: CommunitiesLabelArgs) -> Result<()> {
         "{} communities (modularity {:.3}){}",
         ctx_q.communities.len(),
         ctx_q.modularity,
-        if args.write { " — labels written" } else { "" }
+        if args.write {
+            " — labels written"
+        } else {
+            ""
+        }
     );
     for c in &ctx_q.communities {
         println!("  [{:>4}] {} ({} members)", c.id, c.label, c.member_count);
@@ -86,10 +90,5 @@ pub fn run_label(ctx: &CliContext, args: CommunitiesLabelArgs) -> Result<()> {
 }
 
 pub fn run_list(ctx: &CliContext) -> Result<()> {
-    run_label(
-        ctx,
-        CommunitiesLabelArgs {
-            write: false,
-        },
-    )
+    run_label(ctx, CommunitiesLabelArgs { write: false })
 }

@@ -6,12 +6,12 @@ use super::semantic_output::{
     build_index_response, index_response_to_json, query_response_to_json,
 };
 use crate::analysis::{
-    blast_summary_from_result, build_index, default_tokenizer_path, resolve_embedder,
-    try_load_engine, validate_mrl_dimensions, BlastRadiusEngine, BlastSummaryProvider,
-    EmbedderChoice, SemanticBuildOptions, SemanticExpansion, SemanticIndex, CODE_DAEMON_MRL_DIMS,
+    BlastRadiusEngine, BlastSummaryProvider, CODE_DAEMON_MRL_DIMS, EmbedderChoice,
+    SemanticBuildOptions, SemanticExpansion, SemanticIndex, blast_summary_from_result, build_index,
+    default_tokenizer_path, resolve_embedder, try_load_engine, validate_mrl_dimensions,
 };
 use crate::graph::backend::{GraphBackend, MemoryBackend};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::ValueEnum;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
@@ -168,7 +168,11 @@ pub fn run_index(ctx: &CliContext, args: SemanticIndexArgs) -> Result<()> {
         };
         println!(
             "Indexed {} {} ({}, {} dims) → {}",
-            response.functions_indexed, scope_label, response.model_id, response.dimensions, response.path
+            response.functions_indexed,
+            scope_label,
+            response.model_id,
+            response.dimensions,
+            response.path
         );
         if let Some(build_stats) = &response.build_stats {
             println!(

@@ -1,16 +1,16 @@
 //! `rg-build slice` — line-level slicing and taint policy checks.
 
 use super::args::{OutputFormat, SliceDirection, SliceView};
+use super::context::{CliContext, language_from_path};
 use super::markup::markup_context_unsupported;
-use super::context::{language_from_path, CliContext};
 use super::slice_output::{
     cfg_topology_json, pdg_topology_json, taint_slice_json, text_slice_json,
 };
 use crate::analysis::{
-    build_cfg_for_function, BackwardSlicer, ForwardSlicer, ProgramDependenceGraph, SliceCriterion,
-    TaintAnalyzer,
+    BackwardSlicer, ForwardSlicer, ProgramDependenceGraph, SliceCriterion, TaintAnalyzer,
+    build_cfg_for_function,
 };
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::fs;
 use std::path::PathBuf;
 

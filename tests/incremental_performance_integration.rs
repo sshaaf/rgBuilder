@@ -1,8 +1,8 @@
 //! Phase 5 integration tests: incremental updates and performance
 
+use rgbuilder::graph::CodeGraph;
 use rgbuilder::graph::backend::GraphBackend;
 use rgbuilder::graph::schema::{Node, NodeType};
-use rgbuilder::graph::CodeGraph;
 use rgbuilder::incremental::{FileTracker, IncrementalUpdater, UpdateOptions};
 use rgbuilder::languages::registry::LanguageRegistry;
 use rgbuilder::pipeline::{PipelineConfig, ProcessingPipeline};

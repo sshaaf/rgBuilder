@@ -91,7 +91,10 @@ impl std::fmt::Display for PolicyViolation {
                 "domain isolation failure: path from '{source_domain}' to '{reached_domain}' via node {node}"
             ),
             Self::ScaleFailure { count, max } => {
-                write!(f, "scale failure: impact zone size {count} exceeds max {max}")
+                write!(
+                    f,
+                    "scale failure: impact zone size {count} exceeds max {max}"
+                )
             }
             Self::CascadeHazard {
                 node,

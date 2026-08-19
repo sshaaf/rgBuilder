@@ -3,7 +3,7 @@
 //! Task 1.6.4: Implement graph export (JSON)
 
 use crate::backend::MemoryBackend;
-use crate::schema::{Edge, Node, GRAPH_SCHEMA_VERSION};
+use crate::schema::{Edge, GRAPH_SCHEMA_VERSION, Node};
 use rgbuilder_error::{Error, Result};
 use serde::{Deserialize, Serialize};
 

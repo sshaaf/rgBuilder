@@ -1,6 +1,6 @@
 //! Phase 14: Graphviz DOT export tests.
 
-use rgbuilder::export::{generate_dot, GraphvizOptions, Layout, RankDir};
+use rgbuilder::export::{GraphvizOptions, Layout, RankDir, generate_dot};
 use rgbuilder::graph::backend::GraphBackend;
 use rgbuilder::graph::schema::{Edge, EdgeType, Node, NodeType};
 

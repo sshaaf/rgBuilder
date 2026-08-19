@@ -1,7 +1,7 @@
 //! Manual profile: dashboard export on example/linux (requires prior discover).
 
-use rgbuilder_dashboard::export_dashboard_bundle_with_context;
 use rgbuilder_dashboard::DashboardExportContext;
+use rgbuilder_dashboard::export_dashboard_bundle_with_context;
 use rgbuilder_graph::snapshot::MmappedGraphSnapshot;
 use std::path::Path;
 use std::time::Instant;
@@ -36,7 +36,8 @@ fn profile_linux_dashboard_export() {
     }
 
     let analysis_path = root.join(".rgbuilder/analysis_results.bin");
-    let analysis = rgbuilder_analysis::AnalysisResults::load(&analysis_path).expect("load analysis");
+    let analysis =
+        rgbuilder_analysis::AnalysisResults::load(&analysis_path).expect("load analysis");
 
     export_dashboard_bundle_with_context(
         &backend,
