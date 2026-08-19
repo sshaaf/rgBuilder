@@ -1,6 +1,6 @@
 [package]
 name = "rgbuilder-lang-go"
-version = "0.4.4"
+version = "0.4.5"
 edition.workspace = true
 rust-version.workspace = true
 description = "rgBuilder language plugin: go"

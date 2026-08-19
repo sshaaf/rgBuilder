@@ -1,6 +1,6 @@
 [package]
 name = "rgbuilder-plugin-api"
-version = "0.4.4"
+version = "0.4.5"
 edition.workspace = true
 rust-version.workspace = true
 description = "Stable plugin API for rgBuilder language and config format plugins"
