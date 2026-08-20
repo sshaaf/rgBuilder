@@ -1,8 +1,9 @@
 //! Taint flow export for dashboard (reads `.rgbuilder/analysis/` index + selective loads).
 
 use crate::export_util::write_json_compact;
+use rayon::prelude::*;
 use rgbuilder_analysis::pdg::{PdgNodeId, ProgramDependenceGraph};
-use rgbuilder_analysis::storage::AnalysisStorage;
+use rgbuilder_analysis::storage::{AnalysisIndexEntry, AnalysisStorage};
 use rgbuilder_analysis::taint::{Sanitizer, TaintFlow, TaintSink, TaintSource};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -76,55 +77,24 @@ pub fn export_taint_bundle(repo_root: &Path, out_dir: &Path) -> Result<TaintExpo
     }
     fs::create_dir_all(&taint_dir).map_err(|e| e.to_string())?;
 
+    let mut entries: Vec<_> = index
+        .into_values()
+        .filter(|entry| entry.flow_count > 0 || entry.vulnerable_count > 0)
+        .collect();
+    entries.sort_by(|a, b| a.stable_key.cmp(&b.stable_key));
+
+    let works: Vec<Option<(TaintFunctionEntry, usize, usize)>> = entries
+        .par_iter()
+        .map(|entry| export_one_taint(entry, &storage, &taint_dir))
+        .collect();
+
     let mut functions = Vec::new();
     let mut total_flows = 0usize;
     let mut vulnerable_flows = 0usize;
-
-    let mut entries: Vec<_> = index.values().collect();
-    entries.sort_by(|a, b| a.stable_key.cmp(&b.stable_key));
-
-    for entry in entries {
-        if entry.flow_count == 0 && entry.vulnerable_count == 0 {
-            continue;
-        }
-        let Some(analysis) = storage
-            .load_function(entry.function_id)
-            .map_err(|e| e.to_string())?
-        else {
-            continue;
-        };
-        let Some(flows) = analysis.taint.as_ref().filter(|f| !f.is_empty()) else {
-            continue;
-        };
-        let pdg = analysis.pdg.as_ref();
-        let flow_views: Vec<TaintFlowView> = flows
-            .iter()
-            .enumerate()
-            .map(|(id, flow)| export_flow(id, flow, pdg))
-            .collect();
-        let vuln = flow_views.iter().filter(|f| f.vulnerable).count();
-        total_flows += flow_views.len();
+    for (entry, flows, vuln) in works.into_iter().flatten() {
+        total_flows += flows;
         vulnerable_flows += vuln;
-
-        let bundle = TaintBundlePayload {
-            schema_version: 1,
-            function_id: analysis.function_id.to_string(),
-            name: analysis.function_name.clone(),
-            file_path: Some(analysis.file_path.clone()),
-            flows: flow_views,
-        };
-        write_json_compact(
-            &taint_dir.join(format!("{}.json", analysis.function_id)),
-            &bundle,
-        )?;
-
-        functions.push(TaintFunctionEntry {
-            function_id: analysis.function_id.to_string(),
-            name: analysis.function_name,
-            file_path: Some(analysis.file_path),
-            flow_count: bundle.flows.len(),
-            vulnerable_count: vuln,
-        });
+        functions.push(entry);
     }
 
     functions.sort_by(|a, b| {
@@ -151,6 +121,47 @@ pub fn export_taint_bundle(repo_root: &Path, out_dir: &Path) -> Result<TaintExpo
         total_flows,
         vulnerable_flows,
     })
+}
+
+fn export_one_taint(
+    entry: &AnalysisIndexEntry,
+    storage: &AnalysisStorage,
+    taint_dir: &Path,
+) -> Option<(TaintFunctionEntry, usize, usize)> {
+    let analysis = storage.load_function(entry.function_id).ok()??;
+    let flows = analysis.taint.as_ref().filter(|f| !f.is_empty())?;
+    let pdg = analysis.pdg.as_ref();
+    let flow_views: Vec<TaintFlowView> = flows
+        .iter()
+        .enumerate()
+        .map(|(id, flow)| export_flow(id, flow, pdg))
+        .collect();
+    let vuln = flow_views.iter().filter(|f| f.vulnerable).count();
+    let flow_count = flow_views.len();
+    let bundle = TaintBundlePayload {
+        schema_version: 1,
+        function_id: analysis.function_id.to_string(),
+        name: analysis.function_name.clone(),
+        file_path: Some(analysis.file_path.clone()),
+        flows: flow_views,
+    };
+    write_json_compact(
+        &taint_dir.join(format!("{}.json", analysis.function_id)),
+        &bundle,
+    )
+    .ok()?;
+
+    Some((
+        TaintFunctionEntry {
+            function_id: analysis.function_id.to_string(),
+            name: analysis.function_name,
+            file_path: Some(analysis.file_path),
+            flow_count,
+            vulnerable_count: vuln,
+        },
+        flow_count,
+        vuln,
+    ))
 }
 
 fn export_flow(id: usize, flow: &TaintFlow, pdg: Option<&ProgramDependenceGraph>) -> TaintFlowView {

@@ -1,6 +1,9 @@
 //! Dataflow index for dashboard Phase 7 (PDG bundles live under `slice/`).
+//!
+//! Counts come from the streamed CFG/slice pass — this writer does not re-parse
+//! per-function PDG JSON.
 
-use crate::slice_export::{SLICE_DETAIL_DIR, SliceExportSummary};
+use crate::slice_export::SLICE_DETAIL_DIR;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -33,11 +36,12 @@ pub struct DataflowExportSummary {
     pub function_count: usize,
 }
 
+/// Write `dataflow_index.json` from rows collected during CFG/slice export.
 pub fn export_dataflow_index(
-    slice: &SliceExportSummary,
+    mut functions: Vec<DataflowFunctionEntry>,
     out_dir: &Path,
 ) -> Result<DataflowExportSummary, String> {
-    if !slice.available {
+    if functions.is_empty() {
         let index = DataflowIndexPayload {
             schema_version: 1,
             available: false,
@@ -49,71 +53,66 @@ pub fn export_dataflow_index(
         return Ok(DataflowExportSummary::default());
     }
 
-    let slice_index: crate::slice_export::SliceIndexPayload = serde_json::from_slice(
-        &fs::read(out_dir.join(crate::slice_export::SLICE_INDEX_FILE))
-            .map_err(|e| e.to_string())?,
-    )
-    .map_err(|e| e.to_string())?;
-
-    let cfg_index: Option<crate::cfg_export::CfgIndexPayload> =
-        fs::read(out_dir.join(crate::cfg_export::CFG_INDEX_FILE))
-            .ok()
-            .and_then(|bytes| serde_json::from_slice(&bytes).ok());
-    let block_counts: std::collections::HashMap<String, usize> = cfg_index
-        .map(|idx| {
-            idx.functions
-                .into_iter()
-                .map(|f| (f.function_id, f.block_count))
-                .collect()
-        })
-        .unwrap_or_default();
-
-    let mut functions = Vec::with_capacity(slice_index.functions.len());
-    for entry in &slice_index.functions {
-        let bundle_path = out_dir
-            .join(SLICE_DETAIL_DIR)
-            .join(format!("{}.json", entry.function_id));
-        let data_edges = if bundle_path.is_file() {
-            let bundle: serde_json::Value =
-                serde_json::from_slice(&fs::read(&bundle_path).map_err(|e| e.to_string())?)
-                    .map_err(|e| e.to_string())?;
-            bundle["pdg"]["edges"]
-                .as_array()
-                .map(|a| {
-                    a.iter()
-                        .filter(|e| e["kind"].as_str() == Some("data"))
-                        .count()
-                })
-                .unwrap_or(0)
-        } else {
-            0
-        };
-        functions.push(DataflowFunctionEntry {
-            function_id: entry.function_id.clone(),
-            name: entry.name.clone(),
-            file_path: entry.file_path.clone(),
-            pdg_nodes: entry.pdg_nodes,
-            data_edges,
-            block_count: block_counts.get(&entry.function_id).copied().unwrap_or(0),
-        });
-    }
-
+    functions.sort_by(|a, b| a.name.cmp(&b.name));
+    let function_count = functions.len();
     let index = DataflowIndexPayload {
         schema_version: 1,
         available: true,
         detail_dir: SLICE_DETAIL_DIR.into(),
-        function_count: functions.len(),
+        function_count,
         functions,
     };
     write_json(&out_dir.join(DATAFLOW_INDEX_FILE), &index)?;
 
     Ok(DataflowExportSummary {
         available: true,
-        function_count: index.function_count,
+        function_count,
     })
 }
 
 fn write_json(path: &Path, value: &impl Serialize) -> Result<(), String> {
     let json = serde_json::to_string_pretty(value).map_err(|e| e.to_string())?;
     fs::write(path, json).map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn empty_functions_writes_unavailable_index() {
+        let tmp = TempDir::new().unwrap();
+        let summary = export_dataflow_index(Vec::new(), tmp.path()).unwrap();
+        assert!(!summary.available);
+        let payload: DataflowIndexPayload =
+            serde_json::from_slice(&fs::read(tmp.path().join(DATAFLOW_INDEX_FILE)).unwrap())
+                .unwrap();
+        assert!(!payload.available);
+        assert!(payload.functions.is_empty());
+    }
+
+    #[test]
+    fn writes_streamed_rows_without_slice_files() {
+        let tmp = TempDir::new().unwrap();
+        let summary = export_dataflow_index(
+            vec![DataflowFunctionEntry {
+                function_id: "abc".into(),
+                name: "checkout".into(),
+                file_path: Some("Cart.java".into()),
+                pdg_nodes: 4,
+                data_edges: 2,
+                block_count: 3,
+            }],
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(summary.available);
+        assert_eq!(summary.function_count, 1);
+        let payload: DataflowIndexPayload =
+            serde_json::from_slice(&fs::read(tmp.path().join(DATAFLOW_INDEX_FILE)).unwrap())
+                .unwrap();
+        assert_eq!(payload.functions[0].data_edges, 2);
+        assert_eq!(payload.functions[0].block_count, 3);
+    }
 }

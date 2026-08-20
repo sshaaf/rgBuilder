@@ -6,6 +6,7 @@ use crate::cfg_export::{
     write_empty_cfg_index,
 };
 use crate::cfg_record_pack::{CFG_RECORD_DATA_FILE, CFG_RECORD_INDEX_FILE, CfgRecordPackWriter};
+use crate::dataflow_export::DataflowFunctionEntry;
 use crate::export_util::{link_or_copy, write_json_compact};
 use crate::function_meta::{function_meta_map, resolve_function_meta};
 use crate::slice_export::{
@@ -26,12 +27,14 @@ use uuid::Uuid;
 pub struct StreamedAnalysisExport {
     pub slice: SliceExportSummary,
     pub cfg: CfgExportSummary,
+    pub dataflow: Vec<DataflowFunctionEntry>,
 }
 
 struct ExportWork {
     slice_entry: SliceFunctionEntry,
     cfg_entry: CfgFunctionEntry,
     cfg_detail: Option<CfgDetailPayload>,
+    dataflow_entry: DataflowFunctionEntry,
 }
 
 /// Export slice + CFG indexes and details by loading one function analysis at a time.
@@ -50,6 +53,7 @@ pub fn export_cfg_slice_from_storage(
         return Ok(StreamedAnalysisExport {
             slice: SliceExportSummary::default(),
             cfg: CfgExportSummary::default(),
+            dataflow: Vec::new(),
         });
     }
 
@@ -93,15 +97,17 @@ pub fn export_cfg_slice_from_storage(
 
     let mut slice_functions = Vec::new();
     let mut cfg_functions = Vec::new();
+    let mut dataflow = Vec::new();
     let mut cfg_pack_details: Vec<(Uuid, CfgDetailPayload)> = Vec::new();
     for work in works.into_iter().flatten() {
-        if let Some(detail) = work.cfg_detail {
-            if let Ok(id) = Uuid::parse_str(&detail.function_id) {
-                cfg_pack_details.push((id, detail));
-            }
+        if let Some(detail) = work.cfg_detail
+            && let Ok(id) = Uuid::parse_str(&detail.function_id)
+        {
+            cfg_pack_details.push((id, detail));
         }
         slice_functions.push(work.slice_entry);
         cfg_functions.push(work.cfg_entry);
+        dataflow.push(work.dataflow_entry);
     }
 
     let record_pack_written = if !write_cfg_details && !cfg_pack_details.is_empty() {
@@ -187,6 +193,7 @@ pub fn export_cfg_slice_from_storage(
             function_count: slice_functions.len(),
             archive_copied,
         },
+        dataflow,
     })
 }
 
@@ -229,8 +236,7 @@ fn export_one(
     );
 
     let (source_id, total_lines, start_line, end_line) = if let Some(ref path) = file_path {
-        let mut cache = source_cache.lock().ok()?;
-        if let Some(src) = ensure_source_file(out_dir, path, &mut cache) {
+        if let Some(src) = ensure_source_file(out_dir, path, source_cache) {
             let (start, end) = function_line_span(cfg);
             (Some(src.source_id), src.total_lines, Some(start), Some(end))
         } else {
@@ -241,6 +247,7 @@ fn export_one(
     };
 
     let pdg_export = export_pdg(pdg, cfg);
+    let data_edges = pdg_export.edges.iter().filter(|e| e.kind == "data").count();
     let bundle = SliceBundlePayload {
         schema_version: 2,
         function_id: entry.function_id.to_string(),
@@ -268,25 +275,36 @@ fn export_one(
         .ok()?;
     }
 
+    let function_id = entry.function_id.to_string();
+    let pdg_nodes = pdg_export.nodes.len();
+    let block_count = cfg.blocks.len();
     Some(ExportWork {
         slice_entry: SliceFunctionEntry {
-            function_id: entry.function_id.to_string(),
+            function_id: function_id.clone(),
             name: name.clone(),
-            file_path,
+            file_path: file_path.clone(),
             source_lines: total_lines,
-            pdg_nodes: pdg_export.nodes.len(),
+            pdg_nodes,
         },
         cfg_entry: CfgFunctionEntry {
-            function_id: entry.function_id.to_string(),
-            name,
-            file_path: bundle.file_path,
-            block_count: cfg.blocks.len(),
+            function_id: function_id.clone(),
+            name: name.clone(),
+            file_path: file_path.clone(),
+            block_count,
             cfg_edge_count: cfg.edges.len(),
         },
         cfg_detail: if write_cfg_details {
             None
         } else {
             Some(cfg_detail)
+        },
+        dataflow_entry: DataflowFunctionEntry {
+            function_id,
+            name,
+            file_path,
+            pdg_nodes,
+            data_edges,
+            block_count,
         },
     })
 }
@@ -363,6 +381,8 @@ mod tests {
         assert!(result.slice.available);
         assert_eq!(result.slice.function_count, 1);
         assert!(result.cfg.available);
+        assert_eq!(result.dataflow.len(), 1);
+        assert_eq!(result.dataflow[0].function_id, id.to_string());
         assert!(out.join("slice").join(format!("{id}.json")).is_file());
         assert!(out.join("slice_index.json").is_file());
         assert!(out.join("cfg_index.json").is_file());
