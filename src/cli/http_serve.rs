@@ -1,4 +1,4 @@
-//! HTTP server for the analysis dashboard and GQL query API (`rg-build serve`).
+//! HTTP server for the rg Universe UI and GQL query API (`rg-build serve`).
 
 use super::context::CliContext;
 use super::gql_output::gql_result_to_json;
@@ -92,23 +92,23 @@ fn default_true() -> bool {
     true
 }
 
-/// Start the HTTP server (dashboard static files + `/api/query` and `/graphql`).
+/// Start the HTTP server (universe static files + `/api/query` and `/graphql`).
 pub fn serve(ctx: &CliContext, args: HttpServeArgs) -> Result<()> {
     if args.query_only && args.dashboard_only {
-        bail!("--query-only and --dashboard-only cannot be used together");
+        bail!("--query-only and --ui-only cannot be used together");
     }
 
-    let dashboard_dir = args
+    let ui_dir = args
         .dashboard_dir
         .clone()
         .unwrap_or_else(|| resolve_ui_static_dir(&ctx.repo));
 
     if !args.query_only {
-        let index = dashboard_dir.join("index.html");
+        let index = ui_dir.join("index.html");
         if !index.is_file() {
             bail!(
                 "universe UI not found at {} (run `rg-build discover . --with-universe` first)",
-                dashboard_dir.display()
+                ui_dir.display()
             );
         }
     }
@@ -138,7 +138,7 @@ pub fn serve(ctx: &CliContext, args: HttpServeArgs) -> Result<()> {
         .build()
         .context("create tokio runtime")?;
 
-    rt.block_on(run_server(ctx, args, dashboard_dir, state))
+    rt.block_on(run_server(ctx, args, ui_dir, state))
 }
 
 fn load_semantic_index(repo: &Path) -> Option<SemanticIndex> {
@@ -161,7 +161,7 @@ fn load_semantic_index(repo: &Path) -> Option<SemanticIndex> {
 async fn run_server(
     ctx: &CliContext,
     args: HttpServeArgs,
-    dashboard_dir: PathBuf,
+    ui_dir: PathBuf,
     state: Option<Arc<AppState>>,
 ) -> Result<()> {
     let addr: SocketAddr = format!("{}:{}", args.host, args.port)
@@ -182,7 +182,7 @@ async fn run_server(
     }
 
     if !args.query_only {
-        let static_files = ServeDir::new(dashboard_dir).append_index_html_on_directories(true);
+        let static_files = ServeDir::new(ui_dir).append_index_html_on_directories(true);
         app = app.fallback_service(static_files);
     }
 
@@ -199,12 +199,12 @@ async fn run_server(
             eprintln!("[✓] GraphQL alias: http://{bound}/graphql");
             eprintln!("[✓] Semantic API: http://{bound}/api/semantic/query");
         } else if args.dashboard_only {
-            eprintln!("[✓] Dashboard: http://{bound}/");
+            eprintln!("[✓] Universe UI: http://{bound}/");
         } else {
-            eprintln!("[✓] Dashboard: http://{bound}/");
+            eprintln!("[✓] Universe UI: http://{bound}/");
             eprintln!("[✓] Query API: http://{bound}/api/query");
             eprintln!("[✓] GraphQL alias: http://{bound}/graphql");
-            eprintln!("[✓] Semantic search: http://{bound}/ (Search tab)");
+            eprintln!("[✓] Semantic search: http://{bound}/api/semantic/query");
             eprintln!("[✓] Universe actions: POST http://{bound}/api/universe/actions");
         }
         eprintln!("[i] Press Ctrl+C to stop");

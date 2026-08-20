@@ -3,7 +3,7 @@
 C reference fixture for rgBuilder Tier 1 language support.
 
 Layered REST-style ecommerce API (SQLite + service/repository pattern) used by
-`rg-build discover --with-cfg -l c` dashboard gates (add `--with-dashboard` when exercising the UI).
+`rg-build discover --with-cfg -l c` dashboard gates (add `--with-universe` when exercising the UI).
 
 ## Layout
 

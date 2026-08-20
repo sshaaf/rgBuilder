@@ -33,7 +33,7 @@ flowchart TB
     IDX --> ANA
   end
 
-  subgraph export["Dashboard export"]
+  subgraph export["Universe export"]
     MG[migration_graph.json]
     MP[migration_plan.json]
     FM[function_metrics.json]
@@ -215,7 +215,7 @@ Dashboard: **Roadmap sort** dropdown in Metrics & tuning.
 
 ### 6.1 `migration_graph.json` (schema v2)
 
-Written to `.rgbuilder/dashboard/migration_graph.json` on `discover --with-dashboard`.
+Written to `.rgbuilder/universe/migration_graph.json` on `discover --with-universe`.
 
 ```json
 {
@@ -244,7 +244,7 @@ Note: field name `communities` is historical — entries are **macro packages**.
 
 ### 6.2 `migration_plan.json` (schema v2)
 
-Default export on `discover --with-dashboard` uses `hybrid_default` + `scheduled`. CLI can override.
+Default export on `discover --with-universe` uses `hybrid_default` + `scheduled`. CLI can override.
 
 ```json
 {
@@ -366,8 +366,8 @@ Top → bottom:
 ## 9. CLI usage
 
 ```bash
-# Full analysis + dashboard bundle (includes migration_graph.json + default plan)
-rg-build discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints
+# Full analysis + universe bundle (includes migration_graph.json + default plan)
+rg-build discover . --with-cfg --with-security --with-taint --with-universe --with-harmonic --export-migration-hints
 
 # Export plan to file (harmonic required for β term in ranking)
 rg-build discover . --with-harmonic --export-migration-hints \
@@ -378,7 +378,7 @@ rg-build discover . --with-harmonic --export-migration-hints \
 # JSON to stdout (with discover JSON envelope)
 rg-build discover . --with-harmonic --export-migration-hints -f json
 
-# Serve dashboard (requires prior --with-dashboard discover)
+# Serve universe (requires prior --with-universe discover)
 rg-build serve -r /path/to/repo --open
 ```
 
@@ -387,7 +387,7 @@ Flags:
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--with-harmonic` | off | Compute harmonic centrality (needed for migration β / dense_cluster) |
-| `--with-dashboard` | off | Write `.rgbuilder/dashboard/` bundle |
+| `--with-universe` | off | Write `.rgbuilder/universe/` bundle |
 | `--export-migration-hints` | off | Write plan JSON (alias: `--export-migration-hints`) |
 | `--migration-preset` | `hybrid_default` | Strategy preset |
 | `--migration-order` | `scheduled` | `scheduled` or `priority` |
@@ -424,7 +424,7 @@ After dashboard UI changes:
 ```bash
 cd dashboard && npm run build
 cargo build --release   # embeds dashboard/dist
-rg-build discover . --with-cfg --with-security --with-taint   # refresh .rgbuilder/dashboard static JSON
+rg-build discover . --with-cfg --with-security --with-taint   # refresh .rgbuilder/universe static JSON
 ```
 
 ---

@@ -176,7 +176,7 @@ Currently hard-coded via `DEFAULT_*` and `LARGE_GRAPH_*` constants.
 >
 > **Note (Jul 2026 / #29 + #31):** default `discover` skips HyperBall harmonic and dashboard export.
 > Expected cold wall ≈ **~130–155s** without field materialization.
-> Use `--with-harmonic` / `--with-dashboard` / `--with-cfg` to restore those stages.
+> Use `--with-harmonic` / `--with-universe` / `--with-cfg` to restore those stages.
 
 #### Cold profile gates
 
@@ -243,7 +243,7 @@ High RSS is **duplicate graph residency** (backend + prepared clone + petgraph v
 | CSR from mmap without `edge_topology_typed()` `Vec` | **done** (`CodeGraphCsr::from_store_topology`) |
 | Layer F field `Variable` nodes gated on `--with-cfg` | **done** (default discover skips field materialization) |
 | Cold profile gates (linux / metasfresh / kafka) | **done** (`tests/cold_profile_gates.rs`) |
-| ColdMetadataDb (mmap) opened after early snapshot; **drop `CodeGraph` before community/centrality/blast** | **done** (hydrate only for `--with-dashboard` / migration / JSON) |
+| ColdMetadataDb (mmap) opened after early snapshot; **drop `CodeGraph` before community/centrality/blast** | **done** (hydrate only for `--with-universe` / migration / JSON) |
 | **Lever 1: discover ingest skips `MemoryBackend`** — `write_columnar_from_nodes_edges` | **done** |
 | **Lever 1.5: segmented disk spill** — `SegmentedSpill` + external sort + `write_columnar_from_spill`; `GraphBuilder::with_spill` | **done** (resolution HashMaps still in RAM) |
 | **Delta-merge / GraphCompactor** — stream-filter base mmap + delta extract; indexes rebuilt in Pass 1/compile; atomic rename | **done** (`graph_compactor`; wired into `IncrementalUpdater`) |

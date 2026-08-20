@@ -79,7 +79,7 @@ export default function InstallPage() {
         />
         <p className="text-sm text-[var(--mute)]">
           Dashboard and migration JSON are opt-in: add{" "}
-          <code className="font-mono">--with-dashboard</code> /{" "}
+          <code className="font-mono">--with-universe</code> /{" "}
           <code className="font-mono">--export-migration-hints</code>.
         </p>
       </section>

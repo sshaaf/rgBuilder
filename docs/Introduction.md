@@ -44,7 +44,7 @@ You do not need graph theory to use the CLI: **indexing builds the map; commands
 1. **Once** (or after large changes): `discover`.  
 2. **Many times:** query commands against `.rgbuilder/`.  
 3. **Agents:** always prefer `-f json` ([AGENTS.md](../AGENTS.md)).  
-4. **Dashboard:** optional visual UI after `--with-dashboard` — not required for structural answers.
+4. **Dashboard:** optional visual UI after `--with-universe` — not required for structural answers.
 
 Capability designs for contributors: [design/](design/README.md).
 

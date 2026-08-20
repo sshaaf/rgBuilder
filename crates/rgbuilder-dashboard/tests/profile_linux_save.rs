@@ -1,14 +1,14 @@
-//! Manual profile: dashboard export on example/linux (requires prior discover).
+//! Manual profile: universe export on example/linux (requires prior discover).
 
 use rgbuilder_dashboard::DashboardExportContext;
-use rgbuilder_dashboard::export_dashboard_bundle_with_context;
+use rgbuilder_dashboard::export_universe_bundle_with_context;
 use rgbuilder_graph::snapshot::MmappedGraphSnapshot;
 use std::path::Path;
 use std::time::Instant;
 
 #[test]
-#[ignore = "manual: profile save_dashboard on example/linux artifact"]
-fn profile_linux_dashboard_export() {
+#[ignore = "manual: profile save_universe on example/linux artifact"]
+fn profile_linux_universe_export() {
     let _ = tracing_subscriber::fmt()
         .with_env_filter("profile=info")
         .try_init();
@@ -27,23 +27,23 @@ fn profile_linux_dashboard_export() {
         target: "profile",
         secs = hydrate_start.elapsed().as_secs_f64(),
         nodes = backend.node_count(),
-        "[profile] hydrate_backend for dashboard export"
+        "[profile] hydrate_backend for universe export"
     );
 
-    let dashboard = root.join(".rgbuilder/dashboard");
-    if dashboard.exists() {
-        std::fs::remove_dir_all(&dashboard).expect("remove dashboard");
+    let universe = root.join(".rgbuilder/universe");
+    if universe.exists() {
+        std::fs::remove_dir_all(&universe).expect("remove universe");
     }
 
     let analysis_path = root.join(".rgbuilder/analysis_results.bin");
     let analysis =
         rgbuilder_analysis::AnalysisResults::load(&analysis_path).expect("load analysis");
 
-    export_dashboard_bundle_with_context(
+    export_universe_bundle_with_context(
         &backend,
         &root,
         &snapshot_path,
         DashboardExportContext::with_analysis(&analysis),
     )
-    .expect("export dashboard");
+    .expect("export universe");
 }

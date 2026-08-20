@@ -1,9 +1,10 @@
-//! Extract embedded Vite build output into `.rgbuilder/dashboard/`.
+//! Extract embedded Vite build output into `.rgbuilder/universe/`.
 
 use include_dir::{Dir, include_dir};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+#[allow(dead_code)]
 static DASHBOARD_DIST: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../../dashboard/dist");
 static UNIVERSE_DIST: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../../dashboard/dist-universe");
 
@@ -11,6 +12,7 @@ static UNIVERSE_DIST: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../../dashboar
 pub const DASHBOARD_DIR_NAME: &str = "dashboard";
 pub const UNIVERSE_DIR_NAME: &str = "universe";
 
+#[allow(dead_code)]
 fn workspace_dist_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../dashboard/dist")
 }
@@ -19,20 +21,18 @@ fn workspace_universe_dist_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../dashboard/dist-universe")
 }
 
-/// True when a usable dashboard build exists (disk tree in dev, or full embed for release).
+/// True when a usable universe build exists (legacy alias).
 pub fn dist_embedded() -> bool {
-    let disk = workspace_dist_dir();
-    if disk.join("index.html").is_file() && disk.join("assets").is_dir() {
-        return true;
-    }
-    embedded_file_count() > 1
+    universe_dist_embedded()
 }
 
+#[allow(dead_code)]
 fn embedded_file_count() -> usize {
     DASHBOARD_DIST.files().count()
 }
 
-/// Write all files from embedded `dashboard/dist` into `out_dir`.
+/// Legacy dashboard dist extract (retained for shared WASM build pipeline).
+#[allow(dead_code)]
 pub fn extract_static_assets(out_dir: &Path) -> Result<(), String> {
     fs::create_dir_all(out_dir).map_err(|e| e.to_string())?;
 
@@ -101,7 +101,7 @@ pub fn inject_manifest_bootstrap(out_dir: &Path, manifest_json: &str) -> Result<
 }
 
 pub fn default_dashboard_path(repo_root: &Path) -> PathBuf {
-    repo_root.join(".rgbuilder").join(DASHBOARD_DIR_NAME)
+    default_universe_path(repo_root)
 }
 
 pub fn default_universe_path(repo_root: &Path) -> PathBuf {

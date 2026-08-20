@@ -155,7 +155,7 @@ rg-build semantic index --embedder vocab --diffuse
 | Path | Content |
 |------|---------|
 | `.rgbuilder/semantic_index.bin` | Quantized embeddings + metadata (schema v2) |
-| `.rgbuilder/dashboard/manifest.json` | `semantic` section when index present |
+| `.rgbuilder/universe/manifest.json` | `semantic` section when index present |
 
 ---
 

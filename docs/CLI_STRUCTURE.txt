@@ -24,7 +24,7 @@ Active Commands:
 │   ├── --with-dfg-loops            Tag loop-carried DFG edges (with --with-cfg)
 │   ├── --with-ast-skeleton         AST skeleton archive for `cpg ast`
 │   ├── --with-harmonic             Harmonic centrality
-│   ├── --with-dashboard            Static dashboard bundle (off by default)
+│   ├── --with-universe            Static universe bundle (off by default)
 │   ├── --export-migration-hints    Migration roadmap JSON
 │   ├── --migration-preset          Preset for migration hints
 │   ├── --migration-order           scheduled|priority

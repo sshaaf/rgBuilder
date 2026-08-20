@@ -53,7 +53,7 @@ Internals and contribution bars — not the default agent reading path.
 | Tier 1 languages | Nine always-linked plugins (see [languages.md](languages.md)) |
 | `--with-cfg` | CFG/PDG archive (prefer over legacy `--cfg`) |
 | Communities | Label propagation (Raghavan 2007); `louvain_community_id` is historical |
-| Dashboard / migration JSON | Opt-in (`--with-dashboard` / `--export-migration-hints`) |
+| Dashboard / migration JSON | Opt-in (`--with-universe` / `--export-migration-hints`) |
 | First-hour fixture | In-tree **ecommerce-java** |
 
 ## Redirects

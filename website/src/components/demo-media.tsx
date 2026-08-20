@@ -21,7 +21,7 @@ const assets = {
     mp4: "/demos/feature-demo.mp4",
     gif: null as string | null,
     label: "Dashboard tour",
-    blurb: "Tab montage over ecommerce-java after discover --with-dashboard.",
+    blurb: "3D cosmos montage over ecommerce-java after discover --with-universe.",
     alt: "rgBuilder dashboard feature demo across main tabs",
   },
 } as const;

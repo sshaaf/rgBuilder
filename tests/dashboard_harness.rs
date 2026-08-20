@@ -131,7 +131,7 @@ pub fn run_discover(repo: &Path, languages: &str) -> Output {
     run_discover_with_flags(repo, Some(languages), false)
 }
 
-/// Run discover with CFG + security + taint + dashboard (former `--all` depth + dashboard).
+/// Run discover with CFG + security + taint + universe export (former `--all` depth).
 pub fn run_discover_all(repo: &Path, languages: Option<&str>) -> Output {
     run_discover_with_flags(repo, languages, true)
 }
@@ -506,7 +506,7 @@ pub fn assert_dashboard_bundle_with_meta(repo: &Path, min_nodes: u64, min_metano
 pub fn assert_dashboard_bundle_all_analysis(repo: &Path, min_nodes: u64, min_metanodes: u64) {
     assert_dashboard_bundle_with_meta(repo, min_nodes, min_metanodes);
 
-    let dash = repo.join(".rgbuilder/dashboard");
+    let dash = repo.join(".rgbuilder/universe");
     let manifest: Value =
         serde_json::from_slice(&std::fs::read(dash.join("manifest.json")).unwrap()).unwrap();
     let analysis = &manifest["analysis"];
@@ -529,7 +529,7 @@ pub fn assert_dashboard_bundle_all_analysis(repo: &Path, min_nodes: u64, min_met
 
     assert!(
         dash.join("cfg_pdg.archive.bin").is_file(),
-        "cfg_pdg.archive.bin expected in dashboard bundle after discover --with-cfg --with-security --with-taint"
+        "cfg_pdg.archive.bin expected in universe bundle after discover --with-cfg --with-security --with-taint"
     );
 
     let cfg_index: Value =

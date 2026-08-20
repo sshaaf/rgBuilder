@@ -23,9 +23,9 @@ export const demos: DemoScenario[] = [
     title: "Migration plan",
     prompt: "Generate a complete migration plan to help us modernize this repository.",
     commands: [
-      "discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints",
+      "discover . --with-cfg --with-security --with-taint --with-universe --with-harmonic --export-migration-hints",
     ],
-    note: "Plan is written to .rgbuilder/migration_plan.json (opt-in flags). Dashboard needs --with-dashboard.",
+    note: "Plan is written to .rgbuilder/migration_plan.json (opt-in flags). Dashboard needs --with-universe.",
     output: `{
   "schema_version": 2,
   "preset": "hybrid_default",

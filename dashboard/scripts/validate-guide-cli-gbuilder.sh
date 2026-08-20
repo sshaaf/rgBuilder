@@ -118,9 +118,9 @@ run "gql Endpoint pattern (gbuilder: *main*)" \
   "$RB" -r "$REPO" gql "MATCH (n:Function) WHERE n.name LIKE '*main*' RETURN n LIMIT 10"
 
 echo "[migration]"
-if [[ -f "$REPO/.rgbuilder/dashboard/migration_plan.json" ]]; then
+if [[ -f "$REPO/.rgbuilder/universe/migration_plan.json" ]]; then
   run "migration_plan.json readable" \
-    jq '.packages[:1]' "$REPO/.rgbuilder/dashboard/migration_plan.json"
+    jq '.packages[:1]' "$REPO/.rgbuilder/universe/migration_plan.json"
 else
   skip "migration_plan.json" "run discover --all --export-migration-plan first"
 fi

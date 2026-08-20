@@ -63,7 +63,7 @@ export default function DemoPage() {
       </div>
 
       <p className="mt-4 text-sm text-[var(--mute)]">
-        RgBuilder is focused on CLI usecases, however a tech preview dashboard is also available when the discover command runs with --with-dashboard{" "}.
+        RgBuilder is focused on CLI usecases, however a tech preview universe is also available when the discover command runs with --with-universe{" "}.
       </p>
     </div>
   );

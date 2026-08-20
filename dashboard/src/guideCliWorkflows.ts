@@ -22,11 +22,11 @@ export const GUIDE_PREREQUISITES = `export REPO="$PWD"   # repository root after
 rg-build discover .
 
 # Dashboard UI + CFG/PDG (Dataflow, CFG, Slice overlays, CPG mutations)
-rg-build discover . --with-cfg --with-dashboard
+rg-build discover . --with-cfg --with-universe
 
 # Richer pass used by the feature demo / migration tab
 rg-build discover . -l java -e target \\
-  --with-cfg --with-security --with-taint --with-dashboard --with-harmonic \\
+  --with-cfg --with-security --with-taint --with-universe --with-harmonic \\
   --export-migration-hints
 
 # Optional: semantic Search tab (after discover)
@@ -193,7 +193,7 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
     tabLabel: "Dataflow",
     summary:
       "Statement-level PDG / dominator views, plus the Field mutations (CPG) panel for typed writes such as ShoppingCart.",
-    prerequisite: "rg-build discover . --with-cfg --with-dashboard",
+    prerequisite: "rg-build discover . --with-cfg --with-universe",
     blocks: [
       {
         comment: "CPG status + field mutations (Dataflow → Field mutations panel)",
@@ -310,7 +310,7 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
     tabLabel: "Taint analysis",
     summary:
       "Source-to-sink flows and sanitizer checks per function — requires CFG/PDG from discover.",
-    prerequisite: "rg-build discover . --with-cfg --with-taint --with-dashboard",
+    prerequisite: "rg-build discover . --with-cfg --with-taint --with-universe",
     blocks: [
       {
         comment: "On-demand taint at a program point",
@@ -338,13 +338,13 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
     summary:
       "Package-level extraction roadmap from communities, centrality, and blast — export plan JSON for agents or CI.",
     prerequisite:
-      "rg-build discover . --with-cfg --with-dashboard --with-harmonic --export-migration-hints",
+      "rg-build discover . --with-cfg --with-universe --with-harmonic --export-migration-hints",
     blocks: [
       {
         comment: "Default hybrid strategy",
         commands: [
-          'rg-build discover . --with-cfg --with-dashboard --with-harmonic --export-migration-hints',
-          'jq ".packages[:5]" .rgbuilder/dashboard/migration_plan.json',
+          'rg-build discover . --with-cfg --with-universe --with-harmonic --export-migration-hints',
+          'jq ".packages[:5]" .rgbuilder/universe/migration_plan.json',
         ],
       },
       {
@@ -360,7 +360,7 @@ export const CLI_WORKFLOWS: CliWorkflowSection[] = [
       },
     ],
     notes: [
-      "There is no `discover --all` — compose `--with-cfg`, `--with-taint`, `--with-dashboard`, `--with-harmonic`, etc.",
+      "There is no `discover --all` — compose `--with-cfg`, `--with-taint`, `--with-universe`, `--with-harmonic`, etc.",
       "`--export-migration-plan` remains a deprecated alias of `--export-migration-hints`.",
       "Interactive weight tuning is dashboard-only; re-run discover with presets to refresh CLI exports.",
     ],

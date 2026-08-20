@@ -5,7 +5,8 @@ import {
   taintCommunityIds,
 } from "./analysisOverlays";
 import type { MigrationGraphPayload } from "../migration/types";
-import type { SearchLandmark, TaintIndexPayload } from "../types";
+import type { SearchLandmark } from "./types";
+import type { TaintIndexPayload } from "../types";
 
 describe("analysisOverlays", () => {
   it("picks migration hotspots by max_blast", () => {

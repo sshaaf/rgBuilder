@@ -33,7 +33,7 @@ rg-build -r "$REPO" serve --open
 | Flag | Effect |
 |------|--------|
 | `--host`, `--port` | Bind address (default `127.0.0.1:8080`) |
-| `--dashboard-dir DIR` | Override `.rgbuilder/dashboard` |
+| `--dashboard-dir DIR` | Override `.rgbuilder/universe` |
 | `--query-only` | API only, no static files |
 | `--dashboard-only` | Dashboard only, no query API |
 | `--daemon` | **Legacy** Unix-socket blast daemon (no HTTP) |
@@ -136,7 +136,7 @@ curl -sS -X POST http://127.0.0.1:8080/api/semantic/query \
 Static hosting (no Rust process after export):
 
 ```bash
-cd .rgbuilder/dashboard && python3 -m http.server 8765
+cd .rgbuilder/universe && python3 -m http.server 8765
 # open http://localhost:8765/
 ```
 

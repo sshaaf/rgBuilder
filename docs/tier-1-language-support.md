@@ -4,7 +4,7 @@ This document defines what **fully supported** means for a programming language 
 
 **Audience:** contributors adding a new Tier 1 language or bringing a language to parity with the current bar (Java-shaped Layer F + Layers A–E).
 
-**Related docs:** [Code_structure.md](Code_structure.md) (crate layout), [dashboard-design.md](dashboard-design.md) (dashboard bundle), [user-guide.md](user-guide.md) (discover / serve), [hybrid-cpg-plan.md](design/hybrid-cpg-plan.md) (CPG).
+**Related docs:** [Code_structure.md](Code_structure.md) (crate layout), [dashboard-design.md](dashboard-design.md) (universe bundle), [user-guide.md](user-guide.md) (discover / serve), [hybrid-cpg-plan.md](design/hybrid-cpg-plan.md) (CPG).
 
 ---
 
@@ -73,7 +73,7 @@ A language is **fully supported** when all rows are ✅ and backed by automated 
 
 | # | Requirement | Where |
 |---|-------------|--------|
-| D1 | `discover --with-cfg --with-security --with-taint` writes `.rgbuilder/dashboard/` with CFG index populated | `cfg_index.json` `available: true` |
+| D1 | `discover --with-cfg --with-security --with-taint` writes `.rgbuilder/universe/` with CFG index populated | `cfg_index.json` `available: true` |
 | D2 | Per-function CFG + dominance render in dashboard | Manual smoke or Playwright |
 | D3 | Dataflow / taint tabs show data when flows exist | PDG + taint archive export |
 | D4 | Blast radius lists functions with non-zero scores when call graph exists | `manifest.json` `calls_count` > 0 |

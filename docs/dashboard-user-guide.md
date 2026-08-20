@@ -14,9 +14,9 @@ Interactive browser UI for exploring a repository after `discover`. This guide i
 
 ```bash
 cd /path/to/your/repo
-rg-build discover . --with-dashboard          # graph + dashboard bundle
+rg-build discover . --with-universe          # graph + universe bundle
 # or
-rg-build discover . --with-cfg --with-security --with-taint --with-dashboard    # CFG, PDG, taint + dashboard
+rg-build discover . --with-cfg --with-security --with-taint --with-universe    # CFG, PDG, taint + dashboard
 ```
 
 2. Open the dashboard over **HTTP** (required for WASM):
@@ -26,7 +26,7 @@ rg-build discover . --with-cfg --with-security --with-taint --with-dashboard    
 rg-build serve --open
 
 # Option B — static files only
-cd .rgbuilder/dashboard && python3 -m http.server 8765
+cd .rgbuilder/universe && python3 -m http.server 8765
 # open http://localhost:8765/
 ```
 
@@ -83,7 +83,7 @@ Screenshot placeholders (capture with `dashboard/scripts/capture-migration-scree
 ### Dataflow
 
 - PDG visualization and statement list; dominator tree mode.
-- **Field mutations (CPG):** type filter (e.g. `ShoppingCart`), exclude constructors, click a hit to open that function and highlight the write line. Backed by `mutations_index.json` from `field_write.index.bin` (`discover --with-cfg --with-dashboard`).
+- **Field mutations (CPG):** type filter (e.g. `ShoppingCart`), exclude constructors, click a hit to open that function and highlight the write line. Backed by `mutations_index.json` from `field_write.index.bin` (`discover --with-cfg --with-universe`).
 - **CLI:** `inspect <symbol> pdg`, `cpg mutations --type ShoppingCart --exclude-ctors`, `slice ... --view pdg`
 
 ### Slice
@@ -106,9 +106,9 @@ Screenshot placeholders (capture with `dashboard/scripts/capture-migration-scree
 ### Migration
 
 - Tune α/β/γ weights and presets; package graph + ordered table.
-- Requires `discover --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints`.
+- Requires `discover --with-cfg --with-security --with-taint --with-universe --with-harmonic --export-migration-hints`.
 - Screenshots: [design/README.md](design/README.md) (figures under `docs/images/design/`).
-- **CLI:** `discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints`
+- **CLI:** `discover . --with-cfg --with-security --with-taint --with-universe --with-harmonic --export-migration-hints`
 
 ### Query Guide
 
@@ -132,11 +132,11 @@ Screenshot placeholders (capture with `dashboard/scripts/capture-migration-scree
 
 | Problem | Fix |
 |---------|-----|
-| “Graph not found” / empty stats | Run `rg-build discover . --with-dashboard` in repo root |
-| WASM engine error in notifications | Rebuild dashboard (`npm run build` in `dashboard/`) and re-run `discover --with-dashboard` |
-| Stale data after git pull | Re-run `discover` (with `--with-dashboard` if using UI) |
+| “Graph not found” / empty stats | Run `rg-build discover . --with-universe` in repo root |
+| WASM engine error in notifications | Rebuild dashboard (`npm run build` in `dashboard/`) and re-run `discover --with-universe` |
+| Stale data after git pull | Re-run `discover` (with `--with-universe` if using UI) |
 | Semantic search empty / warning | `rg-build semantic index` then `rg-build serve --open` |
-| Migration tab empty | `rg-build discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints` |
+| Migration tab empty | `rg-build discover . --with-cfg --with-security --with-taint --with-universe --with-harmonic --export-migration-hints` |
 
 ---
 

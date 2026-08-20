@@ -132,7 +132,7 @@ export const TAB_DOCS: Record<TabId, TabDocContent> = {
       "JSON (-f json) examples for automation",
     ],
     usage: [
-      "Start with Prerequisites (prefer discover --with-cfg --with-dashboard; there is no --all).",
+      "Start with Prerequisites (prefer discover --with-cfg --with-universe; there is no --all).",
       "Open the section for the dashboard tab you are replacing.",
       "Substitute your symbol names and file paths from GQL or the Functions table.",
       "Add -f json and pipe to jq for scripts and CI gates.",

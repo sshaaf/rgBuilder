@@ -10,7 +10,7 @@ mod dashboard_harness;
 use dashboard_harness::{
     assert_dashboard_bundle_all_analysis, ecommerce_rust_repo_path, run_discover_all,
 };
-use rgbuilder_dashboard::dist_embedded;
+use rgbuilder_dashboard::universe_dist_embedded;
 
 const RUST_MIN_NODES: u64 = 40;
 const RUST_MIN_FUNCTIONS: u64 = 20;
@@ -18,9 +18,9 @@ const RUST_MIN_METANODES: u64 = 1;
 
 #[test]
 fn discover_all_writes_rust_cfg_dashboard_bundle() {
-    if !dist_embedded() {
+    if !universe_dist_embedded() {
         panic!(
-            "dashboard/dist not embedded — run ./scripts/build-dashboard.sh && cargo build --release"
+            "dashboard/dist-universe not embedded — run cd dashboard && npm run build:universe && cargo build --release"
         );
     }
 
@@ -44,7 +44,7 @@ fn discover_all_writes_rust_cfg_dashboard_bundle() {
     assert_dashboard_bundle_all_analysis(&repo, RUST_MIN_NODES, RUST_MIN_METANODES);
 
     let manifest: serde_json::Value = serde_json::from_slice(
-        &std::fs::read(repo.join(".rgbuilder/dashboard/manifest.json")).unwrap(),
+        &std::fs::read(repo.join(".rgbuilder/universe/manifest.json")).unwrap(),
     )
     .unwrap();
     let functions = manifest["metrics"]["function_count"].as_u64().unwrap_or(0);
@@ -54,7 +54,7 @@ fn discover_all_writes_rust_cfg_dashboard_bundle() {
     );
 
     let cfg_index: serde_json::Value = serde_json::from_slice(
-        &std::fs::read(repo.join(".rgbuilder/dashboard/cfg_index.json")).unwrap(),
+        &std::fs::read(repo.join(".rgbuilder/universe/cfg_index.json")).unwrap(),
     )
     .unwrap();
     assert_eq!(cfg_index["available"], true);

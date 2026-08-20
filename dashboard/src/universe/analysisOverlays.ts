@@ -1,6 +1,7 @@
 import { bundleDataUrl } from "../bundleUrl";
 import type { MigrationGraphPayload } from "../migration/types";
-import type { SearchLandmark, TaintIndexPayload } from "../types";
+import type { SearchLandmark } from "./types";
+import type { TaintIndexPayload } from "../types";
 
 export async function loadMigrationGraph(): Promise<MigrationGraphPayload | null> {
   const res = await fetch(bundleDataUrl("migration_graph.json"));

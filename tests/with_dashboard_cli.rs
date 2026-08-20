@@ -1,4 +1,5 @@
-//! CLI coverage for discover `--with-universe` / `--export-migration-hints` (#31).
+//! CLI coverage for discover `--with-universe` / removed `--with-dashboard` (#31).
+//! File name kept for stable `cargo test --test with_dashboard_cli` invocations.
 
 mod dashboard_harness;
 

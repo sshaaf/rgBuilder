@@ -67,7 +67,7 @@ flowchart LR
 | Language lowering | `crates/rgbuilder-lang-*/` CFG hooks |
 | Archive | `crates/rgbuilder-analysis/src/cfg_pdg_archive.rs` |
 | CLI inspect | `src/cli/inspect.rs` |
-| Dashboard export | `crates/rgbuilder-dashboard/src/cfg_export.rs` |
+| Universe export | `crates/rgbuilder-dashboard/src/cfg_export.rs` |
 
 ---
 

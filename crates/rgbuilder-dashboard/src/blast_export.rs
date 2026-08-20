@@ -238,7 +238,7 @@ mod tests {
     #[ignore = "dev: refresh gbuilder blast_index.json"]
     fn refresh_gbuilder_blast_index() {
         let repo = Path::new("/Users/sshaaf/git/java/gbuilder");
-        let out = repo.join(".rgbuilder/dashboard");
+        let out = repo.join(".rgbuilder/universe");
         let snapshot_path = MmappedGraphSnapshot::default_path(repo);
         let uuid_to_index = load_columnar_uuid_indices(&snapshot_path).unwrap();
         let summary = export_blast_bundle(

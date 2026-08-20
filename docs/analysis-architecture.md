@@ -24,7 +24,7 @@ Nodes represent symbols (functions, types, modules). Edges carry `EdgeType` sema
 append-only length-prefixed bincode on disk, externally sorted, then compiled to
 columnar v2 — no full `Vec<Node>`/`Vec<Edge>` or `MemoryBackend` during discover.
 Analysis opens `ColdMetadataDb` + CSR from the mmap; hydrate a `CodeGraph` only for
-`--with-dashboard` / migration / JSON. Share `&PetGraphView` / `StructuralTopology`
+`--with-universe` / migration / JSON. Share `&PetGraphView` / `StructuralTopology`
 across community / centrality / blast, then drop the view after the SCC engine is built.
 
 **Incremental updates:** when `.rgbuilder/graph.snapshot.bin` exists,

@@ -10,7 +10,7 @@ rg-build -f json gql --macro-name all_functions unused | jq '.count'
 rg-build -f json gql --macro-name all_communities unused | jq '.count'
 ```
 
-Read `.rgbuilder/migration_plan.json`. Optional UI: add `--with-dashboard` and `rg-build serve --open` ([dashboard user guide](dashboard-user-guide.md)).
+Read `.rgbuilder/migration_plan.json`. Optional UI: add `--with-universe` and `rg-build serve --open` ([dashboard user guide](dashboard-user-guide.md)).
 
 ## Phase 2 — Hotspots
 
@@ -42,4 +42,4 @@ Write a [policy file](policy-format.md) and run `rg-build -f json check --policy
 | Path | When |
 |------|------|
 | `.rgbuilder/migration_plan.json` | `--export-migration-hints` |
-| `.rgbuilder/dashboard/migration_*.json` | also `--with-dashboard` |
+| `.rgbuilder/universe/migration_*.json` | also `--with-universe` |

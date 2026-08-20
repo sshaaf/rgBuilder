@@ -21,7 +21,7 @@ fi
 
 echo "==> discover + dashboard bundle ($REPO)"
 rg-build -r "$REPO" discover . -l java -e target \
-  --with-cfg --with-security --with-taint --with-dashboard --with-harmonic \
+  --with-cfg --with-security --with-taint --with-universe --with-harmonic \
   --export-migration-hints
 
 echo "==> semantic index (vocab)"

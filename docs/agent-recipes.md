@@ -131,8 +131,8 @@ rg-build -r "$REPO" -f json slice src/.../Controller.java \
 ## Recipe 7 — Migration batch planning
 
 ```bash
-rg-build discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints
-# Prefer root plan from --export-migration-hints; dashboard copy exists when --with-dashboard ran
+rg-build discover . --with-cfg --with-security --with-taint --with-universe --with-harmonic --export-migration-hints
+# Prefer root plan from --export-migration-hints; universe copy exists when --with-universe ran
 jq '.packages[:10]' "$REPO/.rgbuilder/migration_plan.json"
 rg-build serve --open   # Migration tab for interactive tuning
 ```

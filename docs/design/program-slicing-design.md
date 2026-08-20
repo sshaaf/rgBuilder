@@ -32,7 +32,7 @@ flowchart LR
     CFG --> PDG --> ARC
   end
 
-  subgraph export["Dashboard export"]
+  subgraph export["Universe export"]
     SI[slice_index.json]
     SB[slice/*.json]
     ARC --> SI
@@ -69,7 +69,7 @@ flowchart LR
 | PDG + slicing | `crates/rgbuilder-analysis/src/pdg.rs`, `slicing.rs` |
 | CLI | `src/cli/slice.rs` |
 | Archive storage | `crates/rgbuilder-analysis/src/storage.rs` |
-| Dashboard export | `crates/rgbuilder-dashboard/src/slice_export.rs` |
+| Universe export | `crates/rgbuilder-dashboard/src/slice_export.rs` |
 
 ---
 

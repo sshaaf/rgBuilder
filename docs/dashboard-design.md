@@ -15,7 +15,7 @@ Related: [cli-io-sanity-qe.md](cli-io-sanity-qe.md), [Code_structure.md](Code_st
 | Goal | Target |
 |------|--------|
 | Scale | 300k+ nodes (community view); full exploration at smaller sizes |
-| Distribution | Self-contained `.rgbuilder/dashboard/` — no CDN, works offline |
+| Distribution | Self-contained `.rgbuilder/universe/` — no CDN, works offline |
 | Data | Reuse **columnar v2** `graph.snapshot.bin` as `graph_payload.bin` (no third graph format) |
 | Analysis | Rust/WASM worker; UI thread stays at 60 FPS |
 | Legacy | **Delete** monolithic `html.rs` — no parallel stacks |
@@ -39,7 +39,7 @@ crates/rgbuilder-dashboard/      # Rust: export bundle on discover
 crates/rgbuilder-wasm/           # WASM engine (Phase 1+)
   src/lib.rs                    # Columnar v2 header parse, future graph ops
 
-.rgbuilder/dashboard/            # Runtime output (per repo, gitignored)
+.rgbuilder/universe/            # Runtime output (per repo, gitignored)
   index.html
   assets/                       # Hashed JS/CSS from Vite
   manifest.json                 # Counts, paths, phase flags
@@ -70,7 +70,7 @@ crates/rgbuilder-wasm/           # WASM engine (Phase 1+)
 
 ### What it does
 
-1. `discover` writes `.rgbuilder/dashboard/` instead of monolithic `dashboard.html`.
+1. `discover` writes `.rgbuilder/universe/` instead of monolithic `dashboard.html`.
 2. UI: responsive tab bar matching legacy areas (graph, functions, CFG, slice, blast, guide).
 3. Stat cards read **`manifest.json`** (no inline graph JSON).
 4. Static assets bundled at **compile time** via `include_dir` from `dashboard/dist/`.
@@ -89,7 +89,7 @@ rg-build discover .
 # Option A — rg-build HTTP server (dashboard + POST /api/query)
 rg-build serve --open
 # Option B — local static server (WASM fetch; no query API)
-cd .rgbuilder/dashboard && python3 -m http.server 8765
+cd .rgbuilder/universe && python3 -m http.server 8765
 open http://localhost:8080   # or :8765 for Option B
 ```
 
@@ -188,7 +188,7 @@ cargo build --release
 cargo test --release --test dashboard_bundle --test dashboard_gbuilder -- --nocapture
 
 # Preview gbuilder dashboard
-cd /Users/sshaaf/git/java/gbuilder/.rgbuilder/dashboard && python3 -m http.server 8765
+cd /Users/sshaaf/git/java/gbuilder/.rgbuilder/universe && python3 -m http.server 8765
 ```
 
 ### Test targets
@@ -276,13 +276,13 @@ _Update this table when a phase lands._
 | `tests/dashboard_metasfresh.rs` | 8+ | **manual** | metasfresh `discover --with-cfg --with-security --with-taint`; `./scripts/test-dashboard-metasfresh.sh` |
 | Query Guide tab | 9 | **done** | `GuideView.tsx` + `guideCliWorkflows.ts`; validated by `validate-guide-cli-gbuilder.sh` |
 | HTTP `serve` integration | 9 | **done** | `rg-build serve` serves bundle + `/api/query`; see [http-api.md](http-api.md) |
-| Migration tab live weights | 9 | **done** | `MigrationView.tsx` mirrors Rust scoring; exports in `.rgbuilder/dashboard/` |
+| Migration tab live weights | 9 | **done** | `MigrationView.tsx` mirrors Rust scoring; exports in `.rgbuilder/universe/` |
 
 ### Removed (Phase 0)
 
 - `crates/rgbuilder-export/src/html.rs` (~2700 lines)
 - `export_html_dashboard` public API
-- Monolithic `.rgbuilder/dashboard.html` default output
+- Monolithic `.rgbuilder/universe.html` default output
 
 ### Removed (Phase 4)
 

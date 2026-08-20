@@ -597,7 +597,7 @@ rg-build export --export-format mermaid --export-output clearCart.mmd --query 'n
 
 ## 12. On-disk JSON after `discover`
 
-These files are written under `.rgbuilder/` (and copied into `.rgbuilder/dashboard/` for the UI). They are **not** emitted on stdout but are stable inputs for custom tooling.
+These files are written under `.rgbuilder/` (and copied into `.rgbuilder/universe/` for the UI). They are **not** emitted on stdout but are stable inputs for custom tooling.
 
 | Path | `schema_version` | Purpose |
 |------|------------------:|---------|
@@ -1233,11 +1233,11 @@ Without `-f json`, discover remains human-readable text progress (unchanged).
 | `.rgbuilder/macro_call_index.db` | Always | SQLite **blast-radius lookup cache** only (+ UUID + v2 target columns) |
 | `.rgbuilder/macro_call_index.bin` | Always | Bincode companion index (same data family as `.db`) |
 | `.rgbuilder/analysis_results.bin` | Always | Columnar analysis tables |
-| `.rgbuilder/dashboard/` | When export succeeds | Static dashboard bundle (`index.html`, `manifest.json`, …) |
+| `.rgbuilder/universe/` | When export succeeds | Static universe bundle (`index.html`, `manifest.json`, …) |
 | `.rgbuilder/graph.db` / `.rgbuilder/graph.json` | `--write-json-graph` only | Legacy full graph JSON |
 | `.rgbuilder/analysis/cfg_pdg.archive.bin` | `--with-cfg` or `--with-taint` | CFG + PDG for `--with-slices` |
 | `.rgbuilder/analysis/*.json` | `--with-cfg` or `--with-taint` | Per-function analysis storage (taint, CFG, PDG) |
-| `.rgbuilder/dashboard/taint_index.json` | `--with-cfg` or `--with-taint` | Dashboard taint catalog (see [json-api.md](json-api.md) §12) |
+| `.rgbuilder/universe/taint_index.json` | `--with-cfg` or `--with-taint` | Dashboard taint catalog (see [json-api.md](json-api.md) §12) |
 
 ---
 

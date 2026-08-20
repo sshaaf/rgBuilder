@@ -9,7 +9,7 @@ When registered as a skill, the agent does not start with terminal commands—it
 - Commands and flags below match `rg-build --help` / subcommand help (as of this repo).
 - Sample JSON is **illustrative but schema-aligned** (`schema_version`, real field names). It is not a live capture from one fixture run.
 - Prefer the in-tree **ecommerce-java** fixture for demos (`rgbuilder-tests/ecommerce-java`). Symbol names in scenarios are illustrative.
-- Dashboard / migration JSON are **opt-in** (`--with-dashboard`, `--export-migration-hints`).
+- Dashboard / migration JSON are **opt-in** (`--with-universe`, `--export-migration-hints`).
 - GQL `--macro-name … unused`: the trailing `unused` (or `x`) is only a **required QUERY placeholder** when using a macro — it does **not** mean “find unused code.”
 
 ---
@@ -59,11 +59,11 @@ When registered as a skill, the agent does not start with terminal commands—it
 * **Agent Tool Call:**
 ```json
 tool_use: rg-build {
-  "command": "discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints"
+  "command": "discover . --with-cfg --with-security --with-taint --with-universe --with-harmonic --export-migration-hints"
 }
 ```
 
-* **What actually happens:** Discover writes artifacts under `.rgbuilder/` — notably `.rgbuilder/migration_plan.json` (from `--export-migration-hints`) and, with `--with-dashboard`, `.rgbuilder/dashboard/migration_graph.json` + dashboard `migration_plan.json`. With `-f json`, stdout is **discover telemetry** (`schema_version`, `metrics`, …), not the plan body itself. The agent should **read the plan file** (or open the Migration tab via `serve --open`).
+* **What actually happens:** Discover writes artifacts under `.rgbuilder/` — notably `.rgbuilder/migration_plan.json` (from `--export-migration-hints`) and, with `--with-universe`, `.rgbuilder/universe/migration_graph.json` + dashboard `migration_plan.json`. With `-f json`, stdout is **discover telemetry** (`schema_version`, `metrics`, …), not the plan body itself. The agent should **read the plan file** (or open the Migration tab via `serve --open`).
 
 * **rgBuilder Skill Output (illustrative — plan file excerpt):**
 ```json
@@ -639,7 +639,7 @@ tool_use: rg-build {
 
 | # | User Intent | Agent `rgBuilder` Skill Command | Purpose |
 | --- | --- | --- | --- |
-| **1** | Modernization Roadmap | `discover . … --with-dashboard --with-harmonic --export-migration-hints` | Writes migration plan + optional dashboard bundle |
+| **1** | Modernization Roadmap | `discover . … --with-universe --with-harmonic --export-migration-hints` | Writes migration plan + optional universe bundle |
 | **2** | Bottleneck Detection | `-f json metrics --pagerank` | PageRank hotspots (`.pagerank.top`) |
 | **3** | Function Inventory | `-f json gql --macro-name all_functions unused` | Lists functions (`unused` = placeholder) |
 | **4** | Community Inventory | `-f json gql --macro-name all_communities unused` | Lists communities (not “orphans”) |

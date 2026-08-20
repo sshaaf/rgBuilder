@@ -48,6 +48,8 @@ pub fn resolve_action(action: &str) -> Option<&'static str> {
     }
 }
 
+/// CLI hint text for copy-only universe command entries.
+#[allow(dead_code)]
 pub fn action_cli_hint(action: &str, repo: &Path) -> Option<String> {
     let repo = repo.display();
     match action {

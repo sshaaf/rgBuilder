@@ -1,4 +1,4 @@
-//! Export `.rgbuilder/dashboard/` static bundle after discover.
+//! Export `.rgbuilder/universe/` static bundle after discover.
 
 mod analysis_stream_export;
 mod blast_export;
@@ -49,7 +49,7 @@ pub use universe_layout::{UniverseLayout, compute_universe_layout};
 pub use taint_export::{TAINT_INDEX_FILE, TaintExportSummary};
 
 use blast_export::{export_blast_bundle, load_columnar_uuid_indices};
-use bundle::{extract_static_assets, inject_manifest_bootstrap};
+use bundle::{inject_manifest_bootstrap};
 use dataflow_export::export_dataflow_index;
 use function_metrics_export::export_function_metrics;
 use manifest::DashboardManifest as Manifest;
@@ -64,31 +64,26 @@ use std::fs;
 use std::path::Path;
 use taint_export::export_taint_bundle;
 
-/// Write dashboard bundle: static UI, manifest, graph payload copy.
+/// Deprecated: writes the universe bundle (legacy name retained for API stability).
 pub fn export_dashboard_bundle(
     backend: &MemoryBackend,
     repo_root: &Path,
     snapshot_path: &Path,
 ) -> Result<(), String> {
-    export_dashboard_bundle_with_context(
-        backend,
-        repo_root,
-        snapshot_path,
-        DashboardExportContext::default(),
-    )
+    export_universe_bundle(backend, repo_root, snapshot_path)
 }
 
-/// Write dashboard bundle using in-memory analysis from discover (avoids reloading results).
+/// Deprecated: writes the universe bundle (legacy name retained for API stability).
 pub fn export_dashboard_bundle_with_context(
     backend: &MemoryBackend,
     repo_root: &Path,
     snapshot_path: &Path,
     ctx: DashboardExportContext<'_>,
 ) -> Result<(), String> {
-    export_dashboard_bundle_inner(backend, repo_root, snapshot_path, false, ctx)
+    export_universe_bundle_with_context(backend, repo_root, snapshot_path, ctx)
 }
 
-/// Export dashboard only when semantic content fingerprint is unchanged.
+/// Deprecated: writes the universe bundle when fingerprint changed (legacy name retained).
 pub fn export_dashboard_bundle_if_changed(
     backend: &MemoryBackend,
     repo_root: &Path,
@@ -102,27 +97,14 @@ pub fn export_dashboard_bundle_if_changed(
     )
 }
 
-/// Export dashboard when fingerprint changed, with optional in-memory analysis.
+/// Deprecated: writes the universe bundle when fingerprint changed (legacy name retained).
 pub fn export_dashboard_bundle_if_changed_with_context(
     backend: &MemoryBackend,
     repo_root: &Path,
     snapshot_path: &Path,
     ctx: DashboardExportContext<'_>,
 ) -> Result<bool, String> {
-    let out_dir = bundle::default_dashboard_path(repo_root);
-    let manifest_path = out_dir.join("manifest.json");
-    let fingerprint = compute_export_fingerprint(backend, repo_root);
-    if manifest_path.is_file() {
-        if let Ok(bytes) = fs::read_to_string(&manifest_path) {
-            if let Ok(manifest) = serde_json::from_str::<Manifest>(&bytes) {
-                if manifest.export_fingerprint.as_deref() == Some(fingerprint.as_str()) {
-                    return Ok(false);
-                }
-            }
-        }
-    }
-    export_dashboard_bundle_inner(backend, repo_root, snapshot_path, true, ctx)?;
-    Ok(true)
+    export_universe_bundle_if_changed_with_context(backend, repo_root, snapshot_path, ctx)
 }
 
 /// Write universe bundle: static UI, manifest, graph payload copy, universe layout JSON.
@@ -186,39 +168,18 @@ pub fn export_universe_bundle_if_changed_with_context(
 
 #[derive(Debug, Clone, Copy)]
 enum UiBundleKind {
-    Dashboard,
     Universe,
 }
 
-fn export_dashboard_bundle_inner(
-    backend: &MemoryBackend,
-    repo_root: &Path,
-    snapshot_path: &Path,
-    replace_out_dir: bool,
-    ctx: DashboardExportContext<'_>,
-) -> Result<(), String> {
-    export_ui_bundle_inner(
-        UiBundleKind::Dashboard,
-        backend,
-        repo_root,
-        snapshot_path,
-        replace_out_dir,
-        ctx,
-    )
-}
-
 fn export_ui_bundle_inner(
-    kind: UiBundleKind,
+    _kind: UiBundleKind,
     backend: &MemoryBackend,
     repo_root: &Path,
     snapshot_path: &Path,
     replace_out_dir: bool,
     ctx: DashboardExportContext<'_>,
 ) -> Result<(), String> {
-    let out_dir = match kind {
-        UiBundleKind::Dashboard => bundle::default_dashboard_path(repo_root),
-        UiBundleKind::Universe => bundle::default_universe_path(repo_root),
-    };
+    let out_dir = bundle::default_universe_path(repo_root);
     if replace_out_dir && out_dir.exists() {
         profile_stage("replace_out_dir", || {
             let trash = out_dir.with_file_name(format!(
@@ -239,11 +200,8 @@ fn export_ui_bundle_inner(
     }
     fs::create_dir_all(&out_dir).map_err(|e| e.to_string())?;
 
-    profile_stage("extract_static_assets", || match kind {
-        UiBundleKind::Dashboard => extract_static_assets(&out_dir).map_err(|e| e.to_string()),
-        UiBundleKind::Universe => {
-            bundle::extract_universe_static_assets(&out_dir).map_err(|e| e.to_string())
-        }
+    profile_stage("extract_static_assets", || {
+        bundle::extract_universe_static_assets(&out_dir).map_err(|e| e.to_string())
     })?;
 
     let (node_count, edge_count, digest) =
@@ -298,59 +256,39 @@ fn export_ui_bundle_inner(
         })?;
     }
     let semantic_summary = semantic_section(repo_root);
-    let manifest = match kind {
-        UiBundleKind::Dashboard => Manifest::with_phases(
-            node_count,
-            edge_count,
-            digest,
+    profile_stage("universe_export", || {
+        write_universe_json(&out_dir, &export)?;
+        let layout = layout_for_export(&export);
+        export_fingerprint = format!(
+            "{}:{}",
             export_fingerprint,
-            metrics,
-            &export,
-            &cfg_summary,
-            &slice_summary,
-            &blast_summary,
-            &dataflow_summary,
-            &mutations_summary,
-            &taint_summary,
-            &migration_summary,
-            semantic_summary,
-        ),
-        UiBundleKind::Universe => {
-            profile_stage("universe_export", || {
-                write_universe_json(&out_dir, &export)?;
-                let layout = layout_for_export(&export);
-                export_fingerprint = format!(
-                    "{}:{}",
-                    export_fingerprint,
-                    universe_layout_fingerprint(&layout)
-                );
-                write_search_landmarks(
-                    backend,
-                    repo_root,
-                    &out_dir,
-                    &layout,
-                    &uuid_to_index,
-                    ctx,
-                )
-            })?;
-            Manifest::with_universe_phases(
-                node_count,
-                edge_count,
-                digest,
-                export_fingerprint.clone(),
-                metrics,
-                &export,
-                &cfg_summary,
-                &slice_summary,
-                &blast_summary,
-                &dataflow_summary,
-                &mutations_summary,
-                &taint_summary,
-                &migration_summary,
-                semantic_summary,
-            )
-        }
-    };
+            universe_layout_fingerprint(&layout)
+        );
+        write_search_landmarks(
+            backend,
+            repo_root,
+            &out_dir,
+            &layout,
+            &uuid_to_index,
+            ctx,
+        )
+    })?;
+    let manifest = Manifest::with_universe_phases(
+        node_count,
+        edge_count,
+        digest,
+        export_fingerprint.clone(),
+        metrics,
+        &export,
+        &cfg_summary,
+        &slice_summary,
+        &blast_summary,
+        &dataflow_summary,
+        &mutations_summary,
+        &taint_summary,
+        &migration_summary,
+        semantic_summary,
+    );
     let (manifest_json, manifest_serialize_secs) = profile_stage("manifest_serialize", || {
         let start = std::time::Instant::now();
         let json = serde_json::to_string_pretty(&manifest).map_err(|e| e.to_string())?;

@@ -72,11 +72,11 @@ if require_dir "$METASFRESH"; then
 fi
 
 serve_repo="${GBUILDER}"
-if [[ ! -d "$serve_repo/.rgbuilder/dashboard" && -d "$METASFRESH/.rgbuilder/dashboard" ]]; then
+if [[ ! -d "$serve_repo/.rgbuilder/universe" && -d "$METASFRESH/.rgbuilder/universe" ]]; then
   serve_repo="$METASFRESH"
 fi
 
-if [[ -d "$serve_repo/.rgbuilder/dashboard" ]]; then
+if [[ -d "$serve_repo/.rgbuilder/universe" ]]; then
   log "Starting rg-build serve on port ${SERVE_PORT} for ${serve_repo}"
   "$ROOT/target/release/rg-build" -r "$serve_repo" serve --port "$SERVE_PORT" &
   SERVE_PID=$!

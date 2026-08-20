@@ -12,13 +12,13 @@ For CFG/PDG archives used by `inspect`, `slice`, `cpg`, and discover-time taint 
 
 ### Why is the dashboard empty after `discover .`?
 
-Dashboard export is **off by default**. Pass `--with-dashboard`, then `rg-build serve --open`.
+Universe export is **off by default**. Pass `--with-universe`, then `rg-build serve --open`.
 
 ### How do I get a migration plan?
 
 ```bash
 rg-build discover . --with-cfg --with-security --with-taint \
-  --with-dashboard --with-harmonic --export-migration-hints
+  --with-universe --with-harmonic --export-migration-hints
 ```
 
 ### code-daemon vs vocab vs hash?

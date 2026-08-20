@@ -19,7 +19,7 @@ Quick cli tour:
 https://github.com/user-attachments/assets/6f355d16-dd6f-43e2-baad-9d4372b84540
 
 
-Dashboard tour (optional visualization):
+Universe tour (optional visualization):
 
 https://github.com/user-attachments/assets/81328399-dca1-4232-8edc-2a23563c3451
 
@@ -108,19 +108,19 @@ Use the features above together for **migration and modernization** work:
 
 ### Migration planner
 
-After deep discover + `--export-migration-hints`, read `.rgbuilder/migration_plan.json` (agents) or optionally open a dashboard **Migration** tab if you also passed `--with-dashboard`:
+After deep discover + `--export-migration-hints`, read `.rgbuilder/migration_plan.json` (agents) or optionally explore migration hotspots in the **universe** cosmos when you also passed `--with-universe`:
 
 *Scoring and package ordering; community coloring uses label propagation — see [graph metrics naming](docs/design/graph-metrics-design.md#31-community-detection-naming).*
 
 - **Package macro graph** — aggregates functions into path-derived package labels (Java package paths, Rust/C `/src/` modules)
 - **Dual ordering** — **scheduled step** (Kahn topological sort, callee before caller) and **priority rank** (score-only)
 - **Scoring** — `Priority = α·PageRank + β·Harmonic − γ·Blast`; presets include Hybrid Default, Foundational First, Dense Cluster Extraction, Risk Mitigation
-- **CLI export** — `--export-migration-hints` writes a preset-tuned plan (default `.rgbuilder/migration_plan.json`); `--with-dashboard` additionally copies UI assets under `.rgbuilder/dashboard/`
+- **CLI export** — `--export-migration-hints` writes a preset-tuned plan (default `.rgbuilder/migration_plan.json`); `--with-universe` additionally copies UI assets under `.rgbuilder/universe/`
 
 ```bash
 rg-build discover . --with-cfg --with-security --with-taint --with-harmonic --export-migration-hints
-# optional UI: add --with-dashboard, then: rg-build serve --open
-rg-build serve   # http://127.0.0.1:8080/ → Migration tab
+# optional UI: add --with-universe, then: rg-build serve --open
+rg-build serve   # http://127.0.0.1:8080/ → 3D universe + query API
 ```
 
 Design → **[Migration planner design](docs/design/migration-planner-design.md)** · Workflow → **[Building a migration plan](docs/building-migration-plan.md)**  
@@ -178,7 +178,7 @@ rg-build -f json blast-radius ShoppingCartService
 rg-build -f json metrics --pagerank --communities
 
 # Package migration roadmap (graph + plan JSON for agents)
-rg-build discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints
+rg-build discover . --with-cfg --with-security --with-taint --with-universe --with-harmonic --export-migration-hints
 ```
 
 Concepts → **[Introduction](docs/Introduction.md)** · Commands → **[User Guide](docs/user-guide.md)**
@@ -228,7 +228,7 @@ Quick links into **[Introduction](docs/Introduction.md)** — see [Where most to
 | `check` | [CI policy](docs/Introduction.md#ci-policy-checks) |
 | `serve` | [HTTP server](docs/Introduction.md#http-server-serve) |
 
-**Dashboard** — visual exploration after `discover --with-dashboard` (`.rgbuilder/dashboard/`). See **[Feature designs](docs/design/README.md)** for per-tab engineering docs.  
+**Universe** — 3D exploration after `discover --with-universe` (`.rgbuilder/universe/`). See **[Universe user guide](docs/universe-user-guide.md)** and **[Feature designs](docs/design/README.md)**.  
 **Migration export** — `discover --export-migration-hints` (alias `--export-migration-plan`; optional `--migration-preset`, `--migration-order scheduled|priority`).  
 **Languages** — nine Tier 1 languages (Rust, Python, Java, Go, TypeScript, JavaScript, C#, C, C++) plus config/IaC plugins and **markdown** (`.md` / `.mdx` docs context). See [Languages](docs/languages.md) and [Markdown context](docs/markdown-context.md).
 
@@ -254,7 +254,8 @@ Quick links into **[Introduction](docs/Introduction.md)** — see [Where most to
 | **[Feature designs](docs/design/README.md)** | Engineering design docs *(contributors)* |
 | **[Migration planner design](docs/design/migration-planner-design.md)** | Package graph, scoring, ordering *(contributors)* |
 | **[Building a migration plan](docs/building-migration-plan.md)** | End-to-end migration workflow |
-| **[Dashboard user guide](docs/dashboard-user-guide.md)** | Optional browser UI |
+| **[Universe user guide](docs/universe-user-guide.md)** | Optional 3D browser UI |
+| **[Dashboard user guide](docs/dashboard-user-guide.md)** | Legacy tabbed UI (deprecated) |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | Dev setup and PR expectations |
 | **[Releasing](docs/releasing.md)** | Tags and GitHub Releases *(contributors)* |
 

@@ -73,7 +73,7 @@ Dashboard: filter **vulnerable only**; click a flow for path detail.
 | Taint engine | `crates/rgbuilder-analysis/src/taint.rs` |
 | Language sinks/sources | Pattern tables per `rgbuilder-lang-*` |
 | Storage | `crates/rgbuilder-analysis/src/storage.rs` |
-| Dashboard export | `crates/rgbuilder-dashboard/src/taint_export.rs` |
+| Universe export | `crates/rgbuilder-dashboard/src/taint_export.rs` |
 | CLI taint slice | `src/cli/slice.rs` (`--taint`) |
 
 ---

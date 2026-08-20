@@ -44,7 +44,7 @@ Config format plugins (JSON, YAML, TOML, properties, …) add structure nodes; t
 | `--with-cfg` | CFG/PDG for slice/inspect/cpg (slower on huge repos) |
 | `--with-taint` | Discover-time taint (with CFG) |
 | `--export-migration-hints` | Migration plan JSON |
-| `--with-dashboard` | Optional static UI assets |
+| `--with-universe` | Optional universe UI assets |
 
 ## CLI tips
 

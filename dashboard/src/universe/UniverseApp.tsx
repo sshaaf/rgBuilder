@@ -12,7 +12,7 @@ import {
   loadMigrationGraph,
   loadTaintIndex,
   migrationHotspotCommunityIds,
-  taintCommunityIds,
+  taintCommunityIds as computeTaintCommunityIds,
 } from "./analysisOverlays";
 import {
   initialNavState,
@@ -105,7 +105,7 @@ export function UniverseApp() {
       if (manifest.analysis?.taint_available) {
         const taint = await loadTaintIndex();
         if (taint && !cancelled) {
-          setTaintCommunityIds(taintCommunityIds(taint, landmarks));
+          setTaintCommunityIds(computeTaintCommunityIds(taint, landmarks));
         }
       }
     })();

@@ -42,7 +42,7 @@ Typical user turns are natural language (“Where is the checkout flow?”), not
 
 | # | User says (patterns) | Prefer |
 |---|-------------------------------------|--------|
-| 1 | Generate a migration plan / modernize this repo | `discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints [--migration-preset hybrid_default\|foundational_first\|dense_cluster\|risk_mitigation] [--migration-order scheduled\|priority]` then **read** `.rgbuilder/migration_plan.json` (stdout is discover telemetry, not the plan) |
+| 1 | Generate a migration plan / modernize this repo | `discover . --with-cfg --with-security --with-taint --with-universe --with-harmonic --export-migration-hints [--migration-preset hybrid_default\|foundational_first\|dense_cluster\|risk_mitigation] [--migration-order scheduled\|priority]` then **read** `.rgbuilder/migration_plan.json` (stdout is discover telemetry, not the plan) |
 | 2 | Bottlenecks / central dependencies / hotspots | `-f json metrics --pagerank` → `.pagerank.top` |
 | 3 | Inventory of functions / candidates to delete or shrink | `-f json gql --macro-name all_functions unused` — **`unused` is a required QUERY placeholder**, not “find dead code”; follow up with blast-radius / CALL queries |
 | 4 | What communities / packages does the graph see? | `-f json gql --macro-name all_communities unused` (lists communities, **not** orphans) or prefer `communities list` |
@@ -83,9 +83,9 @@ Globals: `-f json` (agents), `-r` / `--repo`, `-o` file, `-d` / `--db` (custom g
 | Path | Content |
 |------|---------|
 | `.rgbuilder/graph.snapshot.bin` | Graph snapshot |
-| `.rgbuilder/dashboard/manifest.json` | Counts, feature flags |
-| `.rgbuilder/dashboard/migration_plan.json` | Migration export |
-| `.rgbuilder/dashboard/graph_payload.bin` | Dashboard WASM graph |
+| `.rgbuilder/universe/manifest.json` | Counts, feature flags |
+| `.rgbuilder/universe/migration_plan.json` | Migration export |
+| `.rgbuilder/universe/graph_payload.bin` | Dashboard WASM graph |
 | `.rgbuilder/semantic_index.bin` | Semantic index (`semantic index`) |
 | `.rgbuilder/migration_plan.json` | Migration plan (with `--export-migration-hints`) |
 | `.rgbuilder/analysis/` | CFG/PDG archives (with `--with-cfg`) |
@@ -119,7 +119,7 @@ Samples below are truncated. Field names match live CLI / `docs/json-api.md`. Fi
 
 ### `discover`
 
-**Command:** `rg-build [-f json] discover [PATH] [-l/--languages CSV] [-e/--exclude GLOB] [-v/--verbose] [--with-cfg] [--with-security] [--with-taint] [--with-dashboard] [--with-harmonic] [--export-migration-hints] [--with-ast-skeleton] [--with-dfg-loops] [--write-json-graph] …`
+**Command:** `rg-build [-f json] discover [PATH] [-l/--languages CSV] [-e/--exclude GLOB] [-v/--verbose] [--with-cfg] [--with-security] [--with-taint] [--with-universe] [--with-harmonic] [--export-migration-hints] [--with-ast-skeleton] [--with-dfg-loops] [--write-json-graph] …`
 
 **Purpose:** Index the repo once (or after large changes). Build the graph agents query.
 
@@ -562,7 +562,7 @@ rg-build cpg export --format graphson --output cpg.json [--path-contains src/] \
 
 **Purpose:** HTTP dashboard + `POST /api/query` (and semantic routes). Preferred for many interactive queries.
 
-**Prerequisites:** `discover` (dashboard bundle with `--with-dashboard` for full UI).
+**Prerequisites:** `discover` (universe bundle with `--with-universe` for full UI).
 
 **Legacy daemon mode:** `rg-build serve --daemon [--socket PATH] [--idle-secs N]` — Unix-socket (or Windows port-file) blast-radius-only daemon; conflicts with all HTTP flags (`--host`/`--port`/`--open`/`--query-only`/`--dashboard-only`/`--dashboard-dir`). `--idle-secs` (default 300) auto-exits after inactivity.
 
@@ -582,7 +582,7 @@ Run the commands as shown; parse encyclopedia sample shapes. Summarize — don�
 
 ```bash
 rg-build discover . --with-cfg --with-security --with-taint \
-  --with-dashboard --with-harmonic --export-migration-hints \
+  --with-universe --with-harmonic --export-migration-hints \
   --migration-preset hybrid_default --migration-order scheduled
 # read .rgbuilder/migration_plan.json (and/or dashboard Migration tab via serve --open)
 ```
@@ -738,7 +738,7 @@ Blast-radius policy schema (`max_impact_nodes`, `forbidden_crossings`, …) — 
 | `--with-cfg` | CFG/PDG/dominance archive (slice, inspect, cpg PDG) |
 | `--with-taint` | Discover-time taint (implies CFG as needed) |
 | `--with-security` | Secret scanning |
-| `--with-dashboard` | `.rgbuilder/dashboard/` bundle |
+| `--with-universe` | `.rgbuilder/universe/` bundle |
 | `--with-harmonic` | Harmonic centrality (migration ranking; expensive) |
 | `--export-migration-hints` | Write `migration_plan.json` |
 | `--with-ast-skeleton` | AST skeleton for `cpg ast` |
@@ -750,7 +750,7 @@ Migration-oriented discover (heavy):
 
 ```bash
 rg-build discover . --with-cfg --with-security --with-taint \
-  --with-dashboard --with-harmonic --export-migration-hints \
+  --with-universe --with-harmonic --export-migration-hints \
   --migration-preset foundational_first --migration-order scheduled
 # then read .rgbuilder/migration_plan.json (or dashboard copy)
 ```

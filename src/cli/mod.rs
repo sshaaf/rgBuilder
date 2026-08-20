@@ -265,9 +265,9 @@ pub enum Commands {
         query: String,
     },
 
-    /// Serve the analysis dashboard and GQL query API over HTTP.
+    /// Serve the rg Universe UI and GQL query API over HTTP.
     ///
-    /// Default: dashboard at `/` and query API at `/api/query` (alias `/graphql`).
+    /// Default: universe UI at `/` and query API at `/api/query` (alias `/graphql`).
     /// Use `--daemon` for the legacy blast-radius query socket instead.
     Serve {
         /// Bind host [default: 127.0.0.1]
@@ -278,20 +278,20 @@ pub enum Commands {
         #[arg(long, default_value_t = 8080)]
         port: u16,
 
-        /// Dashboard directory [default: `<repo>/.rgbuilder/dashboard`]
-        #[arg(long, value_name = "DIR")]
+        /// Universe UI directory [default: `<repo>/.rgbuilder/universe`]
+        #[arg(long, value_name = "DIR", alias = "dashboard-dir")]
         dashboard_dir: Option<std::path::PathBuf>,
 
-        /// Open the dashboard in the default browser
+        /// Open the universe UI in the default browser
         #[arg(long)]
         open: bool,
 
-        /// Serve the query API only (no dashboard static files)
+        /// Serve the query API only (no universe static files)
         #[arg(long)]
         query_only: bool,
 
-        /// Serve the dashboard only (no query API)
-        #[arg(long)]
+        /// Serve the universe UI only (no query API)
+        #[arg(long, alias = "dashboard-only")]
         dashboard_only: bool,
 
         /// Legacy blast-radius query daemon (Unix socket or Windows port file)

@@ -11,7 +11,7 @@ mod dashboard_harness;
 use dashboard_harness::{
     assert_dashboard_bundle_all_analysis, metasfresh_repo_path, run_discover_all_timed,
 };
-use rgbuilder_dashboard::dist_embedded;
+use rgbuilder_dashboard::universe_dist_embedded;
 
 /// metasfresh reference graph (~128k functions per performance doc).
 const METASFRESH_MIN_NODES: u64 = 100_000;
@@ -21,9 +21,9 @@ const METASFRESH_MIN_METANODES: u64 = 20;
 #[test]
 #[ignore = "manual: metasfresh discover --with-cfg --with-security --with-taint is slow (CFG/PDG on ~128k functions)"]
 fn discover_all_writes_dashboard_bundle_on_metasfresh() {
-    if !dist_embedded() {
+    if !universe_dist_embedded() {
         panic!(
-            "dashboard/dist not embedded — run ./scripts/build-dashboard.sh && cargo build --release"
+            "dashboard/dist-universe not embedded — run cd dashboard && npm run build:universe && cargo build --release"
         );
     }
 
@@ -47,7 +47,7 @@ fn discover_all_writes_dashboard_bundle_on_metasfresh() {
     assert_dashboard_bundle_all_analysis(&repo, METASFRESH_MIN_NODES, METASFRESH_MIN_METANODES);
 
     let manifest: serde_json::Value = serde_json::from_slice(
-        &std::fs::read(repo.join(".rgbuilder/dashboard/manifest.json")).unwrap(),
+        &std::fs::read(repo.join(".rgbuilder/universe/manifest.json")).unwrap(),
     )
     .unwrap();
     let functions = manifest["metrics"]["function_count"].as_u64().unwrap_or(0);
@@ -70,13 +70,13 @@ fn discover_all_writes_dashboard_bundle_on_metasfresh() {
 /// Validate an existing metasfresh cache without re-running discover (fast path after manual run).
 #[test]
 fn metasfresh_dashboard_bundle_when_cache_present() {
-    if !dist_embedded() {
+    if !universe_dist_embedded() {
         eprintln!("skip: dashboard/dist not embedded");
         return;
     }
 
     let repo = metasfresh_repo_path();
-    let dash = repo.join(".rgbuilder/dashboard/manifest.json");
+    let dash = repo.join(".rgbuilder/universe/manifest.json");
     let archive = repo.join(".rgbuilder/analysis/cfg_pdg.archive.bin");
     if !repo.is_dir() || !dash.is_file() || !archive.is_file() {
         eprintln!(

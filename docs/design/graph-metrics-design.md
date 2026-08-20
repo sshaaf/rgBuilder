@@ -76,7 +76,7 @@ Discover applies **adaptive centrality gating** and a **columnar write path** so
 | HyperBall harmonic (V > 500k) | 8 rounds, **Rayon-parallel** node scatter |
 | `function_metrics.json` | **`sparse_mode: "community_only"`** — empty rows; use WASM + metagraph |
 | `metagraph.json` | Package-level aggregates only (`member_indices` omitted at scale) |
-| Dashboard export | In-memory `AnalysisResults` via `DashboardExportContext` (no reload per stage) |
+| Universe export | In-memory `AnalysisResults` via `DashboardExportContext` (no reload per stage) |
 
 **Profiling:** `RUST_LOG=profile=info rg-build discover . -v` → `[profile] centrality sub-phase` lines.
 
@@ -107,7 +107,7 @@ Implementation: [`crates/rgbuilder-analysis/src/community.rs`](../../crates/rgbu
 | Harmonic | `crates/rgbuilder-analysis/src/centrality_approx.rs` (`HyperBallHarmonic`) |
 | Persist | `crates/rgbuilder-analysis/src/results.rs` |
 | CLI | `src/cli/metrics.rs` |
-| Dashboard export | `crates/rgbuilder-dashboard/src/export_context.rs`, `function_metrics_export.rs` |
+| Universe export | `crates/rgbuilder-dashboard/src/export_context.rs`, `function_metrics_export.rs` |
 
 ---
 
