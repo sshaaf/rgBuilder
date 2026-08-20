@@ -1,5 +1,12 @@
+import type { MetagraphPayload } from "../types";
 import type { SearchLandmarksPayload, UniverseLayout } from "./types";
 import { bundleDataUrl } from "../bundleUrl";
+
+export async function loadMetagraph(): Promise<MetagraphPayload | null> {
+  const res = await fetch(bundleDataUrl("metagraph.json"));
+  if (!res.ok) return null;
+  return (await res.json()) as MetagraphPayload;
+}
 
 export async function loadUniverseLayout(): Promise<UniverseLayout> {
   const res = await fetch(bundleDataUrl("universe.json"));

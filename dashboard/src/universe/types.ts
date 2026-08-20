@@ -19,12 +19,22 @@ export interface UniverseBridge {
   weight: number;
 }
 
+export interface UniverseUnit {
+  id: number;
+  label: string;
+  kind: "class" | "file" | "module";
+  member_indices: number[];
+  loc_estimate?: number;
+}
+
 export interface UniversePackage {
   id: number;
   community_id: number;
   label: string;
   position: Vec3;
   member_indices: number[];
+  units?: UniverseUnit[];
+  loc_estimate?: number;
 }
 
 export interface SearchLandmark {

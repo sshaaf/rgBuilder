@@ -33,20 +33,25 @@ Do **not** open `index.html` via `file://` — the graph worker cannot load `gra
 
 | Area | Description |
 |------|-------------|
-| **Cosmos (L0)** | Community “galaxies” and inter-community bridge lines from `universe.json` |
-| **Search bar (⌘K)** | Landmarks + communities; semantic fallback when served with a semantic index |
+| **Cosmos (L1)** | Community “galaxies” and inter-community bridge lines from `universe.json` |
+| **Search bar (⌘K / `/`)** | Landmarks + communities; semantic fallback when served |
+| **Left rail** | Home, search, commands (⌘), help |
+| **LOD chip** | Bottom bar — `L1 · COSMOS` through `L5 · FUNCTION` |
 | **Breadcrumb** | `Universe › community › package › symbol` — click to zoom out |
-| **Context panel (L3)** | Blast radius, metrics, optional CFG/dataflow insets |
-| **Commands (⌘)** | Copy or run whitelisted maintenance commands when served |
+| **Selection panel** | Opens on every selection; blast metrics at **L5** only |
+| **Commands (⌘)** | Slide-over — copy or run maintenance commands when served |
 
 ---
 
 ## LOD navigation
 
-1. **L0 — Cosmos:** all communities; migration hotspots show amber rings; taint-affected communities pulse red with highlighted cross-community paths.
-2. **L1 — Galaxy:** click a community to fly in; package cubes appear in local frame.
-3. **L2 — Neighborhood:** click a package; WASM `expand()` loads function nodes (lazy when camera is near).
-4. **L3 — Symbol:** click a function node; context panel shows blast radius and analysis insets.
+1. **L1 — Cosmos:** all communities; migration/taint overlays when exported.
+2. **L2 — Community:** click a community; packages appear; selection panel shows bridges.
+3. **L3 — Package:** click a package; WASM `expand()` loads functions; panel shows metagraph stats.
+4. **L4 — Class or file:** *(Phase 1)* skipped when no class/file units (markdown-only packages).
+5. **L5 — Function:** blast radius, callers, analysis insets in the selection panel.
+
+Press **Escape** to step back one level.
 
 ---
 

@@ -6,6 +6,12 @@ function bundleDir(): string | undefined {
   return process.env.UNIVERSE_BUNDLE_DIR;
 }
 
+function universePath(query = ""): string {
+  const q = query ? (query.startsWith("?") ? query : `?${query}`) : "";
+  // Served over HTTP — file:// blocks workers/WASM in Chromium.
+  return `/index.html${q}`;
+}
+
 function searchQuery(bundle: string): string {
   const landmarksPath = path.join(bundle, "search_landmarks.json");
   if (fs.existsSync(landmarksPath)) {
@@ -45,7 +51,7 @@ test("universe bundle loads without tab bar", async ({ page }) => {
   const bundle = bundleDir();
   test.skip(!bundle, "set UNIVERSE_BUNDLE_DIR to .rgbuilder/universe for e2e");
 
-  await page.goto(`file://${bundle}/index.html`);
+  await page.goto(universePath());
   await expect(page.locator(".universe-search")).toBeVisible();
   await expect(page.locator('[role="tablist"]')).toHaveCount(0);
   await expect(page.locator("#universe-canvas, .universe-canvas-host canvas")).toHaveCount(1, {
@@ -53,11 +59,22 @@ test("universe bundle loads without tab bar", async ({ page }) => {
   });
 });
 
-test("search selection stays at L0 breadcrumb", async ({ page }) => {
+test("canvas is full viewport width", async ({ page }) => {
   const bundle = bundleDir();
   test.skip(!bundle, "set UNIVERSE_BUNDLE_DIR to .rgbuilder/universe for e2e");
 
-  await page.goto(`file://${bundle}/index.html`);
+  await page.goto(universePath());
+  await expect(page.locator(".universe-canvas-host canvas")).toBeVisible({ timeout: 15_000 });
+  const box = await page.locator(".universe-root").boundingBox();
+  const viewport = page.viewportSize();
+  expect(box?.width).toBeGreaterThan((viewport?.width ?? 0) * 0.95);
+});
+
+test("search selection stays at L1 breadcrumb", async ({ page }) => {
+  const bundle = bundleDir();
+  test.skip(!bundle, "set UNIVERSE_BUNDLE_DIR to .rgbuilder/universe for e2e");
+
+  await page.goto(universePath());
   await expect(page.locator(".universe-search-input")).toBeVisible({ timeout: 15_000 });
   await expect(page.locator(".universe-breadcrumb")).toHaveCount(0);
 
@@ -66,17 +83,16 @@ test("search selection stays at L0 breadcrumb", async ({ page }) => {
   await page.locator(".universe-search-hit").first().click({ timeout: 10_000 });
 
   await expect(page.locator(".universe-breadcrumb")).toHaveCount(0);
-  await expect(page.locator(".universe-canvas-host canvas")).toHaveCount(1);
 });
 
-test("drill community then package shows L2 nodes", async ({ page }) => {
+test("drill community then package shows L3 nodes", async ({ page }) => {
   const bundle = bundleDir();
   test.skip(!bundle, "set UNIVERSE_BUNDLE_DIR to .rgbuilder/universe for e2e");
 
   const targets = drillTargets(bundle);
   test.skip(!targets, "universe.json missing drill targets");
 
-  await page.goto(`file://${bundle}/index.html?e2e=1`);
+  await page.goto(universePath("e2e=1"));
   await page.waitForFunction(() => window.__universeE2e != null, undefined, { timeout: 15_000 });
   await expect(page.locator(".universe-wasm-ok")).toBeVisible({ timeout: 20_000 });
 
@@ -84,32 +100,31 @@ test("drill community then package shows L2 nodes", async ({ page }) => {
     window.__universeE2e!.selectCommunity(communityId);
   }, targets);
 
-  await expect(page.locator(".universe-breadcrumb")).toContainText(/.+/);
-  await page.waitForFunction(() => window.__universeE2e!.lod() === 1, undefined, { timeout: 5_000 });
+  await expect(page.getByTestId("universe-lod-chip")).toContainText("L2");
+  await expect(page.getByTestId("universe-selection-panel")).toBeVisible();
+  await page.waitForFunction(() => window.__universeE2e!.lod() === 2, undefined, { timeout: 5_000 });
 
   await page.evaluate(async ({ packageId }) => {
     await window.__universeE2e!.selectPackage(packageId);
   }, targets);
 
-  await page.waitForFunction(() => window.__universeE2e!.lod() === 2, undefined, { timeout: 10_000 });
+  await expect(page.getByTestId("universe-lod-chip")).toContainText("L3");
+  await page.waitForFunction(() => window.__universeE2e!.lod() === 3, undefined, { timeout: 10_000 });
   await page.waitForFunction(
     () => window.__universeE2e!.l2NodeCount() > 0,
     undefined,
     { timeout: 20_000 },
   );
-
-  const l2Count = await page.evaluate(() => window.__universeE2e!.l2NodeCount());
-  expect(l2Count).toBeGreaterThan(0);
 });
 
-test("L3 symbol opens blast context panel", async ({ page }) => {
+test("L5 symbol shows context panel and analysis rail", async ({ page }) => {
   const bundle = bundleDir();
   test.skip(!bundle, "set UNIVERSE_BUNDLE_DIR to .rgbuilder/universe for e2e");
 
   const targets = drillTargets(bundle);
   test.skip(!targets, "universe.json missing drill targets");
 
-  await page.goto(`file://${bundle}/index.html?e2e=1`);
+  await page.goto(universePath("e2e=1"));
   await page.waitForFunction(() => window.__universeE2e != null, undefined, { timeout: 15_000 });
   await expect(page.locator(".universe-wasm-ok")).toBeVisible({ timeout: 20_000 });
 
@@ -130,7 +145,18 @@ test("L3 symbol opens blast context panel", async ({ page }) => {
     window.__universeE2e!.selectFunction(fn.nodeIndex, fn.name);
   });
 
-  await page.waitForFunction(() => window.__universeE2e!.lod() === 3, undefined, { timeout: 5_000 });
-  await expect(page.getByTestId("universe-context-panel")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "BLAST RADIUS" })).toBeVisible();
+  await page.waitForFunction(() => window.__universeE2e!.lod() === 5, undefined, { timeout: 5_000 });
+  await expect(page.getByTestId("universe-selection-panel")).toBeVisible();
+  await expect(page.getByTestId("universe-panel-lod")).toContainText("L5");
+  await expect(page.getByTestId("universe-tool-blast")).toBeVisible();
+});
+
+test("context panel visible after bundle load", async ({ page }) => {
+  const bundle = bundleDir();
+  test.skip(!bundle, "set UNIVERSE_BUNDLE_DIR to .rgbuilder/universe for e2e");
+
+  await page.goto(universePath());
+  await expect(page.getByTestId("universe-selection-panel")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId("universe-panel-lod")).toContainText("L1");
+  await expect(page.getByTestId("universe-panel-lod")).toContainText("COSMOS");
 });

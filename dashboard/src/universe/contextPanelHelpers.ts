@@ -5,7 +5,7 @@ export const CONTEXT_PANEL_WIDTH_PX = 280;
 export const DEFAULT_BLAST_DEPTH = 5;
 
 export function isContextPanelVisible(lod: LodLevel): boolean {
-  return lod >= 3;
+  return lod >= 1;
 }
 
 export function blastRiskLabel(score: number): "Low" | "Medium" | "High" {

@@ -3,7 +3,7 @@
 use crate::export_context::{DashboardExportContext, resolve_analysis};
 use crate::export_util::write_json_compact;
 use crate::metagraph::MetagraphExport;
-use crate::universe_layout::{UniverseLayout, compute_universe_layout};
+use crate::universe_layout::{UniverseLayout, compute_universe_layout, enrich_layout_with_units};
 use rgbuilder_graph::backend::MemoryBackend;
 use rgbuilder_graph::backend::GraphBackend;
 use rgbuilder_graph::schema::NodeType;
@@ -32,12 +32,18 @@ pub struct SearchLandmark {
     pub position: crate::universe_layout::Vec3,
 }
 
-pub fn write_universe_json(out_dir: &Path, export: &MetagraphExport) -> Result<(), String> {
-    let layout = compute_universe_layout(
+pub fn write_universe_json(
+    out_dir: &Path,
+    export: &MetagraphExport,
+    backend: &MemoryBackend,
+    index_to_uuid: &HashMap<u32, Uuid>,
+) -> Result<(), String> {
+    let mut layout = compute_universe_layout(
         &export.communities.communities,
         &export.meta.nodes,
         &export.meta.edges,
     );
+    enrich_layout_with_units(&mut layout, backend, index_to_uuid);
     write_json_compact(&out_dir.join(UNIVERSE_JSON_FILE), &layout)
 }
 
@@ -140,12 +146,18 @@ fn compute_search_landmarks(
         .collect())
 }
 
-pub fn layout_for_export(export: &MetagraphExport) -> UniverseLayout {
-    compute_universe_layout(
+pub fn layout_for_export(
+    export: &MetagraphExport,
+    backend: &MemoryBackend,
+    index_to_uuid: &HashMap<u32, Uuid>,
+) -> UniverseLayout {
+    let mut layout = compute_universe_layout(
         &export.communities.communities,
         &export.meta.nodes,
         &export.meta.edges,
-    )
+    );
+    enrich_layout_with_units(&mut layout, backend, index_to_uuid);
+    layout
 }
 
 pub fn universe_layout_fingerprint(layout: &UniverseLayout) -> String {
@@ -158,6 +170,7 @@ mod tests {
     use super::*;
     use crate::communities::CommunitiesPayload;
     use crate::metagraph::{MetagraphExport, MetagraphPayload};
+    use serde_json::Value;
 
     #[test]
     fn search_landmarks_schema_roundtrip() {
@@ -199,7 +212,19 @@ mod tests {
             },
         };
         let dir = tempfile::tempdir().unwrap();
-        write_universe_json(dir.path(), &export).unwrap();
+        let backend = MemoryBackend::default();
+        write_universe_json(
+            dir.path(),
+            &export,
+            &backend,
+            &HashMap::new(),
+        )
+        .unwrap();
         assert!(dir.path().join(UNIVERSE_JSON_FILE).is_file());
+        let json: Value = serde_json::from_slice(
+            &std::fs::read(dir.path().join(UNIVERSE_JSON_FILE)).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(json["schema_version"], 2);
     }
 }

@@ -2,10 +2,14 @@
 
 use crate::communities::CommunitySummary;
 use crate::metagraph::{Metaedge, Metanode};
+use rgbuilder_graph::backend::{GraphBackend, MemoryBackend};
+use rgbuilder_graph::schema::{Node, NodeType};
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::f64::consts::PI;
+use uuid::Uuid;
 
-pub const UNIVERSE_JSON_SCHEMA_VERSION: u32 = 1;
+pub const UNIVERSE_JSON_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct Vec3 {
@@ -32,12 +36,26 @@ pub struct UniverseBridge {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct UniverseUnit {
+    pub id: u32,
+    pub label: String,
+    pub kind: String,
+    pub member_indices: Vec<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub loc_estimate: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UniversePackage {
     pub id: u32,
     pub community_id: usize,
     pub label: String,
     pub position: Vec3,
     pub member_indices: Vec<u32>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub units: Vec<UniverseUnit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub loc_estimate: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -192,6 +210,8 @@ fn package_frames(
                             z: center.z + (node.id as f64 * 0.31).sin() * 12.0,
                         },
                         member_indices: node.member_indices.clone(),
+                        units: Vec::new(),
+                        loc_estimate: None,
                     }
                 })
                 .collect::<Vec<_>>()
@@ -199,6 +219,210 @@ fn package_frames(
         .collect::<Vec<_>>();
     packages.sort_by_key(|p| p.id);
     packages
+}
+
+struct MemberNode {
+    index: u32,
+    name: String,
+    qualified_name: Option<String>,
+    file_path: Option<String>,
+    node_type: NodeType,
+    loc: u32,
+}
+
+fn node_loc(node: &Node) -> u32 {
+    match (node.start_line, node.end_line) {
+        (Some(s), Some(e)) if e >= s => (e - s + 1) as u32,
+        _ => 0,
+    }
+}
+
+fn load_member_nodes(
+    backend: &MemoryBackend,
+    index_to_uuid: &HashMap<u32, Uuid>,
+    member_indices: &[u32],
+) -> Vec<MemberNode> {
+    let mut out = Vec::with_capacity(member_indices.len());
+    for &idx in member_indices {
+        let Some(uuid) = index_to_uuid.get(&idx) else {
+            continue;
+        };
+        let Ok(Some(node)) = backend.get_node(*uuid) else {
+            continue;
+        };
+        out.push(MemberNode {
+            index: idx,
+            name: node.name.to_string(),
+            qualified_name: node.qualified_name.as_ref().map(|s| s.to_string()),
+            file_path: node.file_path.as_ref().map(|s| s.to_string()),
+            node_type: node.node_type,
+            loc: node_loc(&node),
+        });
+    }
+    out
+}
+
+fn is_type_unit(node_type: NodeType) -> bool {
+    matches!(
+        node_type,
+        NodeType::Class | NodeType::Struct | NodeType::Interface | NodeType::Enum
+    )
+}
+
+fn unit_label(name: &str, file_path: &Option<String>) -> String {
+    if !name.is_empty() {
+        return name.to_string();
+    }
+    file_path
+        .as_ref()
+        .and_then(|p| p.rsplit(['/', '\\']).next())
+        .unwrap_or("file")
+        .to_string()
+}
+
+fn sum_loc(members: &[MemberNode], indices: &[u32]) -> Option<u32> {
+    let total: u32 = members
+        .iter()
+        .filter(|m| indices.contains(&m.index))
+        .map(|m| m.loc)
+        .sum();
+    if total > 0 { Some(total) } else { None }
+}
+
+fn file_path_units(
+    functions: &[&MemberNode],
+    members: &[MemberNode],
+    id_start: u32,
+) -> Vec<UniverseUnit> {
+    let mut by_path: HashMap<String, Vec<u32>> = HashMap::new();
+    for f in functions {
+        let key = f
+            .file_path
+            .clone()
+            .unwrap_or_else(|| "(unknown)".to_string());
+        by_path.entry(key).or_default().push(f.index);
+    }
+    let mut paths: Vec<String> = by_path.keys().cloned().collect();
+    paths.sort();
+    paths
+        .into_iter()
+        .enumerate()
+        .map(|(i, path)| {
+            let member_indices = by_path.get(&path).cloned().unwrap_or_default();
+            let label = path.rsplit(['/', '\\']).next().unwrap_or(&path).to_string();
+            let loc_estimate = sum_loc(members, &member_indices);
+            UniverseUnit {
+                id: id_start + i as u32,
+                label,
+                kind: "file".into(),
+                member_indices,
+                loc_estimate,
+            }
+        })
+        .collect()
+}
+
+/// Group package members into L4 units (class, file, or module).
+pub fn compute_package_units(
+    backend: &MemoryBackend,
+    index_to_uuid: &HashMap<u32, Uuid>,
+    member_indices: &[u32],
+) -> Vec<UniverseUnit> {
+    let members = load_member_nodes(backend, index_to_uuid, member_indices);
+    if members.is_empty() {
+        return vec![];
+    }
+
+    let classes: Vec<&MemberNode> = members.iter().filter(|m| is_type_unit(m.node_type)).collect();
+    let functions: Vec<&MemberNode> = members
+        .iter()
+        .filter(|m| m.node_type == NodeType::Function)
+        .collect();
+    let modules: Vec<&MemberNode> = members
+        .iter()
+        .filter(|m| m.node_type == NodeType::Module)
+        .collect();
+
+    if !classes.is_empty() {
+        let mut units = Vec::new();
+        let mut assigned = HashSet::new();
+        for (uid, class) in classes.iter().enumerate() {
+            let class_qn = class
+                .qualified_name
+                .as_deref()
+                .unwrap_or(class.name.as_str());
+            let mut unit_members = vec![class.index];
+            for f in &functions {
+                if assigned.contains(&f.index) {
+                    continue;
+                }
+                let fn_qn = f.qualified_name.as_deref().unwrap_or(f.name.as_str());
+                let qn_match = fn_qn.starts_with(&format!("{class_qn}.")) || fn_qn == class_qn;
+                let file_match = class.file_path.is_some() && f.file_path == class.file_path;
+                if qn_match || file_match {
+                    unit_members.push(f.index);
+                    assigned.insert(f.index);
+                }
+            }
+            units.push(UniverseUnit {
+                id: uid as u32,
+                label: unit_label(&class.name, &class.file_path),
+                kind: "class".into(),
+                member_indices: unit_members.clone(),
+                loc_estimate: sum_loc(&members, &unit_members),
+            });
+        }
+        let remaining: Vec<&MemberNode> = functions
+            .iter()
+            .copied()
+            .filter(|f| !assigned.contains(&f.index))
+            .collect();
+        if !remaining.is_empty() {
+            units.extend(file_path_units(
+                &remaining,
+                &members,
+                units.len() as u32,
+            ));
+        }
+        return units;
+    }
+
+    if !modules.is_empty() {
+        return modules
+            .iter()
+            .enumerate()
+            .map(|(i, m)| UniverseUnit {
+                id: i as u32,
+                label: m.name.clone(),
+                kind: "module".into(),
+                member_indices: vec![m.index],
+                loc_estimate: if m.loc > 0 { Some(m.loc) } else { None },
+            })
+            .collect();
+    }
+
+    if !functions.is_empty() {
+        return file_path_units(&functions, &members, 0);
+    }
+
+    vec![]
+}
+
+/// Attach export-time L4 units and LoC estimates to a precomputed layout.
+pub fn enrich_layout_with_units(
+    layout: &mut UniverseLayout,
+    backend: &MemoryBackend,
+    index_to_uuid: &HashMap<u32, Uuid>,
+) {
+    for pkg in &mut layout.packages {
+        let units = compute_package_units(backend, index_to_uuid, &pkg.member_indices);
+        if units.is_empty() {
+            continue;
+        }
+        let total: u32 = units.iter().filter_map(|u| u.loc_estimate).sum();
+        pkg.loc_estimate = if total > 0 { Some(total) } else { None };
+        pkg.units = units;
+    }
 }
 
 #[cfg(test)]

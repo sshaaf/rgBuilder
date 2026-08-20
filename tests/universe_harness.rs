@@ -2,11 +2,14 @@
 
 #![allow(dead_code)]
 
+#[path = "dashboard_harness.rs"]
+mod dashboard_harness;
+
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-pub use crate::dashboard_harness::rgbuilder_bin;
+pub use dashboard_harness::rgbuilder_bin;
 
 pub fn run_discover_universe(repo: &Path, languages: Option<&str>) -> Output {
     let bin = rgbuilder_bin();
@@ -72,6 +75,11 @@ pub fn assert_universe_cross_artifact(repo: &Path) {
     let uni = repo.join(".rgbuilder/universe");
     let universe: Value =
         serde_json::from_slice(&std::fs::read(uni.join("universe.json")).unwrap()).unwrap();
+    let schema = universe["schema_version"].as_u64().unwrap_or(0);
+    assert!(
+        schema == 1 || schema == 2,
+        "unexpected universe.json schema_version {schema}"
+    );
     let communities: Value =
         serde_json::from_slice(&std::fs::read(uni.join("communities.json")).unwrap()).unwrap();
 

@@ -63,6 +63,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use taint_export::export_taint_bundle;
+use uuid::Uuid;
 
 /// Deprecated: writes the universe bundle (legacy name retained for API stability).
 pub fn export_dashboard_bundle(
@@ -257,8 +258,10 @@ fn export_ui_bundle_inner(
     }
     let semantic_summary = semantic_section(repo_root);
     profile_stage("universe_export", || {
-        write_universe_json(&out_dir, &export)?;
-        let layout = layout_for_export(&export);
+        let index_to_uuid: HashMap<u32, Uuid> =
+            uuid_to_index.iter().map(|(uuid, idx)| (*idx, *uuid)).collect();
+        write_universe_json(&out_dir, &export, backend, &index_to_uuid)?;
+        let layout = layout_for_export(&export, backend, &index_to_uuid);
         export_fingerprint = format!(
             "{}:{}",
             export_fingerprint,
