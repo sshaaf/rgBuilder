@@ -89,9 +89,13 @@ Full map: [docs/Code_structure.md](docs/Code_structure.md)
 
 ---
 
-## Adding or improving a language
+## Adding or improving a language / feature
 
-Follow [docs/tier-1-language-support.md](docs/tier-1-language-support.md) and update [docs/languages.md](docs/languages.md).
+Use the hub checklist for path choice, test matrices, and CI-equivalent commands:
+
+**[docs/contributor-checklist.md](docs/contributor-checklist.md)**
+
+Tier 1 depth (Layers A–F): [docs/tier-1-language-support.md](docs/tier-1-language-support.md) · language list: [docs/languages.md](docs/languages.md)
 
 ---
 
@@ -107,8 +111,9 @@ Follow [docs/tier-1-language-support.md](docs/tier-1-language-support.md) and up
 
 1. Branch from `main` (or the active integration branch).
 2. Keep commits focused; match existing Rust style and `cargo fmt` / `clippy` expectations.
-3. CI runs on PRs when a maintainer adds the **`ci`** label (see [.github/workflows/ci.yml](.github/workflows/ci.yml)).
-4. Fill in the PR template with test commands you ran.
+3. **Sign every commit** with **DCO sign-off** (`git commit -s`). See [Developer Certificate of Origin](https://developercertificate.org/) and [contributor checklist §6](docs/contributor-checklist.md#6-documentation--pr).
+4. CI runs on PRs when a maintainer adds the **`ci`** label (see [.github/workflows/ci.yml](.github/workflows/ci.yml)). Paste the CI-equivalent command block from the [contributor checklist](docs/contributor-checklist.md#5-standard-test-workflow).
+5. Fill in the PR template with test commands you ran.
 
 ---
 
