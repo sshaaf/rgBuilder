@@ -2,7 +2,7 @@
 
 Single hub for **adding or updating a language**, **config/markup plugins**, and **shipping a feature change** — including which tests to run before opening a PR.
 
-This doc **does not replace** the deep guides it links to. Use it to pick a path, run the right gates, and paste the same commands CI runs when a maintainer adds the **`ci`** label.
+This doc **does not replace** the deep guides it links to. Use it to pick a path, run the right tests, and paste the commands you ran in your PR.
 
 **Setup and clone:** [CONTRIBUTING.md](../CONTRIBUTING.md) · **Crate map:** [Code_structure.md](Code_structure.md)
 
@@ -16,7 +16,7 @@ This doc **does not replace** the deep guides it links to. Use it to pick a path
 | Tier / path | Decide Tier 1 vs 2 vs 3, markup, config, or feature — see [§1](#1-choose-your-path). |
 | Design | Large features: skim or add a note under [design/](design/README.md). Tier 1 languages: read [tier-1-language-support.md](tier-1-language-support.md) Layers A–F first. |
 | Crate map | Know where your change lives — [Code_structure.md](Code_structure.md). |
-| Commits | All commits must be **GPG-signed** and include **DCO sign-off** — [§6](#6-documentation--pr). |
+| Commits | Include **DCO sign-off** on every commit — [§6](#6-documentation--pr). |
 
 ---
 
@@ -64,7 +64,7 @@ Copy-paste **PR checklist** block: [tier-1 §7](tier-1-language-support.md#7-pr-
 | E3 Taint source→sink | E | `cargo test --test taint_analysis` or `tests/{lang}_taint.rs` |
 | E4 Fixture integration | E | e.g. `cargo test --test go_cfg_analysis` |
 | E5 Dashboard bundle | E | `cargo test --release --test dashboard_ecommerce_{lang}` + shared [dashboard_harness.rs](../tests/dashboard_harness.rs) |
-| E6 CI clean | E | [§5 fast gate](#5-standard-test-workflow) |
+| E6 Workspace clean | E | [§5 standard test workflow](#5-standard-test-workflow) |
 | F6 Field-write golden | F | `crates/rgbuilder-analysis/src/field_write.rs` — `{id}_cfg_captures_field_write_and_query` |
 | Langfeature GQL probes | E/F | `cargo test --test java_langfeatures` · `cargo test --test go_langfeatures` (see [go-language-coverage.md](design/go-language-coverage.md)) |
 
@@ -145,23 +145,7 @@ When changing `dashboard/` or `crates/rgbuilder-dashboard/`:
 
 ## 5. Standard test workflow
 
-### Fast gate (local, every PR)
-
-Run on touched areas plus workspace smoke:
-
-```bash
-cargo fmt --all -- --check
-cargo clippy --lib --bins -- -D warnings
-cargo clippy -p rgbuilder-analysis -- -D warnings
-cargo clippy -p rgbuilder-graph -p rgbuilder-core -- -D warnings
-cargo test --workspace --lib --bins --tests
-```
-
-Add path-specific targets from [§2](#2-programming-languages), [§3](#3-config--markup), or [§4](#4-feature-updates).
-
-### CI-equivalent block (paste into PR when `ci` label is requested)
-
-Matches [.github/workflows/ci.yml](../.github/workflows/ci.yml) (maintainers trigger via **`ci`** label or `workflow_dispatch`):
+Run before opening a PR (add path-specific targets from [§2](#2-programming-languages), [§3](#3-config--markup), or [§4](#4-feature-updates)):
 
 ```bash
 cargo fmt --all -- --check
@@ -190,7 +174,7 @@ cargo test --release --test blast_radius_perf
 
 Optional release-mode dashboard gates: add `--release --test dashboard_*` targets from [§2](#2-programming-languages).
 
-CLI I/O layer reference: [cli-io-sanity-qe.md](cli-io-sanity-qe.md).
+CLI I/O layer reference: [cli-io-sanity-qe.md](cli-io-sanity-qe.md). Workflow mirror: [.github/workflows/ci.yml](../.github/workflows/ci.yml).
 
 ---
 
@@ -208,9 +192,7 @@ CLI I/O layer reference: [cli-io-sanity-qe.md](cli-io-sanity-qe.md).
 
 ### Signed commits and DCO
 
-Every commit in a PR must:
-
-2. **Include DCO sign-off** — use `-s` / `--signoff` so the commit message contains:
+Every commit in a PR must include **DCO sign-off** — use `-s` / `--signoff` so the commit message contains:
 
    ```text
    Signed-off-by: Your Name <your.email@example.com>
@@ -227,7 +209,6 @@ git commit -s -m "your message"
 Verify before push:
 
 ```bash
-git log --show-signature -1
 git log -1 --format=%B | grep -i '^Signed-off-by:'
 ```
 
@@ -235,7 +216,7 @@ git log -1 --format=%B | grep -i '^Signed-off-by:'
 
 1. Branch from `main`.
 2. Fill in [.github/PULL_REQUEST_TEMPLATE.md](../.github/PULL_REQUEST_TEMPLATE.md).
-3. List **exact commands** you ran (use [§5 CI block](#ci-equivalent-block-paste-into-pr-when-ci-label-is-requested) when asking for the `ci` label).
+3. List **exact commands** you ran (see [§5](#5-standard-test-workflow)).
 4. Tier 1 language PRs: paste the checklist from [tier-1 §7](tier-1-language-support.md#7-pr-submission-checklist).
 
 ---
@@ -265,7 +246,7 @@ git log -1 --format=%B | grep -i '^Signed-off-by:'
          └───────────────────┴───────────────────┘
                              │
                              ▼
-              §5 fast gate (+ CI block if ci label)
+              §5 standard test workflow
                              │
                              ▼
               §6 signed commits + DCO + PR template
