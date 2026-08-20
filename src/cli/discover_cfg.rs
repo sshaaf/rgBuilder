@@ -84,10 +84,10 @@ struct CfgIncrementalCache {
     index: HashMap<String, AnalysisIndexEntry>,
 }
 
-struct FunctionWorkItem {
-    func_idx: usize,
+struct FileWorkGroup {
     file_path: String,
     language: String,
+    func_indices: Vec<usize>,
 }
 
 /// Parallel file read cache keyed by node `file_path` strings.
@@ -172,7 +172,7 @@ pub fn run_cfg_analysis_batch(
             &owned_sources
         }
     };
-    let work_items = flatten_work_items(functions);
+    let groups = group_work_items_by_file(functions);
     let stage = options.verbose.then(CfgStageTimings::default);
     let stage_ref = stage.as_ref();
     let timing_log = options
@@ -190,15 +190,13 @@ pub fn run_cfg_analysis_batch(
         dfg_loops: options.dfg_loops,
     };
 
-    let flat: Vec<Option<CfgFunctionWork>> = with_pool(options.thread_count, || {
-        work_items
+    let nested: Vec<Vec<Option<CfgFunctionWork>>> = with_pool(options.thread_count, || {
+        groups
             .par_iter()
-            .map_init(
-                HashMap::<String, ParsedSourceFile>::new,
-                |parse_cache, item| process_function_work_item(parse_cache, item, &ctx),
-            )
+            .map(|group| process_file_group(group, &ctx))
             .collect()
     });
+    let flat: Vec<Option<CfgFunctionWork>> = nested.into_iter().flatten().collect();
 
     let stage_profile = stage_ref.map(|stage| {
         let analyzed = flat.iter().filter_map(|w| w.as_ref()).count();
@@ -317,8 +315,8 @@ fn emit_tail_profile(log: &Mutex<Vec<CfgFunctionTiming>>) {
     }
 }
 
-fn flatten_work_items(functions: &[Node]) -> Vec<FunctionWorkItem> {
-    let mut items = Vec::new();
+fn group_work_items_by_file(functions: &[Node]) -> Vec<FileWorkGroup> {
+    let mut by_file: HashMap<String, FileWorkGroup> = HashMap::new();
     for (idx, func) in functions.iter().enumerate() {
         let Some(file_path) = func.file_path.as_ref() else {
             continue;
@@ -329,35 +327,48 @@ fn flatten_work_items(functions: &[Node]) -> Vec<FunctionWorkItem> {
         if language.is_empty() {
             continue;
         }
-        items.push(FunctionWorkItem {
-            func_idx: idx,
-            file_path: file_path.to_string(),
-            language,
-        });
+        by_file
+            .entry(file_path.to_string())
+            .or_insert_with(|| FileWorkGroup {
+                file_path: file_path.to_string(),
+                language,
+                func_indices: Vec::new(),
+            })
+            .func_indices
+            .push(idx);
     }
-    items
+    by_file.into_values().collect()
 }
 
-fn process_function_work_item(
-    parse_cache: &mut HashMap<String, ParsedSourceFile>,
-    item: &FunctionWorkItem,
+fn process_file_group(
+    group: &FileWorkGroup,
     ctx: &CfgWorkContext<'_>,
-) -> Option<CfgFunctionWork> {
-    let func = &ctx.functions[item.func_idx];
-    let source_arc = ctx.sources.sources.get(&item.file_path)?;
-    let source = source_arc.as_str();
-    analyze_function_in_file(
-        func,
-        &item.language,
-        &item.file_path,
-        source,
-        parse_cache,
-        ctx.cache,
-        ctx.stage,
-        ctx.timings,
-        ctx.enable_taint,
-        ctx.dfg_loops,
-    )
+) -> Vec<Option<CfgFunctionWork>> {
+    let Some(source) = ctx.sources.get(&group.file_path) else {
+        return (0..group.func_indices.len()).map(|_| None).collect();
+    };
+    let mut parsed: Option<ParsedSourceFile> = None;
+    let mut parse_attempted = false;
+    group
+        .func_indices
+        .iter()
+        .map(|&func_idx| {
+            let func = &ctx.functions[func_idx];
+            analyze_function_in_file(
+                func,
+                &group.language,
+                &group.file_path,
+                source,
+                &mut parsed,
+                &mut parse_attempted,
+                ctx.cache,
+                ctx.stage,
+                ctx.timings,
+                ctx.enable_taint,
+                ctx.dfg_loops,
+            )
+        })
+        .collect()
 }
 
 fn sync_storage_function_ids(storage: &AnalysisStorage, functions: &[Node]) -> usize {
@@ -415,7 +426,8 @@ fn analyze_function_in_file(
     language: &str,
     file_path: &str,
     source: &str,
-    parse_cache: &mut HashMap<String, ParsedSourceFile>,
+    parsed: &mut Option<ParsedSourceFile>,
+    parse_attempted: &mut bool,
     cache: &CfgIncrementalCache,
     stage: Option<&CfgStageTimings>,
     timings: Option<&Mutex<Vec<CfgFunctionTiming>>>,
@@ -433,13 +445,18 @@ fn analyze_function_in_file(
         }
     }
 
+    if !*parse_attempted {
+        *parsed = ParsedSourceFile::parse(language, source.as_bytes()).ok();
+        *parse_attempted = true;
+    }
+
     compute_function_cfg(
         func_node,
         language,
         file_path,
         source,
         &code_hash,
-        parse_cache,
+        parsed.as_ref(),
         false,
         stage,
         timings,
@@ -497,7 +514,7 @@ fn compute_function_cfg(
     file_path: &str,
     source: &str,
     code_hash: &str,
-    parse_cache: &mut HashMap<String, ParsedSourceFile>,
+    parsed: Option<&ParsedSourceFile>,
     from_cache: bool,
     stage: Option<&CfgStageTimings>,
     timings: Option<&Mutex<Vec<CfgFunctionTiming>>>,
@@ -508,21 +525,9 @@ fn compute_function_cfg(
 
     let build_start = stage.map(|_| Instant::now());
     let bytes = source.as_bytes();
-    let cfg_data = if let Some(parsed) = parse_cache.get(file_path) {
-        parsed.build_cfg(language, bytes, &func_node.name).ok()
-    } else {
-        None
-    }
-    .or_else(|| {
-        ParsedSourceFile::parse(language, bytes)
-            .ok()
-            .and_then(|parsed| {
-                let cfg = parsed.build_cfg(language, bytes, &func_node.name).ok()?;
-                parse_cache.insert(file_path.to_string(), parsed);
-                Some(cfg)
-            })
-    })
-    .or_else(|| build_cfg_for_function(language, source, &func_node.name).ok())?;
+    let cfg_data = parsed
+        .and_then(|p| p.build_cfg(language, bytes, &func_node.name).ok())
+        .or_else(|| build_cfg_for_function(language, source, &func_node.name).ok())?;
     if let (Some(stage), Some(start)) = (stage, build_start) {
         stage
             .build_cfg_ns
@@ -604,9 +609,12 @@ fn compute_from_cfg(
     }
 
     let taint_start = stage.map(|_| Instant::now());
+    let cfg_arc = Arc::new(cfg_data);
+    let pdg_arc = pdg_data.map(Arc::new);
     let (taint_data, flow_count, vulnerable_count) = if enable_taint {
-        if let Some(ref pdg) = pdg_data {
-            let mut analyzer = TaintAnalyzer::with_dominator(pdg, &cfg_data, dom_data);
+        if let Some(ref pdg) = pdg_arc {
+            let mut analyzer =
+                TaintAnalyzer::with_dominator(pdg.as_ref(), cfg_arc.as_ref(), dom_data);
             analyzer.detect_patterns(language);
             let flows = analyzer.analyze();
             let vulnerable = flows.iter().filter(|f| f.is_vulnerable()).count();
@@ -632,13 +640,20 @@ fn compute_from_cfg(
         function_name: func_node.name.to_string(),
         file_path: file_path.to_string(),
         code_hash: Some(code_hash.to_string()),
-        cfg: Some(cfg_data),
-        pdg: pdg_data,
+        cfg: Some(Arc::clone(&cfg_arc)),
+        pdg: pdg_arc.as_ref().map(Arc::clone),
         dominance: None,
         taint: taint_data,
     };
 
-    let archive_record = archive_record_from_analysis(func_node, file_path, code_hash, &analysis);
+    let archive_record = pdg_arc.as_ref().map(|pdg| CfgPdgRecord {
+        function_id: func_node.id,
+        code_hash: code_hash.to_string(),
+        function_name: func_node.name.to_string(),
+        file_path: Some(file_path.to_string()),
+        cfg: Arc::clone(&cfg_arc),
+        pdg: Arc::clone(pdg),
+    });
 
     Some(CfgFunctionWork {
         analysis: Some(analysis),
@@ -648,25 +663,6 @@ fn compute_from_cfg(
         from_cache,
         skip_persist: false,
     })
-}
-
-fn archive_record_from_analysis(
-    func_node: &Node,
-    file_path: &str,
-    code_hash: &str,
-    analysis: &FunctionAnalysis,
-) -> Option<CfgPdgRecord> {
-    match (&analysis.cfg, &analysis.pdg) {
-        (Some(cfg), Some(pdg)) => Some(CfgPdgRecord {
-            function_id: func_node.id,
-            code_hash: code_hash.to_string(),
-            function_name: func_node.name.to_string(),
-            file_path: Some(file_path.to_string()),
-            cfg: cfg.clone(),
-            pdg: Arc::new(pdg.clone()),
-        }),
-        _ => None,
-    }
 }
 
 /// When every CFG-eligible function is already indexed with the same body hash, skip the batch.

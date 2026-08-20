@@ -37,14 +37,37 @@ pub struct CfgPdgRecord {
     /// Source file path at index time.
     #[serde(default)]
     pub file_path: Option<String>,
-    /// Control-flow graph.
-    pub cfg: ControlFlowGraph,
+    /// Control-flow graph (shared with in-memory [`crate::storage::FunctionAnalysis`]).
+    #[serde(
+        serialize_with = "serialize_arc_cfg",
+        deserialize_with = "deserialize_arc_cfg"
+    )]
+    pub cfg: Arc<ControlFlowGraph>,
     /// Program dependence graph (shared across slice handoffs).
     #[serde(
         serialize_with = "serialize_arc_pdg",
         deserialize_with = "deserialize_arc_pdg"
     )]
     pub pdg: Arc<ProgramDependenceGraph>,
+}
+
+fn serialize_arc_cfg<S>(
+    cfg: &Arc<ControlFlowGraph>,
+    serializer: S,
+) -> std::result::Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    cfg.as_ref().serialize(serializer)
+}
+
+fn deserialize_arc_cfg<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Arc<ControlFlowGraph>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    ControlFlowGraph::deserialize(deserializer).map(Arc::new)
 }
 
 fn serialize_arc_pdg<S>(
@@ -96,7 +119,7 @@ impl CfgPdgArchive {
 
     /// Lookup CFG for a function.
     pub fn get_cfg(&self, function_id: Uuid) -> Option<&ControlFlowGraph> {
-        self.records.get(&function_id).map(|r| &r.cfg)
+        self.records.get(&function_id).map(|r| r.cfg.as_ref())
     }
 
     /// Write archive with magic header.
@@ -136,7 +159,7 @@ impl CfgPdgArchive {
     pub fn function_cfgs(&self) -> HashMap<Uuid, ControlFlowGraph> {
         self.records
             .iter()
-            .map(|(id, record)| (*id, record.cfg.clone()))
+            .map(|(id, record)| (*id, (*record.cfg).clone()))
             .collect()
     }
 
@@ -240,7 +263,7 @@ mod tests {
             code_hash: hash_code(code),
             function_name: "add".into(),
             file_path: None,
-            cfg,
+            cfg: Arc::new(cfg),
             pdg: Arc::new(pdg),
         });
 

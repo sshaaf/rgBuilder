@@ -130,7 +130,7 @@ fn export_one_taint(
 ) -> Option<(TaintFunctionEntry, usize, usize)> {
     let analysis = storage.load_function(entry.function_id).ok()??;
     let flows = analysis.taint.as_ref().filter(|f| !f.is_empty())?;
-    let pdg = analysis.pdg.as_ref();
+    let pdg = analysis.pdg.as_deref();
     let flow_views: Vec<TaintFlowView> = flows
         .iter()
         .enumerate()

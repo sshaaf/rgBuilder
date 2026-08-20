@@ -323,6 +323,7 @@ mod tests {
     use rgbuilder_analysis::pdg::ProgramDependenceGraph;
     use rgbuilder_analysis::storage::FunctionAnalysis;
     use rgbuilder_graph::backend::MemoryBackend;
+    use std::sync::Arc;
     use tempfile::TempDir;
     use uuid::Uuid;
 
@@ -369,8 +370,8 @@ mod tests {
                 function_name: "add".into(),
                 file_path: "src/lib.rs".into(),
                 code_hash: Some("hash1".into()),
-                cfg: Some(cfg),
-                pdg: Some(pdg),
+                cfg: Some(Arc::new(cfg)),
+                pdg: Some(Arc::new(pdg)),
                 dominance: None,
                 taint: None,
             })

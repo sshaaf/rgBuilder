@@ -14,51 +14,67 @@ pub struct DominatorTree {
     pub frontiers: HashMap<BlockId, HashSet<BlockId>>,
     /// Blocks reachable from entry (unreachable blocks excluded).
     pub reachable: HashSet<BlockId>,
-    /// DFS block order for intersect algorithm (used by [`intersect`]).
+    /// Reverse-postorder index per block (entry is 0).
     #[allow(dead_code)]
     block_order: HashMap<BlockId, usize>,
 }
 
 impl DominatorTree {
-    /// Build dominator tree via iterative dataflow (Cooper-Harvey-Kennedy style).
+    /// Build dominator tree via iterative dataflow (Cooper-Harvey-Kennedy).
+    ///
+    /// Blocks are numbered in reverse postorder and the CHK inner loop uses dense
+    /// `Vec<u32>` idoms. Public maps stay keyed by [`BlockId`] for PDG and callers.
     pub fn build(cfg: &ControlFlowGraph) -> Self {
         let reachable = cfg.reachable_blocks();
-        let block_order = compute_block_order(cfg, &reachable);
-        let mut idom = HashMap::new();
-        for block_id in reachable.iter() {
-            idom.insert(*block_id, cfg.entry);
+        let rpo = compute_rpo(cfg, &reachable);
+        let n = rpo.len();
+        let mut rpo_index: HashMap<BlockId, u32> = HashMap::with_capacity(n);
+        for (i, &id) in rpo.iter().enumerate() {
+            rpo_index.insert(id, i as u32);
         }
-        idom.insert(cfg.entry, cfg.entry);
 
+        // idom_rpo[i] = RPO index of the immediate dominator of rpo[i]. Entry is 0.
+        let mut idom_rpo = vec![0u32; n];
         let mut changed = true;
         while changed {
             changed = false;
-            for &block_id in reachable.iter() {
-                if block_id == cfg.entry {
-                    continue;
+            for i in 1..n {
+                let block_id = rpo[i];
+                let mut new_idom: Option<u32> = None;
+                for &pred in cfg.predecessors(block_id) {
+                    let Some(&pidx) = rpo_index.get(&pred) else {
+                        continue;
+                    };
+                    new_idom = Some(match new_idom {
+                        None => pidx,
+                        Some(cur) => intersect_rpo(&idom_rpo, cur, pidx),
+                    });
                 }
-                let mut preds = cfg
-                    .predecessors(block_id)
-                    .iter()
-                    .copied()
-                    .filter(|p| reachable.contains(p));
-                let Some(first_pred) = preds.next() else {
+                let Some(new_idom) = new_idom else {
                     continue;
                 };
-                let mut new_idom = first_pred;
-                for pred in preds {
-                    new_idom = intersect(&idom, &block_order, new_idom, pred);
-                }
-                if idom.get(&block_id) != Some(&new_idom) {
-                    idom.insert(block_id, new_idom);
+                if idom_rpo[i] != new_idom {
+                    idom_rpo[i] = new_idom;
                     changed = true;
                 }
             }
         }
 
+        let mut idom = HashMap::with_capacity(reachable.len());
+        for (i, &block_id) in rpo.iter().enumerate() {
+            let idom_block = rpo[idom_rpo[i] as usize];
+            idom.insert(block_id, idom_block);
+        }
+        for &block_id in &reachable {
+            idom.entry(block_id).or_insert(cfg.entry);
+        }
+        idom.insert(cfg.entry, cfg.entry);
+
         debug_assert!(verify_idom_acyclic(&idom), "idom tree must be acyclic");
 
         let frontiers = compute_dominance_frontiers(cfg, &idom, &reachable);
+        let block_order: HashMap<BlockId, usize> =
+            rpo.iter().enumerate().map(|(i, id)| (*id, i)).collect();
         Self {
             idom,
             frontiers,
@@ -131,47 +147,49 @@ pub fn verify_idom_acyclic(idom: &HashMap<BlockId, BlockId>) -> bool {
     true
 }
 
-fn compute_block_order(
-    cfg: &ControlFlowGraph,
-    reachable: &HashSet<BlockId>,
-) -> HashMap<BlockId, usize> {
-    let mut order = HashMap::new();
-    let mut stack = vec![cfg.entry];
-    let mut visited = HashSet::new();
-    let mut idx = 0usize;
-    while let Some(block) = stack.pop() {
-        if !reachable.contains(&block) || !visited.insert(block) {
-            continue;
-        }
-        order.insert(block, idx);
-        idx += 1;
-        for &succ in cfg.successors(block) {
-            if reachable.contains(&succ) && !visited.contains(&succ) {
-                stack.push(succ);
+/// Reverse postorder from `cfg.entry` (entry first). Iterative to avoid deep-CFG stack overflow.
+fn compute_rpo(cfg: &ControlFlowGraph, reachable: &HashSet<BlockId>) -> Vec<BlockId> {
+    if !reachable.contains(&cfg.entry) {
+        return Vec::new();
+    }
+    let mut visited = HashSet::with_capacity(reachable.len());
+    let mut post_order = Vec::with_capacity(reachable.len());
+    struct Frame {
+        block: BlockId,
+        succ_i: usize,
+    }
+    visited.insert(cfg.entry);
+    let mut stack = vec![Frame {
+        block: cfg.entry,
+        succ_i: 0,
+    }];
+    while let Some(frame) = stack.last_mut() {
+        let succs = cfg.successors(frame.block);
+        if frame.succ_i < succs.len() {
+            let succ = succs[frame.succ_i];
+            frame.succ_i += 1;
+            if reachable.contains(&succ) && visited.insert(succ) {
+                stack.push(Frame {
+                    block: succ,
+                    succ_i: 0,
+                });
             }
+        } else {
+            let Frame { block, .. } = stack.pop().expect("stack non-empty");
+            post_order.push(block);
         }
     }
-    order
+    post_order.reverse();
+    post_order
 }
 
-fn intersect(
-    idom: &HashMap<BlockId, BlockId>,
-    order: &HashMap<BlockId, usize>,
-    mut b1: BlockId,
-    mut b2: BlockId,
-) -> BlockId {
+fn intersect_rpo(idom: &[u32], mut b1: u32, mut b2: u32) -> u32 {
     while b1 != b2 {
-        while order.get(&b1).unwrap_or(&0) > order.get(&b2).unwrap_or(&0) {
-            b1 = *idom.get(&b1).unwrap_or(&b1);
-            if b1 == *idom.get(&b1).unwrap_or(&b1) {
-                break;
-            }
+        while b1 > b2 {
+            b1 = idom[b1 as usize];
         }
-        while order.get(&b2).unwrap_or(&0) > order.get(&b1).unwrap_or(&0) {
-            b2 = *idom.get(&b2).unwrap_or(&b2);
-            if b2 == *idom.get(&b2).unwrap_or(&b2) {
-                break;
-            }
+        while b2 > b1 {
+            b2 = idom[b2 as usize];
         }
     }
     b1
@@ -212,7 +230,18 @@ fn compute_dominance_frontiers(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cfg::{BasicBlock, CfgEdgeType};
     use crate::cfg_builder::build_cfg_for_function;
+    use uuid::Uuid;
+
+    fn empty_block(id: BlockId) -> BasicBlock {
+        BasicBlock {
+            id,
+            statements: Vec::new(),
+            start_line: 0,
+            end_line: 0,
+        }
+    }
 
     #[test]
     fn test_dominance_entry_dominates_all() {
@@ -262,6 +291,55 @@ fn sum(n: i32) -> i32 {
 "#;
         let cfg = build_cfg_for_function("rust", code, "sum").unwrap();
         let dom = DominatorTree::build(&cfg);
+        assert!(verify_idom_acyclic(&dom.idom));
+    }
+
+    #[test]
+    fn rpo_starts_at_entry_and_covers_reachable() {
+        let code = r#"
+fn nested(n: i32) -> i32 {
+    let mut s = 0;
+    let mut i = 0;
+    while i < n {
+        if i % 2 == 0 {
+            s += i;
+        }
+        i += 1;
+    }
+    s
+}
+"#;
+        let cfg = build_cfg_for_function("rust", code, "nested").unwrap();
+        let reachable = cfg.reachable_blocks();
+        let rpo = compute_rpo(&cfg, &reachable);
+        assert_eq!(rpo.first().copied(), Some(cfg.entry));
+        assert_eq!(rpo.len(), reachable.len());
+        let rpo_set: HashSet<_> = rpo.into_iter().collect();
+        assert_eq!(rpo_set, reachable);
+    }
+
+    #[test]
+    fn diamond_join_idom_is_entry() {
+        let mut cfg = ControlFlowGraph::new();
+        let entry = cfg.entry;
+        let left = Uuid::from_u128(1);
+        let right = Uuid::from_u128(2);
+        let join = Uuid::from_u128(3);
+        cfg.add_block(empty_block(left));
+        cfg.add_block(empty_block(right));
+        cfg.add_block(empty_block(join));
+        cfg.add_edge(entry, left, CfgEdgeType::IfTrue);
+        cfg.add_edge(entry, right, CfgEdgeType::IfFalse);
+        cfg.add_edge(left, join, CfgEdgeType::Next);
+        cfg.add_edge(right, join, CfgEdgeType::Next);
+
+        let dom = DominatorTree::build(&cfg);
+        assert_eq!(dom.idom.get(&entry), Some(&entry));
+        assert_eq!(dom.idom.get(&left), Some(&entry));
+        assert_eq!(dom.idom.get(&right), Some(&entry));
+        assert_eq!(dom.idom.get(&join), Some(&entry));
+        assert!(dom.dominates(entry, join));
+        assert!(!dom.dominates(left, right));
         assert!(verify_idom_acyclic(&dom.idom));
     }
 }
