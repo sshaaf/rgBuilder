@@ -45,6 +45,7 @@ How has this been tested?
 - [ ] No clippy warnings (`cargo clippy --all-targets -- -D warnings`)
 - [ ] Documentation updated (if applicable)
 - [ ] CONTRIBUTING.md guidelines followed
+- [ ] All commits are **signed** and include **DCO sign-off** (`Signed-off-by:`) — see [Developer Certificate of Origin](https://developercertificate.org/) and [contributor checklist §6](../docs/contributor-checklist.md#6-documentation--pr)
 
 ## Performance Impact
 
