@@ -284,6 +284,8 @@ fn semantic_vocab_and_diffuse_find_checkout() {
         vocab_doc["model_id"]
     );
 
+    // Distilled vocab-accumulate-v2 Hamming is weaker than FNV v1 identity matching.
+    // Product ranking is fusion (default); that is what must surface checkout.
     let q = sandbox.run(&[
         "-f",
         "json",
@@ -292,13 +294,12 @@ fn semantic_vocab_and_diffuse_find_checkout() {
         "checkout order cart",
         "--limit",
         "5",
-        "--no-fusion",
     ]);
     assert_success(&q, "vocab query");
     let names = hit_names(&sandbox.parse_json(&q));
     assert!(
         names.iter().any(|n| n.contains("checkout")),
-        "vocab Hamming should rank checkout: {names:?}"
+        "vocab fusion should rank checkout: {names:?}"
     );
 
     let index_diffuse = sandbox.run(&[
@@ -321,7 +322,6 @@ fn semantic_vocab_and_diffuse_find_checkout() {
         "checkout order cart",
         "--limit",
         "5",
-        "--no-fusion",
     ]);
     assert_success(&q2, "vocab+diffuse query");
     let names2 = hit_names(&sandbox.parse_json(&q2));

@@ -5,7 +5,7 @@
 //! vocab (`vocab-accumulate-v1` FNV or `v2` distilled); code-daemon ONNX is opt-in (`--embedder code-daemon`).
 
 use crate::semantic_embedder::{OnnxReloadOptions, SemanticEmbedder, embedder_for_index};
-use crate::semantic_extract::extract_body_tokens_for_node;
+use crate::semantic_extract::{extract_body_tokens_for_node, extract_body_tokens_from_slice};
 use rayon::prelude::*;
 use rgbuilder_error::Result;
 use rgbuilder_graph::backend::MemoryBackend;
@@ -260,29 +260,8 @@ pub fn build_index(
         .repo_root
         .as_ref()
         .and_then(|root| ContentStore::load(ContentStore::default_path(root)).ok());
-    let mut candidates: Vec<(SemanticEntry, String)> = Vec::new();
-    backend.for_each_node(|node| {
-        let text = embed_text_for_scope(node, options.scope, body_root, content_store.as_ref());
-        if let Some(text) = text {
-            let code_hash = node
-                .code_hash
-                .as_ref()
-                .map(|s| s.to_string())
-                .or_else(|| node.get_property("body_hash").map(|s| s.to_string()));
-            candidates.push((
-                SemanticEntry {
-                    node_id: node.id,
-                    name: node.name.to_string(),
-                    qualified_name: node.qualified_name.as_ref().map(|s| s.to_string()),
-                    file_path: node.file_path.as_ref().map(|s| s.to_string()),
-                    code_hash,
-                    node_type: Some(format!("{:?}", node.node_type)),
-                    kind: node.get_property("kind").map(|s| s.to_string()),
-                },
-                text,
-            ));
-        }
-    })?;
+    let candidates =
+        collect_index_candidates(backend, options.scope, body_root, content_store.as_ref())?;
 
     let diffuse = options.diffuse.filter(|cfg| cfg.is_active());
 
@@ -320,18 +299,21 @@ pub fn build_index(
         let mut entry_by_uuid: HashMap<Uuid, (SemanticEntry, Vec<f32>)> = HashMap::new();
 
         let mut seen = HashSet::new();
-        for (fresh_entry, text) in candidates {
+        for (fresh_entry, _) in &candidates {
             seen.insert(fresh_entry.node_id);
             stats.total += 1;
             stats.embedded += 1;
-            let floats = embedder.embed(&text)?;
-            if let Some(&idx) = call_graph.id_to_index.get(&fresh_entry.node_id) {
+        }
+
+        embed_jobs_chunked(embedder, &candidates, |entry, floats| {
+            if let Some(&idx) = call_graph.id_to_index.get(&entry.node_id) {
                 let start = idx as usize * dims;
                 let copy = dims.min(floats.len());
                 dense[start..start + copy].copy_from_slice(&floats[..copy]);
             }
-            entry_by_uuid.insert(fresh_entry.node_id, (fresh_entry, floats));
-        }
+            entry_by_uuid.insert(entry.node_id, (entry.clone(), floats));
+            Ok(())
+        })?;
 
         crate::semantic_diffuse::diffuse_call_topology(&call_graph, &mut dense, dims, config);
 
@@ -377,23 +359,12 @@ pub fn build_index(
             embed_jobs.push((fresh_entry, text));
         }
 
-        const EMBED_STREAM_CHUNK: usize = 256;
-        for chunk in embed_jobs.chunks(EMBED_STREAM_CHUNK) {
-            let texts: Vec<&str> = chunk.iter().map(|(_, text)| text.as_str()).collect();
-            let binaries = embedder.embed_binary_batch(&texts)?;
-            if binaries.len() != chunk.len() {
-                return Err(rgbuilder_error::Error::ConfigError(format!(
-                    "embed_binary_batch returned {} rows for {} texts",
-                    binaries.len(),
-                    chunk.len()
-                )));
-            }
-            for ((entry, _), bits) in chunk.iter().zip(binaries) {
-                entries.push(entry.clone());
-                binary_embeddings.extend_from_slice(&bits);
-                stats.embedded += 1;
-            }
-        }
+        embed_jobs_chunked(embedder, &embed_jobs, |entry, floats| {
+            entries.push(entry.clone());
+            binary_embeddings.extend_from_slice(&quantize_binary(&floats));
+            stats.embedded += 1;
+            Ok(())
+        })?;
 
         if options.incremental {
             if let Some(existing) = &options.existing {
@@ -435,6 +406,183 @@ pub fn build_from_backend(
         SemanticBuildOptions::fresh(dimensions, graph_digest),
     )?;
     Ok(index)
+}
+
+fn semantic_entry_from_node(node: &Node) -> SemanticEntry {
+    SemanticEntry {
+        node_id: node.id,
+        name: node.name.to_string(),
+        qualified_name: node.qualified_name.as_ref().map(|s| s.to_string()),
+        file_path: node.file_path.as_ref().map(|s| s.to_string()),
+        code_hash: node
+            .code_hash
+            .as_ref()
+            .map(|s| s.to_string())
+            .or_else(|| node.get_property("body_hash").map(|s| s.to_string())),
+        node_type: Some(format!("{:?}", node.node_type)),
+        kind: node.get_property("kind").map(|s| s.to_string()),
+    }
+}
+
+struct PendingCandidate {
+    entry: SemanticEntry,
+    parts: Vec<String>,
+    body_slice: Option<(String, usize, usize)>,
+    body_ref: Option<String>,
+}
+
+impl PendingCandidate {
+    fn needs_io(&self) -> bool {
+        self.body_slice.is_some() || self.body_ref.is_some()
+    }
+}
+
+fn is_doc_section(node: &Node) -> bool {
+    if node.node_type != NodeType::Module {
+        return false;
+    }
+    matches!(node.get_property("kind"), Some("heading" | "code_block"))
+}
+
+fn function_decl_parts(node: &Node) -> Vec<String> {
+    let mut parts: Vec<String> = Vec::new();
+    if let Some(qn) = &node.qualified_name {
+        parts.push(qn.to_string());
+    } else {
+        parts.push(node.name.to_string());
+    }
+    if let Some(sig) = node.signature_text() {
+        parts.push(sig.to_string());
+    }
+    if let Some(ret) = node.return_type_text() {
+        parts.push(format!("returns {ret}"));
+    }
+    if let Some(doc) = node.get_property("documentation") {
+        parts.push(doc.to_string());
+    }
+    parts
+}
+
+fn pending_from_node(
+    node: &Node,
+    scope: SemanticIndexScope,
+    embed_bodies: bool,
+) -> Option<PendingCandidate> {
+    let include_fn = matches!(
+        scope,
+        SemanticIndexScope::Functions | SemanticIndexScope::All
+    );
+    let include_docs = matches!(scope, SemanticIndexScope::Docs | SemanticIndexScope::All);
+    if include_fn && node.node_type == NodeType::Function {
+        let body_slice = if embed_bodies {
+            match (node.file_path.as_deref(), node.start_line, node.end_line) {
+                (Some(path), Some(start), Some(end)) => Some((path.to_string(), start, end)),
+                _ => None,
+            }
+        } else {
+            None
+        };
+        return Some(PendingCandidate {
+            entry: semantic_entry_from_node(node),
+            parts: function_decl_parts(node),
+            body_slice,
+            body_ref: None,
+        });
+    }
+    if include_docs && is_doc_section(node) {
+        let mut parts: Vec<String> = Vec::new();
+        if let Some(qn) = &node.qualified_name {
+            parts.push(qn.to_string());
+        }
+        parts.push(node.name.to_string());
+        let mut body_ref = None;
+        if let Some(text) = node.get_property("body_text") {
+            parts.push(text.to_string());
+        } else if let Some(ref_key) = node.get_property("body_ref") {
+            body_ref = Some(ref_key.to_string());
+        }
+        return Some(PendingCandidate {
+            entry: semantic_entry_from_node(node),
+            parts,
+            body_slice: None,
+            body_ref,
+        });
+    }
+    None
+}
+
+fn collect_index_candidates(
+    backend: &MemoryBackend,
+    scope: SemanticIndexScope,
+    body_root: Option<&Path>,
+    content_store: Option<&ContentStore>,
+) -> Result<Vec<(SemanticEntry, String)>> {
+    let parallel_io =
+        body_root.is_some() || matches!(scope, SemanticIndexScope::Docs | SemanticIndexScope::All);
+    if !parallel_io {
+        let mut candidates = Vec::new();
+        backend.for_each_node(|node| {
+            if let Some(text) = embed_text_for_scope(node, scope, None, None) {
+                candidates.push((semantic_entry_from_node(node), text));
+            }
+        })?;
+        return Ok(candidates);
+    }
+
+    let mut pending = Vec::new();
+    backend.for_each_node(|node| {
+        if let Some(item) = pending_from_node(node, scope, body_root.is_some()) {
+            pending.push(item);
+        }
+    })?;
+    if pending.iter().any(PendingCandidate::needs_io) {
+        pending.par_iter_mut().for_each(|item| {
+            if let (Some(root), Some((path, start, end))) = (body_root, item.body_slice.take()) {
+                if let Ok(tokens) = extract_body_tokens_from_slice(root, &path, start, end) {
+                    let mut token_list: Vec<String> = tokens.into_iter().collect();
+                    token_list.sort_unstable();
+                    item.parts.extend(token_list);
+                }
+            }
+            if let Some(key) = item.body_ref.take() {
+                if let Some(store) = content_store {
+                    if let Some(body) = store.get_str(&key) {
+                        item.parts.push(body.to_string());
+                    }
+                }
+            }
+        });
+    }
+    Ok(pending
+        .into_iter()
+        .map(|item| (item.entry, item.parts.join(" ")))
+        .collect())
+}
+
+fn embed_jobs_chunked(
+    embedder: &dyn SemanticEmbedder,
+    jobs: &[(SemanticEntry, String)],
+    mut emit: impl FnMut(&SemanticEntry, Vec<f32>) -> Result<()>,
+) -> Result<()> {
+    if jobs.is_empty() {
+        return Ok(());
+    }
+    let chunk_size = embedder.preferred_batch_size().max(1);
+    for chunk in jobs.chunks(chunk_size) {
+        let texts: Vec<&str> = chunk.iter().map(|(_, text)| text.as_str()).collect();
+        let rows = embedder.embed_batch(&texts)?;
+        if rows.len() != chunk.len() {
+            return Err(rgbuilder_error::Error::ConfigError(format!(
+                "embed_batch returned {} rows for {} texts",
+                rows.len(),
+                chunk.len()
+            )));
+        }
+        for ((entry, _), floats) in chunk.iter().zip(rows) {
+            emit(entry, floats)?;
+        }
+    }
+    Ok(())
 }
 
 /// Collect embeddable text for a function node (declaration metadata only).
@@ -1214,5 +1362,64 @@ mod tests {
         let hits = hamming_top_k(&index, &[0u8], rows + 10);
         let rows_seen: HashSet<_> = hits.iter().map(|(r, _)| *r).collect();
         assert_eq!(rows_seen.len(), rows);
+    }
+
+    #[test]
+    fn hash_embed_batch_preserves_per_text_vectors() {
+        let emb = crate::semantic_embedder::SignHashEmbedder::new(32);
+        let texts = ["checkout cart", "publish event", "process order"];
+        let refs: Vec<&str> = texts.to_vec();
+        let batch = emb.embed_batch(&refs).unwrap();
+        for (text, row) in texts.iter().zip(batch) {
+            assert_eq!(row, emb.embed(text).unwrap());
+        }
+    }
+
+    #[test]
+    fn embed_batch_preserves_order_under_parallelism() {
+        let emb = crate::semantic_embedder::SignHashEmbedder::new(64);
+        let texts: Vec<String> = (0..32)
+            .map(|i| format!("symbol{i} unique{i} token"))
+            .collect();
+        let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
+        let batch = emb.embed_batch(&refs).unwrap();
+        assert_eq!(batch.len(), texts.len());
+        for (text, row) in texts.iter().zip(&batch) {
+            assert_eq!(row, &emb.embed(text).unwrap());
+        }
+    }
+
+    #[test]
+    fn diffuse_index_embeds_call_neighbors() {
+        use rgbuilder_graph::schema::{Edge, EdgeType};
+        let mut backend = MemoryBackend::new();
+        let caller = Node::new(NodeType::Function, "caller").with_signature("fn caller()");
+        let callee = Node::new(NodeType::Function, "callee").with_signature("fn callee()");
+        let caller_id = caller.id;
+        let callee_id = callee.id;
+        backend.insert_node(caller).unwrap();
+        backend.insert_node(callee).unwrap();
+        backend
+            .insert_edge(Edge::new(caller_id, callee_id, EdgeType::Calls))
+            .unwrap();
+
+        let embedder = crate::semantic_embedder::SignHashEmbedder::new(64);
+        let (index, stats) = build_index(
+            &backend,
+            &embedder,
+            SemanticBuildOptions {
+                diffuse: Some(crate::semantic_diffuse::DiffuseConfig {
+                    alpha: 0.25,
+                    iterations: 1,
+                    mode: crate::semantic_diffuse::DiffuseNeighborMode::Callees,
+                }),
+                ..SemanticBuildOptions::fresh(64, None)
+            },
+        )
+        .unwrap();
+        assert_eq!(stats.embedded, 2);
+        assert_eq!(index.len(), 2);
+        assert!(index.entries.iter().any(|entry| entry.name == "caller"));
+        assert!(index.entries.iter().any(|entry| entry.name == "callee"));
     }
 }

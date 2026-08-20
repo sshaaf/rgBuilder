@@ -16,10 +16,24 @@ pub trait SemanticEmbedder: Send + Sync {
     fn dimensions(&self) -> usize;
     /// Embed one document/query string.
     fn embed(&self, text: &str) -> Result<Vec<f32>>;
-    /// Embed many texts. Default runs [`Self::embed`] in parallel.
+    /// Preferred `embed_batch` width for index/distill chunking.
+    ///
+    /// CPU embedders can take large chunks. ONNX should stay small enough that
+    /// a padded `[N, seq]` tensor fits comfortably in cache.
+    fn preferred_batch_size(&self) -> usize {
+        1024
+    }
+    /// Embed many texts. Default runs [`Self::embed`] in parallel (order-preserving).
     fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
         use rayon::prelude::*;
-        texts.par_iter().map(|text| self.embed(text)).collect()
+        // Collect `Vec<Result<_>>` first. `collect::<Result<Vec<_>>>()` on a
+        // parallel iterator is not indexed and can reorder rows.
+        texts
+            .par_iter()
+            .map(|text| self.embed(text))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .collect()
     }
     /// Embed and sign-quantize to bit-packed bytes.
     fn embed_binary(&self, text: &str) -> Result<Vec<u8>> {
