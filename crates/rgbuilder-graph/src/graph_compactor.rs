@@ -242,6 +242,9 @@ pub fn compact_repo_snapshot(repo_root: &Path, delta: DeltaSegment) -> Result<Co
 }
 
 #[cfg(test)]
+use crate::schema::NodeType;
+
+#[cfg(test)]
 fn node_matches_invalidated(node: &Node, invalidated: &HashSet<String>) -> bool {
     let path = match (&node.file_path, node.node_type == NodeType::File) {
         (Some(fp), _) => fp.as_ref(),
