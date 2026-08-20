@@ -7,7 +7,7 @@
 //!
 //! - **`Sandbox`** — copies [`tests/fixtures/tiny_polyglot_repo`] into a temp dir;
 //!   passes `-r {repo}` and `-d {repo}/sandbox_graph.db` on every invocation.
-//! - **Binary** — `CARGO_BIN_EXE_rg_build` (built by `cargo test` for the active profile).
+//! - **Binary** — `CARGO_BIN_EXE_rg_build` when set; otherwise `target/debug/rg-build`.
 //! - **Helpers** — schema version, key presence/absence, nil-UUID scan, exit-code checks.
 //!
 //! # Coverage (see `docs/cli-io-sanity-qe.md` for the full matrix)
@@ -34,11 +34,17 @@ use std::str;
 const NIL_UUID: &str = "00000000-0000-0000-0000-000000000000";
 
 fn rgbuilder_bin() -> PathBuf {
-    option_env!("CARGO_BIN_EXE_rg_build")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/release/rg-build")
-        })
+    for key in ["CARGO_BIN_EXE_rg_build", "CARGO_BIN_EXE_rg-build"] {
+        if let Ok(p) = std::env::var(key) {
+            return PathBuf::from(p);
+        }
+    }
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let debug = root.join("target/debug/rg-build");
+    if debug.is_file() {
+        return debug;
+    }
+    root.join("target/release/rg-build")
 }
 
 fn fixture_root() -> PathBuf {
@@ -493,6 +499,14 @@ fn test_all_cli_commands_json_schema_sanity() {
     assert!(
         index_doc["functions_indexed"].as_u64().unwrap() > 0,
         "semantic index should cover functions"
+    );
+    assert!(
+        index_doc["model_id"]
+            .as_str()
+            .unwrap_or("")
+            .contains("vocab-accumulate"),
+        "default embedder should be vocab, got {:?}",
+        index_doc["model_id"]
     );
 
     let semantic_query = sandbox.run(&[

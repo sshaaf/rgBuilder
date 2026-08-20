@@ -764,15 +764,15 @@ Opt-in embedding index + query. Types: `src/cli/semantic_output.rs`.
 ```bash
 rg-build -r "$REPO" -f json semantic index
 rg-build -r "$REPO" -f json semantic index --scope docs --embedder hash
-# offline: --embedder vocab|hash
+# extras: --embedder code-daemon|hash   --embed-bodies
 ```
 
-`--scope` on **index**: `function` (default), `docs` (`:Module` `kind=heading` + `kind=code_block`), or `all`. Doc embeddings read `body_text` or `content_store.bin` via `body_ref`.
+`--scope` on **index**: `function` (default), `docs` (`:Module` `kind=heading` + `kind=code_block`), or `all`. Doc embeddings read `body_text` or `content_store.bin` via `body_ref`. Function vectors use declaration metadata unless `--embed-bodies`.
 
 ```typescript
 type SemanticIndexJsonResponse = {
   schema_version: 2;
-  model_id: string;
+  model_id: string;            // e.g. vocab-accumulate-v1; +bodies when --embed-bodies
   dimensions: number;          // default 256
   functions_indexed: number;   // entry count (doc sections when --scope docs; field name is legacy)
   path: string;                // .rgbuilder/semantic_index.bin

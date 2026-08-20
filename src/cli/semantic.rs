@@ -16,11 +16,12 @@ use clap::ValueEnum;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq, Default)]
 pub enum CliEmbedderKind {
     /// Deterministic sign-hash (no model files).
     Hash,
     /// Compiled vocab bag-of-tokens (offline, no ONNX).
+    #[default]
     Vocab,
     /// Generic ONNX `--model` (hash tokenization, or `--tokenizer` for SentencePiece).
     Onnx,
@@ -68,6 +69,8 @@ pub struct SemanticIndexArgs {
     pub diffuse_iters: usize,
     pub diffuse_bidirectional: bool,
     pub scope: CliSemanticScope,
+    /// Re-read function source and append body identifier tokens (off by default).
+    pub embed_bodies: bool,
 }
 
 pub struct SemanticQueryArgs {
@@ -127,6 +130,7 @@ pub fn run_index(ctx: &CliContext, args: SemanticIndexArgs) -> Result<()> {
             model_path: stored_model,
             tokenizer_path: stored_tokenizer,
             repo_root: Some(ctx.repo.clone()),
+            embed_bodies: args.embed_bodies,
             diffuse: if args.diffuse {
                 Some(crate::analysis::DiffuseConfig {
                     alpha: args.diffuse_alpha,

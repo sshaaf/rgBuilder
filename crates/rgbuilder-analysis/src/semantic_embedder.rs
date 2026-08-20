@@ -1,9 +1,11 @@
-//! Pluggable semantic embedders (bundled code-daemon default; sign-hash fallback).
+//! Pluggable semantic embedders (compiled vocab default; code-daemon / sign-hash fallbacks).
 
 use rgbuilder_error::{Error, Result};
 use std::path::{Path, PathBuf};
 
-use crate::semantic_search::{SIGN_HASH_MODEL_ID, quantize_binary, sign_hash_embed};
+use crate::semantic_search::{
+    SIGN_HASH_MODEL_ID, embedder_model_id, quantize_binary, sign_hash_embed,
+};
 use crate::semantic_vocab::{VOCAB_ACCUMULATE_MODEL_ID, VocabAccumulateEmbedder};
 
 /// Embed text into a float vector before binary quantization.
@@ -102,13 +104,14 @@ pub fn embedder_for_index(
     index: &crate::semantic_search::SemanticIndex,
     reload: &OnnxReloadOptions,
 ) -> Result<Box<dyn SemanticEmbedder>> {
-    if index.model_id == SIGN_HASH_MODEL_ID {
+    let model_id = embedder_model_id(&index.model_id);
+    if model_id == SIGN_HASH_MODEL_ID {
         return Ok(Box::new(SignHashEmbedder::new(index.dimensions)));
     }
-    if index.model_id == VOCAB_ACCUMULATE_MODEL_ID {
+    if model_id == VOCAB_ACCUMULATE_MODEL_ID {
         return Ok(Box::new(VocabAccumulateEmbedder::new(index.dimensions)?));
     }
-    if index.model_id == crate::semantic_code_daemon::CODE_DAEMON_MODEL_ID {
+    if model_id == crate::semantic_code_daemon::CODE_DAEMON_MODEL_ID {
         let model = reload
             .model_path
             .as_deref()
@@ -120,7 +123,7 @@ pub fn embedder_for_index(
             .or_else(|| index.tokenizer_path.as_deref().map(Path::new));
         return code_daemon_embedder(model, index.dimensions, tokenizer);
     }
-    if index.model_id.starts_with("onnx:") {
+    if model_id.starts_with("onnx:") {
         let model = reload
             .model_path
             .clone()
@@ -139,7 +142,7 @@ pub fn embedder_for_index(
     }
     Err(Error::ConfigError(format!(
         "unknown semantic model_id: {}",
-        index.model_id
+        model_id
     )))
 }
 
@@ -199,5 +202,28 @@ mod tests {
         assert_eq!(floats.len(), 64);
         let bits = embedder.embed_binary("authenticate token").unwrap();
         assert_eq!(bits.len(), 8);
+    }
+
+    #[test]
+    fn embedder_for_index_accepts_bodies_suffix() {
+        let index = crate::semantic_search::SemanticIndex {
+            schema_version: crate::semantic_search::SEMANTIC_INDEX_SCHEMA_VERSION,
+            model_id: crate::semantic_search::persist_semantic_model_id(SIGN_HASH_MODEL_ID, true),
+            dimensions: 64,
+            graph_digest: None,
+            model_path: None,
+            tokenizer_path: None,
+            entries: vec![],
+            binary_embeddings: vec![],
+        };
+        let embedder = embedder_for_index(
+            &index,
+            &OnnxReloadOptions {
+                model_path: None,
+                tokenizer_path: None,
+            },
+        )
+        .unwrap();
+        assert_eq!(embedder.model_id(), SIGN_HASH_MODEL_ID);
     }
 }

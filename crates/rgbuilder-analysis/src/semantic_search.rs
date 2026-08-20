@@ -1,8 +1,8 @@
 //! Opt-in semantic search over function symbols using binary-quantized embeddings.
 //!
 //! Embeddings are stored separately from [`AnalysisResults`] in `.rgbuilder/semantic_index.bin`
-//! so the default discover path stays lean. Default semantic embedder is bundled
-//! code-daemon (requires the `semantic-onnx` feature, enabled by default).
+//! so the default discover path stays lean. Default semantic embedder is compiled
+//! vocab (`vocab-accumulate-v1`); code-daemon ONNX is opt-in (`--embedder code-daemon`).
 
 use crate::semantic_embedder::{OnnxReloadOptions, SemanticEmbedder, embedder_for_index};
 use crate::semantic_extract::extract_body_tokens_for_node;
@@ -26,6 +26,25 @@ pub const DEFAULT_EMBEDDING_DIMENSIONS: usize = 256;
 
 /// Identifier for the built-in deterministic hash embedder.
 pub const SIGN_HASH_MODEL_ID: &str = "sign-hash-v1";
+
+/// Suffix on [`SemanticIndex::model_id`] when function bodies were embedded.
+pub const EMBED_BODIES_MODEL_SUFFIX: &str = "+bodies";
+
+/// Persist embedder id plus optional `--embed-bodies` marker (forces rebuild on toggle).
+pub fn persist_semantic_model_id(embedder_id: &str, embed_bodies: bool) -> String {
+    if embed_bodies {
+        format!("{embedder_id}{EMBED_BODIES_MODEL_SUFFIX}")
+    } else {
+        embedder_id.to_string()
+    }
+}
+
+/// Strip [`EMBED_BODIES_MODEL_SUFFIX`] so query reload can resolve the embedder.
+pub fn embedder_model_id(stored: &str) -> &str {
+    stored
+        .strip_suffix(EMBED_BODIES_MODEL_SUFFIX)
+        .unwrap_or(stored)
+}
 
 /// One indexed function symbol and its metadata for query display.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -165,8 +184,11 @@ pub struct SemanticBuildOptions {
     pub model_path: Option<String>,
     /// Persisted tokenizer path metadata.
     pub tokenizer_path: Option<String>,
-    /// Repository root for on-demand body slicing during indexing.
+    /// Repository root for content-store lookup (docs) and optional body slicing.
     pub repo_root: Option<PathBuf>,
+    /// When true, re-read function source and append body identifier tokens.
+    /// Off by default — declaration metadata is enough; query fusion uses discover token-blooms.
+    pub embed_bodies: bool,
     /// Optional index-time call-graph diffusion (before sign quantization).
     pub diffuse: Option<crate::semantic_diffuse::DiffuseConfig>,
     /// Node kinds to index.
@@ -184,6 +206,7 @@ impl SemanticBuildOptions {
             model_path: None,
             tokenizer_path: None,
             repo_root: None,
+            embed_bodies: false,
             diffuse: None,
             scope: SemanticIndexScope::Functions,
         }
@@ -197,6 +220,7 @@ pub fn build_index(
     options: SemanticBuildOptions,
 ) -> Result<(SemanticIndex, SemanticBuildStats)> {
     let row_bytes = packed_bytes(options.dimensions);
+    let stored_model_id = persist_semantic_model_id(embedder.model_id(), options.embed_bodies);
     let mut entries = Vec::new();
     let mut binary_embeddings = Vec::new();
     let mut stats = SemanticBuildStats::default();
@@ -205,13 +229,12 @@ pub fn build_index(
     let digest_matches_existing = options.existing.as_ref().is_some_and(|existing| {
         existing.graph_digest == options.graph_digest
             && existing.dimensions == options.dimensions
-            && existing.model_id == embedder.model_id()
+            && existing.model_id == stored_model_id
     });
     if options.incremental {
         if let Some(existing) = &options.existing {
-            if existing.dimensions != options.dimensions || existing.model_id != embedder.model_id()
-            {
-                // Dimension/model mismatch — full rebuild.
+            if existing.dimensions != options.dimensions || existing.model_id != stored_model_id {
+                // Dimension/model/embed-bodies mismatch — full rebuild.
             } else {
                 let stride = existing.bytes_per_vector();
                 for (row, entry) in existing.entries.iter().enumerate() {
@@ -227,13 +250,18 @@ pub fn build_index(
     }
 
     let repo_root = options.repo_root.as_deref();
+    let body_root = if options.embed_bodies {
+        repo_root
+    } else {
+        None
+    };
     let content_store = options
         .repo_root
         .as_ref()
         .and_then(|root| ContentStore::load(ContentStore::default_path(root)).ok());
     let mut candidates: Vec<(SemanticEntry, String)> = Vec::new();
     backend.for_each_node(|node| {
-        let text = embed_text_for_scope(node, options.scope, repo_root, content_store.as_ref());
+        let text = embed_text_for_scope(node, options.scope, body_root, content_store.as_ref());
         if let Some(text) = text {
             let code_hash = node
                 .code_hash
@@ -366,7 +394,7 @@ pub fn build_index(
 
     let index = SemanticIndex {
         schema_version: SEMANTIC_INDEX_SCHEMA_VERSION,
-        model_id: embedder.model_id().to_string(),
+        model_id: stored_model_id,
         dimensions: options.dimensions,
         graph_digest: options.graph_digest,
         model_path: options.model_path,
@@ -847,6 +875,20 @@ mod tests {
     }
 
     #[test]
+    fn persist_model_id_marks_embed_bodies() {
+        assert_eq!(
+            persist_semantic_model_id(SIGN_HASH_MODEL_ID, false),
+            SIGN_HASH_MODEL_ID
+        );
+        let stored = persist_semantic_model_id(SIGN_HASH_MODEL_ID, true);
+        assert_eq!(
+            stored,
+            format!("{SIGN_HASH_MODEL_ID}{EMBED_BODIES_MODEL_SUFFIX}")
+        );
+        assert_eq!(embedder_model_id(&stored), SIGN_HASH_MODEL_ID);
+    }
+
+    #[test]
     fn save_load_round_trip() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join(SEMANTIC_INDEX_FILE);
@@ -901,6 +943,7 @@ mod tests {
                 model_path: None,
                 tokenizer_path: None,
                 repo_root: None,
+                embed_bodies: false,
                 diffuse: None,
                 scope: SemanticIndexScope::Functions,
             },
@@ -926,6 +969,7 @@ mod tests {
                 model_path: None,
                 tokenizer_path: None,
                 repo_root: None,
+                embed_bodies: false,
                 diffuse: None,
                 scope: SemanticIndexScope::Functions,
             },
@@ -970,6 +1014,7 @@ mod tests {
                 model_path: None,
                 tokenizer_path: None,
                 repo_root: None,
+                embed_bodies: false,
                 diffuse: None,
                 scope: SemanticIndexScope::Functions,
             },
@@ -988,6 +1033,7 @@ mod tests {
                 model_path: None,
                 tokenizer_path: None,
                 repo_root: Some(dir.path().to_path_buf()),
+                embed_bodies: true,
                 diffuse: None,
                 scope: SemanticIndexScope::Functions,
             },
@@ -1011,6 +1057,94 @@ mod tests {
 
         assert!(dist_with_body < dist_no_body);
         assert_eq!(hits_with_body[0].entry.node_id, helper.id);
+    }
+
+    #[test]
+    fn repo_root_without_embed_bodies_does_not_scan_source() {
+        let dir = tempfile::tempdir().unwrap();
+        let rel = "src/net.rs";
+        let abs = dir.path().join(rel);
+        std::fs::create_dir_all(abs.parent().unwrap()).unwrap();
+        std::fs::write(&abs, "fn cryptic_b() {\n    let port = ntohs(raw);\n}\n").unwrap();
+
+        let mut backend = MemoryBackend::new();
+        let helper = Node::new(NodeType::Function, "cryptic_b")
+            .with_file_path(rel)
+            .with_location(1, 3);
+        backend.insert_node(helper).unwrap();
+
+        let embedder = crate::semantic_embedder::SignHashEmbedder::new(128);
+        let no_root = build_index(&backend, &embedder, SemanticBuildOptions::fresh(128, None))
+            .unwrap()
+            .0;
+        let with_root = build_index(
+            &backend,
+            &embedder,
+            SemanticBuildOptions {
+                dimensions: 128,
+                graph_digest: None,
+                incremental: false,
+                existing: None,
+                model_path: None,
+                tokenizer_path: None,
+                repo_root: Some(dir.path().to_path_buf()),
+                embed_bodies: false,
+                diffuse: None,
+                scope: SemanticIndexScope::Functions,
+            },
+        )
+        .unwrap()
+        .0;
+        assert_eq!(
+            no_root.binary_embeddings, with_root.binary_embeddings,
+            "repo_root without embed_bodies must not change vectors"
+        );
+    }
+
+    #[test]
+    fn toggling_embed_bodies_invalidates_incremental_reuse() {
+        let mut backend = MemoryBackend::new();
+        backend
+            .insert_node(Node::new(NodeType::Function, "authenticate").with_code_hash("h1"))
+            .unwrap();
+
+        let embedder = crate::semantic_embedder::SignHashEmbedder::new(64);
+        let (index, stats) =
+            build_index(&backend, &embedder, SemanticBuildOptions::fresh(64, None)).unwrap();
+        assert_eq!(stats.embedded, 1);
+        assert_eq!(index.model_id, SIGN_HASH_MODEL_ID);
+
+        let (index_bodies, stats_bodies) = build_index(
+            &backend,
+            &embedder,
+            SemanticBuildOptions {
+                incremental: true,
+                existing: Some(index),
+                embed_bodies: true,
+                ..SemanticBuildOptions::fresh(64, None)
+            },
+        )
+        .unwrap();
+        assert_eq!(stats_bodies.reused, 0);
+        assert_eq!(stats_bodies.embedded, 1);
+        assert_eq!(
+            index_bodies.model_id,
+            persist_semantic_model_id(SIGN_HASH_MODEL_ID, true)
+        );
+
+        let (_, stats_again) = build_index(
+            &backend,
+            &embedder,
+            SemanticBuildOptions {
+                incremental: true,
+                existing: Some(index_bodies),
+                embed_bodies: true,
+                ..SemanticBuildOptions::fresh(64, None)
+            },
+        )
+        .unwrap();
+        assert_eq!(stats_again.reused, 1);
+        assert_eq!(stats_again.embedded, 0);
     }
 
     #[test]

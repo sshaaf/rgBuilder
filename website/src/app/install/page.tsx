@@ -18,8 +18,8 @@ export default function InstallPage() {
       </h1>
       <p className="mt-3 text-[var(--body)]">
         Prefer a release binary for day-to-day use. Build from source when you
-        need the latest main — and pull Git LFS if you want the default semantic
-        embedder.
+        need the latest main. Pull Git LFS only if you use the optional
+        code-daemon semantic embedder.
       </p>
 
       <section className="mt-10 space-y-3">
@@ -51,8 +51,7 @@ export default function InstallPage() {
           lines={[
             "git clone https://github.com/sshaaf/rgBuilder.git",
             "cd rgBuilder",
-            "# Optional: default semantic embedder (code-daemon ONNX ~206 MB)",
-            "# Skip if you only use: semantic index --embedder vocab|hash",
+            "# Optional: only if you use `semantic index --embedder code-daemon` (~206 MB)",
             "git lfs pull",
             "cargo build --release",
             "./target/release/rg-build --version",

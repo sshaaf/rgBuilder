@@ -79,8 +79,8 @@ Requires **Rust 1.88+** (Edition 2024; [rustup.rs](https://rustup.rs/)).
 ```bash
 git clone https://github.com/sshaaf/rgBuilder.git
 cd rgBuilder
-# Optional: default semantic embedder (code-daemon ONNX ~206 MB via Git LFS).
-# Skip if you only use `semantic index --embedder vocab|hash`.
+# Optional: code-daemon ONNX weights (~206 MB via Git LFS) if you use
+# `semantic index --embedder code-daemon`. Skip for the default vocab embedder.
 git lfs pull
 cargo build --release
 ./target/release/rg-build --version
@@ -913,10 +913,10 @@ Semantic search is **opt-in** — it does not run during `discover`. Build a sep
 
 **Default index scope:** `:Function` symbols. **Doc headings:** `semantic index --scope docs` (or `--scope all` for functions + docs). See [markdown-context.md](markdown-context.md#semantic-search-doc-sections).
 
-**Prerequisites:** `discover` completed. Default embedder is **code-daemon** (needs `git lfs pull` for bundled ONNX when building from source). Offline / CI: prefer `--embedder vocab` or `--embedder hash` (no ONNX).
+**Prerequisites:** `discover` completed. Default embedder is **vocab** (compiled token table, no ONNX). Quality extra: `--embedder code-daemon` (needs `git lfs pull` for bundled ONNX). CI smoke: `--embedder hash`.
 
 ```bash
-# Build semantic index (default: code-daemon, 256-d)
+# Build semantic index (default: vocab, 256-d, declaration metadata only)
 rg-build -r "$REPO" semantic index
 
 # Incremental rebuild — reuse rows when body hash unchanged
@@ -938,10 +938,15 @@ rg-build -r "$REPO" -f json semantic query "checkout flow" --scope docs --limit 
 # Hash embedder (no ONNX) — e.g. CI
 rg-build -r "$REPO" semantic index --embedder hash
 
-# Vocab embedder (compiled token table, offline) + optional call-graph diffusion
-rg-build -r "$REPO" semantic index --embedder vocab
-rg-build -r "$REPO" semantic index --embedder vocab --diffuse \
+# Vocab is the default; optional call-graph diffusion
+rg-build -r "$REPO" semantic index --diffuse \
   --diffuse-alpha 0.25 --diffuse-iters 2
+
+# Re-read function bodies into the vector (off by default; fusion still uses discover token-blooms)
+rg-build -r "$REPO" semantic index --embed-bodies
+
+# Neural code retriever (ONNX)
+rg-build -r "$REPO" semantic index --embedder code-daemon
 ```
 
 Passing `--diffuse` recomputes dense vectors and mixes call-graph neighbors **before** sign quantization (even when `--incremental` would otherwise reuse bits). Query does not re-diffuse — restart is not required for CLI query; for the dashboard, restart `serve` after rebuilding the index.
@@ -956,7 +961,8 @@ Passing `--diffuse` recomputes dense vectors and mixes call-graph neighbors **be
 | `--keyword-and` | Every query token must match metadata or body sketch |
 | `--candidate-pool <N>` | Hamming pool size before fusion [default: 256] |
 | `--expand neighbors\|blast\|gql\|all` | Hybrid expansion after top hits |
-| `--embedder hash\|vocab\|onnx\|code-daemon` | Embedding backend [default: `code-daemon`] |
+| `--embedder hash\|vocab\|onnx\|code-daemon` | Embedding backend [default: `vocab`] |
+| `--embed-bodies` | Append identifier tokens from function source (off by default) |
 | `--dimensions <N>` | Float width before quantize; multiple of 8 [default: 256] |
 | `--diffuse` / `--no-diffuse` | Jacobi call-graph mix on dense floats before quantize (index only; off by default) |
 | `--diffuse-alpha` / `--diffuse-iters` | Diffusion blend weight and iterations [defaults: 0.25, 2] |

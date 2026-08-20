@@ -103,7 +103,7 @@ Globals: `-f json` (agents), `-r` / `--repo`, `-o` file, `-d` / `--db` (custom g
 |---------|-----|
 | No `.rgbuilder/` / graph missing | `rg-build discover .` |
 | slice / inspect / cpg PDG fails | Re-discover with `--with-cfg` |
-| semantic query fails | `rg-build semantic index` (offline: `--embedder vocab` or `hash`) |
+| semantic query fails | `rg-build semantic index` (optional: `--embedder hash` or `code-daemon`) |
 | Ambiguous symbol | `--class` / `--file` on blast-radius; disambiguate via GQL |
 | `check` / policy exit 1 | Report violations (JSON still on stdout when applicable) |
 | `inspect` / `slice --function` confusion | `inspect` = symbol only; `slice --function` = **method** name |
@@ -371,7 +371,7 @@ Loop over `top[]` UUIDs and resolve each. GQL `WHERE n.id = '<uuid>'` does **not
 **Command:**
 
 ```bash
-rg-build semantic index [--embedder code-daemon|vocab|hash|onnx] [--model PATH] [--tokenizer PATH] \
+rg-build semantic index [--embedder vocab|hash|onnx|code-daemon] [--embed-bodies] [--model PATH] [--tokenizer PATH] \
   [--dimensions N] [--incremental] [--diffuse] [--diffuse-alpha F] [--diffuse-iters N] [--diffuse-bidirectional]
 rg-build -f json semantic query "…" [--limit N] [--scope function|community] \
   [--expand neighbors|blast|gql|all] [--expand-depth N] [--no-fusion] [--candidate-pool N] [--keyword-and]
@@ -379,13 +379,13 @@ rg-build -f json semantic query "…" [--limit N] [--scope function|community] \
 
 **Purpose:** Natural-language / keyword find of functions (and community-scoped search), with optional one-shot expansion into graph context.
 
-**Prerequisites:** `discover`, then **`semantic index`** (separate artifact). Offline: `--embedder vocab` or `hash`. `--embedder onnx` needs `--model` (+ optional `--tokenizer` for SentencePiece). Default `code-daemon` needs ONNX weights (bundled via `git lfs pull`).
+**Prerequisites:** `discover`, then **`semantic index`** (separate artifact). Default **vocab** (no ONNX). `--embedder onnx` needs `--model` (+ optional `--tokenizer` for SentencePiece). `--embedder code-daemon` needs ONNX weights (`git lfs pull`). `--embed-bodies` re-reads function source (off by default).
 
 **Index tuning:** `--dimensions` (default 256, multiple of 8) trades index size for precision. `--incremental` (default true) reuses embeddings for unchanged `code_hash`. `--diffuse` blends each embedding toward its call-graph neighbors' mean (Jacobi iterations via `--diffuse-alpha`/`--diffuse-iters`; `--diffuse-bidirectional` includes callers, not just callees) — useful when bare-name/docstring signal is weak and callers/callees disambiguate intent; `--no-diffuse` forces it off.
 
 **Query expansion:** `--expand neighbors` pulls CALLS neighbors of top hits, `--expand blast` runs blast-radius on top hits, `--expand gql` returns a ready GQL query, `--expand all` does all three — use when the user's NL query implies "and show me what's connected," so you skip a manual follow-up call. `--expand-depth` controls hop depth for `neighbors`/`gql` expansion (default 1). `--no-fusion` returns pure Hamming top-k (skip late-fusion re-ranking — rarely needed). `--candidate-pool` widens/narrows the pre-fusion candidate set (default 256). `--keyword-and` requires all query keywords to match entry metadata (stricter than default OR).
 
-**Sample** (`--embedder vocab`, query `checkout cart`):
+**Sample** (default vocab, query `checkout cart`):
 
 ```json
 {
@@ -627,7 +627,7 @@ Writes a **file**; success is typically a text summary. Needs prior `discover --
 **6. NL function search** — *“Where is the code that handles our checkout flow?”*
 
 ```bash
-rg-build semantic index                    # opt-in; offline: --embedder vocab|hash
+rg-build semantic index                    # opt-in; default vocab. extras: --embedder code-daemon|hash
 rg-build -f json semantic query "checkout flow" --limit 10
 ```
 

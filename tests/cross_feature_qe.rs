@@ -21,11 +21,17 @@ fn fixture_repo() -> PathBuf {
 }
 
 fn rgbuilder_bin() -> PathBuf {
-    option_env!("CARGO_BIN_EXE_rg_build")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/release/rg-build")
-        })
+    for key in ["CARGO_BIN_EXE_rg_build", "CARGO_BIN_EXE_rg-build"] {
+        if let Ok(p) = std::env::var(key) {
+            return PathBuf::from(p);
+        }
+    }
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let debug = root.join("target/debug/rg-build");
+    if debug.is_file() {
+        return debug;
+    }
+    root.join("target/release/rg-build")
 }
 
 fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {

@@ -319,8 +319,8 @@ pub enum SemanticCommands {
         #[arg(long, default_value_t = true)]
         incremental: bool,
 
-        /// Embedder backend: code-daemon (default, bundled), hash, vocab, or onnx
-        #[arg(long, value_enum, default_value = "code-daemon")]
+        /// Embedder backend: vocab (default, compiled token table), hash, onnx, or code-daemon
+        #[arg(long, value_enum, default_value_t = semantic::CliEmbedderKind::Vocab)]
         embedder: semantic::CliEmbedderKind,
 
         /// Path to ONNX model (required for `--embedder onnx`; optional for code-daemon)
@@ -330,6 +330,10 @@ pub enum SemanticCommands {
         /// SentencePiece tokenizer for ONNX embedders (auto-detected beside `--model` when omitted)
         #[arg(long, value_name = "PATH")]
         tokenizer: Option<std::path::PathBuf>,
+
+        /// Re-read function source and append body identifier tokens (off: declaration metadata only)
+        #[arg(long, default_value_t = false)]
+        embed_bodies: bool,
 
         /// Diffuse dense embeddings over the call graph before sign quantization
         #[arg(long, default_value_t = false)]
@@ -647,6 +651,7 @@ impl Cli {
                     embedder,
                     model,
                     tokenizer,
+                    embed_bodies,
                     diffuse,
                     no_diffuse,
                     diffuse_alpha,
@@ -661,6 +666,7 @@ impl Cli {
                         embedder,
                         model,
                         tokenizer,
+                        embed_bodies,
                         diffuse: diffuse && !no_diffuse,
                         diffuse_alpha,
                         diffuse_iters,

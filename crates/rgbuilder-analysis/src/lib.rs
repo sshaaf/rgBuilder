@@ -190,11 +190,12 @@ pub use semantic_hybrid::{
     expand_semantic_hits,
 };
 pub use semantic_search::{
-    CommunitySemanticHit, DEFAULT_EMBEDDING_DIMENSIONS, SEMANTIC_INDEX_FILE,
-    SEMANTIC_INDEX_SCHEMA_VERSION, SIGN_HASH_MODEL_ID, SemanticBuildOptions, SemanticBuildStats,
-    SemanticEntry, SemanticHit, SemanticIndex, SemanticIndexScope, build_from_backend, build_index,
-    embed_text_for_doc_node, embed_text_for_function, embed_text_for_node, embed_text_for_scope,
-    hamming_distance, hamming_top_k, quantize_binary, query_communities, query_index,
+    CommunitySemanticHit, DEFAULT_EMBEDDING_DIMENSIONS, EMBED_BODIES_MODEL_SUFFIX,
+    SEMANTIC_INDEX_FILE, SEMANTIC_INDEX_SCHEMA_VERSION, SIGN_HASH_MODEL_ID, SemanticBuildOptions,
+    SemanticBuildStats, SemanticEntry, SemanticHit, SemanticIndex, SemanticIndexScope,
+    build_from_backend, build_index, embed_text_for_doc_node, embed_text_for_function,
+    embed_text_for_node, embed_text_for_scope, embedder_model_id, hamming_distance, hamming_top_k,
+    persist_semantic_model_id, quantize_binary, query_communities, query_index,
     query_index_with_embedder, sign_hash_embed,
 };
 pub use semantic_vocab::{

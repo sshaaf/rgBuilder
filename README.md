@@ -48,7 +48,7 @@ Most codebase tools stop at **text search**, **file trees**, or a **shallow call
 
 | Feature | What it gives you | Design doc |
 |---------|-------------------|------------|
-| **Semantic search** | **Natural-language and keyword search** over functions — code-daemon (default), offline **vocab** / **hash**, Hamming retrieval, late fusion with blast/PageRank/sketches | [semantic-search-design.md](docs/design/semantic-search-design.md) |
+| **Semantic search** | **Natural-language and keyword search** over functions — **vocab** default, optional **code-daemon** / **hash**, Hamming retrieval, late fusion with blast/PageRank/sketches | [semantic-search-design.md](docs/design/semantic-search-design.md) |
 | **Blast radius** | Pre-computed **reachability** over the call graph — upstream impact, scores, policy gates, sub-second on large repos | [blast-radius-design.md](docs/design/blast-radius-design.md) |
 | **Program slicing** | **Backward / forward slice** — only the statements that affect (or are affected by) a line and variable | [program-slicing-design.md](docs/design/program-slicing-design.md) |
 | **Taint analysis** | **Source → sink** flows (HTTP params → SQL, shell, render, …) with sanitizer awareness | [taint-analysis-design.md](docs/design/taint-analysis-design.md) |
@@ -151,7 +151,7 @@ Walkthrough on the in-tree Spring Boot fixture → **[ecommerce-java example](do
 ```bash
 git clone https://github.com/sshaaf/rgBuilder.git
 cd rgBuilder
-git lfs pull   # bundled code-daemon ONNX weights (~206 MB)
+git lfs pull   # only if you use `semantic index --embedder code-daemon` (~206 MB)
 cargo build --release
 ```
 
@@ -189,7 +189,7 @@ Example deep-analysis commands (after `discover --with-cfg`):
 rg-build inspect checkout cfg              # CFG / PDG / dominance (function symbol)
 rg-build slice src/Foo.java --line 42 --variable x
 rg-build slice src/Foo.java --line 10 --variable req --taint
-rg-build semantic index --embedder vocab   # offline; or default code-daemon after git lfs pull
+rg-build semantic index                    # default vocab; optional: --embedder code-daemon|hash
 rg-build -f json semantic query "checkout flow" --limit 10
 ```
 

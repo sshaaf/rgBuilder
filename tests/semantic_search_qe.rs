@@ -23,12 +23,17 @@ fn oracles_path() -> PathBuf {
 }
 
 fn rgbuilder_bin() -> PathBuf {
-    if let Some(bin) = std::env::var_os("CARGO_BIN_EXE_rg-build")
-        .or_else(|| std::env::var_os("CARGO_BIN_EXE_rg_build"))
-    {
-        return PathBuf::from(bin);
+    for key in ["CARGO_BIN_EXE_rg_build", "CARGO_BIN_EXE_rg-build"] {
+        if let Ok(p) = std::env::var(key) {
+            return PathBuf::from(p);
+        }
     }
-    panic!("CARGO_BIN_EXE_rg_build is not set; run via `cargo test`");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let debug = root.join("target/debug/rg-build");
+    if debug.is_file() {
+        return debug;
+    }
+    panic!("rg-build binary not found; run via `cargo test` or `cargo build`");
 }
 
 fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
