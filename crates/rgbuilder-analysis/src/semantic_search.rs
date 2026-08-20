@@ -2,10 +2,11 @@
 //!
 //! Embeddings are stored separately from [`AnalysisResults`] in `.rgbuilder/semantic_index.bin`
 //! so the default discover path stays lean. Default semantic embedder is compiled
-//! vocab (`vocab-accumulate-v1`); code-daemon ONNX is opt-in (`--embedder code-daemon`).
+//! vocab (`vocab-accumulate-v1` FNV or `v2` distilled); code-daemon ONNX is opt-in (`--embedder code-daemon`).
 
 use crate::semantic_embedder::{OnnxReloadOptions, SemanticEmbedder, embedder_for_index};
 use crate::semantic_extract::extract_body_tokens_for_node;
+use rayon::prelude::*;
 use rgbuilder_error::Result;
 use rgbuilder_graph::backend::MemoryBackend;
 use rgbuilder_graph::content_store::ContentStore;
@@ -358,6 +359,7 @@ pub fn build_index(
         }
     } else {
         let mut seen = HashSet::new();
+        let mut embed_jobs: Vec<(SemanticEntry, String)> = Vec::new();
         for (fresh_entry, text) in candidates {
             seen.insert(fresh_entry.node_id);
             stats.total += 1;
@@ -372,11 +374,25 @@ pub fn build_index(
                     }
                 }
             }
+            embed_jobs.push((fresh_entry, text));
+        }
 
-            let floats = embedder.embed(&text)?;
-            entries.push(fresh_entry);
-            binary_embeddings.extend_from_slice(&quantize_binary(&floats));
-            stats.embedded += 1;
+        const EMBED_STREAM_CHUNK: usize = 256;
+        for chunk in embed_jobs.chunks(EMBED_STREAM_CHUNK) {
+            let texts: Vec<&str> = chunk.iter().map(|(_, text)| text.as_str()).collect();
+            let binaries = embedder.embed_binary_batch(&texts)?;
+            if binaries.len() != chunk.len() {
+                return Err(rgbuilder_error::Error::ConfigError(format!(
+                    "embed_binary_batch returned {} rows for {} texts",
+                    binaries.len(),
+                    chunk.len()
+                )));
+            }
+            for ((entry, _), bits) in chunk.iter().zip(binaries) {
+                entries.push(entry.clone());
+                binary_embeddings.extend_from_slice(&bits);
+                stats.embedded += 1;
+            }
         }
 
         if options.incremental {
@@ -558,7 +574,7 @@ pub fn hamming_distance(a: &[u8], b: &[u8]) -> u32 {
 
 /// Return up to `k` nearest rows by Hamming distance (smallest first).
 ///
-/// Uses a bounded max-heap so cost is O(n log k), not O(n log n).
+/// Parallel chunk scan with per-thread heaps, then merge. Cost is O(n log k).
 pub fn hamming_top_k(index: &SemanticIndex, query: &[u8], k: usize) -> Vec<(usize, u32)> {
     if k == 0 || index.is_empty() {
         return Vec::new();
@@ -567,20 +583,40 @@ pub fn hamming_top_k(index: &SemanticIndex, query: &[u8], k: usize) -> Vec<(usiz
     let stride = index.bytes_per_vector();
     debug_assert_eq!(index.binary_embeddings.len(), index.len() * stride);
 
-    let mut heap: BinaryHeap<(u32, usize)> = BinaryHeap::with_capacity(k.saturating_add(1));
-    for (row, chunk) in index.binary_embeddings.chunks_exact(stride).enumerate() {
-        let dist = hamming_distance(query, chunk);
-        if heap.len() < k {
-            heap.push((dist, row));
-        } else if let Some(&(worst, _)) = heap.peek() {
-            if dist < worst {
-                heap.pop();
-                heap.push((dist, row));
+    let merged = index
+        .binary_embeddings
+        .par_chunks(stride)
+        .enumerate()
+        .fold(
+            || BinaryHeap::<(u32, usize)>::with_capacity(k.saturating_add(1)),
+            |mut heap, (row, chunk)| {
+                let dist = hamming_distance(query, chunk);
+                if heap.len() < k {
+                    heap.push((dist, row));
+                } else if let Some(&(worst, _)) = heap.peek() {
+                    if dist < worst {
+                        heap.pop();
+                        heap.push((dist, row));
+                    }
+                }
+                heap
+            },
+        )
+        .reduce(BinaryHeap::new, |mut left, right| {
+            for item in right {
+                if left.len() < k {
+                    left.push(item);
+                } else if let Some(&(worst, _)) = left.peek() {
+                    if item.0 < worst {
+                        left.pop();
+                        left.push(item);
+                    }
+                }
             }
-        }
-    }
+            left
+        });
 
-    let mut hits: Vec<(usize, u32)> = heap.into_iter().map(|(d, i)| (i, d)).collect();
+    let mut hits: Vec<(usize, u32)> = merged.into_iter().map(|(d, i)| (i, d)).collect();
     hits.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(&b.0)));
     hits
 }

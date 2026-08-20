@@ -62,7 +62,7 @@ flowchart TB
 
 | Embedder | CLI | Notes |
 |----------|-----|-------|
-| **vocab** (default) | `--embedder vocab` | Compiled bag-of-tokens (`vocab-accumulate-v1`); offline, no ONNX; native **256-d** |
+| **vocab** (default) | `--embedder vocab` | Compiled bag-of-tokens (`vocab-accumulate-v1` FNV, or `v2` after `semantic distill`); offline; native **256-d** |
 | **sign-hash** | `--embedder hash` | Deterministic FNV sign-hash — CI / `--no-default-features` |
 | **code-daemon** | `--embedder code-daemon` | Bundled ONNX + SentencePiece in `rgbuilder-analysis/assets/`; requires `semantic-onnx` feature |
 | **custom ONNX** | `--embedder onnx --model PATH` | Optional `--tokenizer` for SentencePiece |
@@ -128,6 +128,8 @@ Requires `rg-build serve` (not static `python -m http.server`) so the semantic A
 ```bash
 rg-build discover .
 rg-build semantic index                    # default vocab, 256-d, no source re-read
+rg-build semantic distill --matrix crates/rgbuilder-analysis/assets/vocab_matrix.bin
+# teacher: code-daemon (our ONNX). Rebuild rg-build to compile v2 into the binary.
 rg-build semantic index --incremental      # reuse unchanged code_hash rows
 rg-build -f json semantic query "shopping cart checkout" --limit 10
 rg-build -f json semantic query "OrderService" --keyword-and

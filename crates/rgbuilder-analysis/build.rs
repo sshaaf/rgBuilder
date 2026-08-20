@@ -30,6 +30,26 @@ fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let tokens_path = manifest_dir.join("assets/vocab_tokens.txt");
     println!("cargo:rerun-if-changed={}", tokens_path.display());
+    let distilled_path = manifest_dir.join("assets/vocab_matrix.bin");
+    println!("cargo:rerun-if-changed={}", distilled_path.display());
+
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let out_path = out_dir.join("vocab_matrix.bin");
+
+    if distilled_path.is_file() {
+        let bytes = fs::read(&distilled_path).expect("read distilled vocab_matrix.bin");
+        assert!(
+            bytes.len() >= 16 && bytes.starts_with(MAGIC),
+            "assets/vocab_matrix.bin is not an RBVK blob; regenerate with `rg-build semantic distill`"
+        );
+        fs::write(&out_path, bytes).expect("write distilled vocab_matrix.bin");
+        println!("cargo:rustc-env=RGBUILDER_VOCAB_MODEL_ID=vocab-accumulate-v2");
+        println!(
+            "cargo:rustc-env=RGBUILDER_VOCAB_MATRIX={}",
+            out_path.display()
+        );
+        return;
+    }
 
     let text = fs::read_to_string(&tokens_path).unwrap_or_else(|err| {
         panic!(
@@ -55,8 +75,6 @@ fn main() {
         "vocab_tokens.txt produced empty vocabulary"
     );
 
-    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let out_path = out_dir.join("vocab_matrix.bin");
     let mut out = fs::File::create(&out_path).expect("create vocab_matrix.bin");
 
     out.write_all(MAGIC).unwrap();
@@ -83,6 +101,7 @@ fn main() {
         }
     }
 
+    println!("cargo:rustc-env=RGBUILDER_VOCAB_MODEL_ID=vocab-accumulate-v1");
     println!(
         "cargo:rustc-env=RGBUILDER_VOCAB_MATRIX={}",
         out_path.display()

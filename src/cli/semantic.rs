@@ -7,8 +7,9 @@ use super::semantic_output::{
 };
 use crate::analysis::{
     BlastRadiusEngine, BlastSummaryProvider, CODE_DAEMON_MRL_DIMS, EmbedderChoice,
-    SemanticBuildOptions, SemanticExpansion, SemanticIndex, blast_summary_from_result, build_index,
-    default_tokenizer_path, resolve_embedder, try_load_engine, validate_mrl_dimensions,
+    SemanticBuildOptions, SemanticExpansion, SemanticIndex, VOCAB_ACCUMULATE_DISTILLED_ID,
+    blast_summary_from_result, build_index, default_tokenizer_path, distill_vocab_matrix,
+    parse_vocab_token_list, resolve_embedder, try_load_engine, validate_mrl_dimensions,
 };
 use crate::graph::backend::{GraphBackend, MemoryBackend};
 use anyhow::{Context, Result, bail};
@@ -71,6 +72,16 @@ pub struct SemanticIndexArgs {
     pub scope: CliSemanticScope,
     /// Re-read function source and append body identifier tokens (off by default).
     pub embed_bodies: bool,
+}
+
+pub struct SemanticDistillArgs {
+    pub output: PathBuf,
+    pub tokens: Option<PathBuf>,
+    pub embedder: CliEmbedderKind,
+    pub dimensions: usize,
+    pub batch_size: usize,
+    pub model: Option<PathBuf>,
+    pub tokenizer: Option<PathBuf>,
 }
 
 pub struct SemanticQueryArgs {
@@ -186,6 +197,85 @@ pub fn run_index(ctx: &CliContext, args: SemanticIndexArgs) -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+pub fn run_distill(ctx: &CliContext, args: SemanticDistillArgs) -> Result<()> {
+    if args.dimensions == 0 || !args.dimensions.is_multiple_of(8) {
+        bail!("--dimensions must be a positive multiple of 8");
+    }
+    if args.embedder == CliEmbedderKind::Vocab {
+        bail!("distill teacher cannot be vocab; use --embedder code-daemon (or hash / onnx)");
+    }
+    if args.embedder == CliEmbedderKind::Onnx && args.model.is_none() {
+        bail!("--model is required when --embedder onnx");
+    }
+
+    let token_text = if let Some(path) = &args.tokens {
+        std::fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?
+    } else {
+        crate::analysis::DEFAULT_VOCAB_TOKEN_LIST.to_string()
+    };
+    let tokens = parse_vocab_token_list(&token_text);
+    if tokens.is_empty() {
+        bail!("token list is empty after filtering");
+    }
+
+    let index_args = SemanticIndexArgs {
+        dimensions: args.dimensions,
+        incremental: false,
+        embedder: args.embedder,
+        model: args.model.clone(),
+        tokenizer: args.tokenizer.clone(),
+        diffuse: false,
+        diffuse_alpha: 0.0,
+        diffuse_iters: 0,
+        diffuse_bidirectional: false,
+        scope: CliSemanticScope::Function,
+        embed_bodies: false,
+    };
+    let (_model_path, embedder_choice) = resolve_embedder_choice(&ctx.repo, &index_args)?;
+    if args.embedder == CliEmbedderKind::CodeDaemon {
+        validate_mrl_dimensions(args.dimensions).with_context(|| {
+            format!(
+                "code-daemon supports MRL dims {:?} (multiples of 8, max 768)",
+                CODE_DAEMON_MRL_DIMS
+            )
+        })?;
+    }
+    let embedder = resolve_embedder(&embedder_choice, args.dimensions)?;
+    let blob = distill_vocab_matrix(embedder.as_ref(), &tokens, args.dimensions, args.batch_size)?;
+    if let Some(parent) = args.output.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("create {}", parent.display()))?;
+        }
+    }
+    std::fs::write(&args.output, &blob)
+        .with_context(|| format!("write {}", args.output.display()))?;
+
+    if ctx.format == OutputFormat::Json {
+        let doc = serde_json::json!({
+            "schema_version": 1,
+            "path": args.output.display().to_string(),
+            "tokens": tokens.len(),
+            "dimensions": args.dimensions,
+            "teacher_model_id": embedder.model_id(),
+            "compiled_model_id": VOCAB_ACCUMULATE_DISTILLED_ID,
+        });
+        ctx.emit_json_value(&doc)?;
+    } else {
+        println!(
+            "Wrote {} tokens × {}d ({}) via {}",
+            tokens.len(),
+            args.dimensions,
+            args.output.display(),
+            embedder.model_id()
+        );
+        println!(
+            "Copy to crates/rgbuilder-analysis/assets/vocab_matrix.bin and rebuild to activate {VOCAB_ACCUMULATE_DISTILLED_ID}"
+        );
+    }
     Ok(())
 }
 

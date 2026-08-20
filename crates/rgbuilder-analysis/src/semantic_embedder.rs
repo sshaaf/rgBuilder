@@ -16,9 +16,22 @@ pub trait SemanticEmbedder: Send + Sync {
     fn dimensions(&self) -> usize;
     /// Embed one document/query string.
     fn embed(&self, text: &str) -> Result<Vec<f32>>;
+    /// Embed many texts. Default runs [`Self::embed`] in parallel.
+    fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+        use rayon::prelude::*;
+        texts.par_iter().map(|text| self.embed(text)).collect()
+    }
     /// Embed and sign-quantize to bit-packed bytes.
     fn embed_binary(&self, text: &str) -> Result<Vec<u8>> {
         Ok(quantize_binary(&self.embed(text)?))
+    }
+    /// Sign-quantize a batch of embeddings.
+    fn embed_binary_batch(&self, texts: &[&str]) -> Result<Vec<Vec<u8>>> {
+        Ok(self
+            .embed_batch(texts)?
+            .into_iter()
+            .map(|floats| quantize_binary(&floats))
+            .collect())
     }
 }
 
@@ -54,7 +67,7 @@ impl SemanticEmbedder for SignHashEmbedder {
 pub enum EmbedderChoice {
     /// Built-in sign-hash (`sign-hash-v1`).
     SignHash,
-    /// Compiled vocab bag-of-tokens (`vocab-accumulate-v1`).
+    /// Compiled vocab bag-of-tokens (`vocab-accumulate-v1` / distilled `v2`).
     Vocab,
     /// Generic ONNX `--model` (hash tokenization, or SentencePiece with `--tokenizer`).
     Onnx {

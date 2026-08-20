@@ -373,6 +373,7 @@ Loop over `top[]` UUIDs and resolve each. GQL `WHERE n.id = '<uuid>'` does **not
 ```bash
 rg-build semantic index [--embedder vocab|hash|onnx|code-daemon] [--embed-bodies] [--model PATH] [--tokenizer PATH] \
   [--dimensions N] [--incremental] [--diffuse] [--diffuse-alpha F] [--diffuse-iters N] [--diffuse-bidirectional]
+rg-build semantic distill --matrix PATH [--embedder code-daemon|hash|onnx] [--tokens PATH] [--dimensions N]
 rg-build -f json semantic query "…" [--limit N] [--scope function|community] \
   [--expand neighbors|blast|gql|all] [--expand-depth N] [--no-fusion] [--candidate-pool N] [--keyword-and]
 ```

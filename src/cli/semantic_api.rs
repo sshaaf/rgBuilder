@@ -154,6 +154,7 @@ pub fn execute_semantic_query(
         &reload,
         &fusion,
         analysis.as_ref(),
+        Some(graph.backend()),
         Some(repo),
     )?;
     let unfiltered_hit_count = hits.len();

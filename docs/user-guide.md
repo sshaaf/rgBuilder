@@ -945,6 +945,9 @@ rg-build -r "$REPO" semantic index --diffuse \
 # Re-read function bodies into the vector (off by default; fusion still uses discover token-blooms)
 rg-build -r "$REPO" semantic index --embed-bodies
 
+# Distill our token list through a teacher (rebuild after copying to assets/vocab_matrix.bin)
+rg-build -r "$REPO" semantic distill --matrix crates/rgbuilder-analysis/assets/vocab_matrix.bin --embedder code-daemon
+
 # Neural code retriever (ONNX)
 rg-build -r "$REPO" semantic index --embedder code-daemon
 ```
@@ -957,13 +960,14 @@ Passing `--diffuse` recomputes dense vectors and mixes call-graph neighbors **be
 |------|---------|
 | **`semantic index --scope`** `function\|docs\|all` | Which symbols to embed (default: functions only) |
 | **`semantic query --scope`** `function\|community\|docs\|all` | `community` = pooled community search; other scopes do not filter hits (index content determines results) |
-| `--no-fusion` | Disable late fusion (default is fusion **on**: blast, PageRank, name, token-bloom) |
+| `--no-fusion` | Disable late fusion (default is fusion **on**: blast, PageRank, name, token-bloom, community, package, callees) |
 | `--keyword-and` | Every query token must match metadata or body sketch |
 | `--candidate-pool <N>` | Hamming pool size before fusion [default: 256] |
 | `--expand neighbors\|blast\|gql\|all` | Hybrid expansion after top hits |
 | `--embedder hash\|vocab\|onnx\|code-daemon` | Embedding backend [default: `vocab`] |
 | `--embed-bodies` | Append identifier tokens from function source (off by default) |
 | `--dimensions <N>` | Float width before quantize; multiple of 8 [default: 256] |
+| `semantic distill --matrix <PATH>` | Write RBVK from our token list via a teacher (`code-daemon` default; not `vocab`) |
 | `--diffuse` / `--no-diffuse` | Jacobi call-graph mix on dense floats before quantize (index only; off by default) |
 | `--diffuse-alpha` / `--diffuse-iters` | Diffusion blend weight and iterations [defaults: 0.25, 2] |
 | `--diffuse-bidirectional` | Include callers as well as callees |

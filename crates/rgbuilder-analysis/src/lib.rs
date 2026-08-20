@@ -181,8 +181,8 @@ pub use semantic_extract::{
 };
 pub use semantic_fusion::{
     DEFAULT_CANDIDATE_POOL, FusionCandidate, SemanticFusionConfig, entry_metadata_tokens,
-    fuse_candidates, hamming_similarity, keyword_and_matches, name_overlap_score,
-    query_index_with_fusion, query_keywords,
+    entry_package_key, fuse_candidates, hamming_similarity, keyword_and_matches,
+    name_overlap_score, query_index_with_fusion, query_keywords,
 };
 pub use semantic_hybrid::{
     BlastSummaryProvider, SemanticBlastSummary, SemanticExpandConfig, SemanticExpandMode,
@@ -199,8 +199,9 @@ pub use semantic_search::{
     query_index_with_embedder, sign_hash_embed,
 };
 pub use semantic_vocab::{
-    TokenSpaceAccumulator, VOCAB_ACCUMULATE_MODEL_ID, VOCAB_NATIVE_DIMENSIONS,
-    VocabAccumulateEmbedder,
+    DEFAULT_VOCAB_TOKEN_LIST, TokenSpaceAccumulator, VOCAB_ACCUMULATE_DISTILLED_ID,
+    VOCAB_ACCUMULATE_MODEL_ID, VOCAB_NATIVE_DIMENSIONS, VocabAccumulateEmbedder,
+    distill_vocab_matrix, encode_rbvk, parse_vocab_token_list,
 };
 pub use slicing::{
     BackwardSlicer, CodeSlice, ForwardSlicer, SliceCriterion, SliceDirection, SliceOptions,

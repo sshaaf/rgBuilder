@@ -84,6 +84,7 @@ if (doc.schema_version !== 2) {
 | `inspect` | **1** | — |
 | `semantic index` | **2** | CLI index telemetry |
 | `semantic query` | **3** | hits + optional expansion / fusion fields |
+| `semantic distill` | **1** | RBVK matrix write (hash/code-daemon teacher) |
 | `communities` | **1** | list / label |
 | `cpg` (status / mutations / flows / …) | **1** | per-subcommand shapes |
 
@@ -790,6 +791,26 @@ Text mode prints `Indexed N functions` — same count as `functions_indexed` (no
 
 ```bash
 rg-build -r "$REPO" -f json semantic index | jq '{model_id, dimensions, functions_indexed}'
+```
+
+### `semantic distill`
+
+Teacher-embed `vocab_tokens.txt` into an RBVK blob. Copy the file to `crates/rgbuilder-analysis/assets/vocab_matrix.bin` and rebuild to compile `vocab-accumulate-v2`. Teacher cannot be `vocab` (that would distill the table from itself). Default teacher is `code-daemon`; `--embedder hash` is for tests / offline CI.
+
+```bash
+rg-build -r "$REPO" -f json semantic distill --matrix vocab_matrix.bin --embedder hash
+rg-build -r "$REPO" semantic distill --matrix crates/rgbuilder-analysis/assets/vocab_matrix.bin --embedder code-daemon
+```
+
+```typescript
+type SemanticDistillJsonResponse = {
+  schema_version: 1;
+  path: string;
+  tokens: number;
+  dimensions: number;
+  teacher_model_id: string;
+  compiled_model_id: string;  // vocab-accumulate-v2
+};
 ```
 
 ### `semantic query`
@@ -1558,6 +1579,7 @@ See [json-api.md §15](json-api.md#15-semantic) for TypeScript shapes and jq rec
 |------------|-----------------:|--------|
 | `semantic index` | **2** | `SEMANTIC_INDEX_CLI_SCHEMA_VERSION` |
 | `semantic query` | **3** | `SEMANTIC_QUERY_CLI_SCHEMA_VERSION` |
+| `semantic distill` | **1** | teacher → RBVK write |
 
 | Field (index) | Type | Notes |
 |---------------|------|-------|

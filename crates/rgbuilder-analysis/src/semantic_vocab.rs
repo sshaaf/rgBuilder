@@ -1,14 +1,28 @@
-//! Compiled vocabulary matrix + bag-of-tokens accumulator (`vocab-accumulate-v1`).
+//! Compiled vocabulary matrix + bag-of-tokens accumulator.
+//!
+//! `vocab-accumulate-v1` is FNV rows from `build.rs`. `vocab-accumulate-v2` is a
+//! matrix distilled from rgBuilder's own token list through a teacher embedder
+//! (`rg-build semantic distill`, typically code-daemon).
 
+use crate::semantic_embedder::SemanticEmbedder;
 use rgbuilder_error::{Error, Result};
 use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;
 
-/// Stable model id for vocab-accumulate indexes.
-pub const VOCAB_ACCUMULATE_MODEL_ID: &str = "vocab-accumulate-v1";
+/// Stable model id for the compiled vocab matrix (`v1` FNV, `v2` distilled).
+pub const VOCAB_ACCUMULATE_MODEL_ID: &str = match option_env!("RGBUILDER_VOCAB_MODEL_ID") {
+    Some(id) => id,
+    None => "vocab-accumulate-v1",
+};
+
+/// Model id written into distilled `assets/vocab_matrix.bin` files.
+pub const VOCAB_ACCUMULATE_DISTILLED_ID: &str = "vocab-accumulate-v2";
 
 /// Native vocabulary embedding width produced by `build.rs`.
 pub const VOCAB_NATIVE_DIMENSIONS: usize = 256;
+
+/// Identifier list compiled into the binary (`assets/vocab_tokens.txt`).
+pub const DEFAULT_VOCAB_TOKEN_LIST: &str = include_str!("../assets/vocab_tokens.txt");
 
 const MAGIC: &[u8; 4] = b"RBVK";
 const VERSION: u32 = 1;
@@ -126,6 +140,8 @@ impl TokenSpaceAccumulator {
     }
 
     /// Accumulate tokens into an L2-normalized dense vector of native width.
+    ///
+    /// Tokens missing from the table contribute a deterministic FNV row (OOV fallback).
     pub fn accumulate_tokens(&self, tokens: &HashSet<String>) -> Vec<f32> {
         let mut dense = vec![0.0f32; self.dimensions];
         let mut matched = 0usize;
@@ -138,6 +154,9 @@ impl TokenSpaceAccumulator {
                 for (d, &w) in row.iter().enumerate() {
                     dense[d] += f32::from(w);
                 }
+            } else if (3..=48).contains(&key.len()) {
+                matched += 1;
+                add_fnv_row(&mut dense, key.as_bytes());
             }
         }
         if matched > 0 {
@@ -158,6 +177,121 @@ impl TokenSpaceAccumulator {
         }
         let native = self.accumulate_tokens(&tokens);
         resize_dense(&native, out_dims)
+    }
+}
+
+/// Parse `assets/vocab_tokens.txt` (one token per line, `#` comments).
+pub fn parse_vocab_token_list(text: &str) -> Vec<String> {
+    let mut tokens: Vec<String> = text
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(str::to_ascii_lowercase)
+        .filter(|token| (3..=48).contains(&token.len()))
+        .collect();
+    tokens.sort_unstable();
+    tokens.dedup();
+    tokens
+}
+
+/// Encode a row-major int8 matrix as an RBVK blob.
+pub fn encode_rbvk(tokens: &[String], weights: &[i8], dimensions: usize) -> Result<Vec<u8>> {
+    if dimensions == 0 || !dimensions.is_multiple_of(8) {
+        return Err(Error::ConfigError(
+            "vocab matrix dimensions must be a positive multiple of 8".into(),
+        ));
+    }
+    let expected = tokens
+        .len()
+        .checked_mul(dimensions)
+        .ok_or_else(|| Error::ConfigError("vocab matrix: weights overflow".into()))?;
+    if weights.len() != expected {
+        return Err(Error::ConfigError(format!(
+            "vocab matrix: expected {} weights, got {}",
+            expected,
+            weights.len()
+        )));
+    }
+    let mut out = Vec::new();
+    out.extend_from_slice(MAGIC);
+    out.extend_from_slice(&VERSION.to_le_bytes());
+    out.extend_from_slice(&(tokens.len() as u32).to_le_bytes());
+    out.extend_from_slice(&(dimensions as u32).to_le_bytes());
+    for token in tokens {
+        let bytes = token.as_bytes();
+        let len = u16::try_from(bytes.len())
+            .map_err(|_| Error::ConfigError("vocab token longer than u16".into()))?;
+        if len == 0 {
+            return Err(Error::ConfigError("empty vocab token".into()));
+        }
+        out.extend_from_slice(&len.to_le_bytes());
+        out.extend_from_slice(bytes);
+    }
+    out.extend(weights.iter().map(|w| *w as u8));
+    Ok(out)
+}
+
+/// Distill `tokens` through `embedder` into an RBVK blob of `out_dims`.
+///
+/// Teacher is typically code-daemon. Batches keep ONNX sessions fed without
+/// holding a dense `tokens × dims` buffer for the whole vocabulary.
+pub fn distill_vocab_matrix(
+    embedder: &dyn SemanticEmbedder,
+    tokens: &[String],
+    out_dims: usize,
+    batch_size: usize,
+) -> Result<Vec<u8>> {
+    if tokens.is_empty() {
+        return Err(Error::ConfigError(
+            "cannot distill an empty token list".into(),
+        ));
+    }
+    let chunk = batch_size.max(1);
+    let mut weights = Vec::with_capacity(tokens.len() * out_dims);
+    for batch in tokens.chunks(chunk) {
+        let refs: Vec<&str> = batch.iter().map(String::as_str).collect();
+        let dense = embedder.embed_batch(&refs)?;
+        if dense.len() != batch.len() {
+            return Err(Error::ConfigError(format!(
+                "embed_batch returned {} rows for {} tokens",
+                dense.len(),
+                batch.len()
+            )));
+        }
+        for row in dense {
+            let resized = resize_dense(&row, out_dims);
+            weights.extend(quantize_unit_i8(&resized));
+        }
+    }
+    encode_rbvk(tokens, &weights, out_dims)
+}
+
+fn quantize_unit_i8(row: &[f32]) -> Vec<i8> {
+    row.iter()
+        .map(|value| {
+            let scaled = (*value * 127.0).round();
+            scaled.clamp(-127.0, 127.0) as i8
+        })
+        .collect()
+}
+
+fn fnv1a(bytes: &[u8]) -> u64 {
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for byte in bytes {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    hash
+}
+
+fn add_fnv_row(dense: &mut [f32], token: &[u8]) {
+    let base = fnv1a(token);
+    for (d, slot) in dense.iter_mut().enumerate() {
+        let mixed = base
+            .wrapping_add((d as u64).wrapping_mul(0x9E3779B97F4A7C15))
+            .wrapping_mul(0x100000001b3);
+        let centered = (mixed % 251) as i32 - 125;
+        *slot += centered as f32;
     }
 }
 
@@ -223,7 +357,6 @@ impl crate::semantic_embedder::SemanticEmbedder for VocabAccumulateEmbedder {
 mod tests {
     use super::*;
     use crate::semantic_embedder::SemanticEmbedder;
-    use crate::semantic_search::quantize_binary;
 
     #[test]
     fn embedded_matrix_loads() {
@@ -242,16 +375,27 @@ mod tests {
     }
 
     #[test]
-    fn unknown_tokens_zero_vector() {
+    fn unknown_tokens_use_fnv_oov_fallback() {
         let acc = TokenSpaceAccumulator::global().unwrap();
         let mut tokens = HashSet::new();
         tokens.insert("zzzxqnotinvocab999".into());
-        let dense = acc.accumulate_tokens(&tokens);
-        assert!(dense.iter().all(|&x| x == 0.0));
-        // Sign-quantization treats 0.0 as non-negative → all bits set.
-        let bits = quantize_binary(&dense);
-        assert_eq!(bits, quantize_binary(&vec![0.0f32; dense.len()]));
-        assert!(bits.iter().all(|&b| b == 0xff));
+        let a = acc.accumulate_tokens(&tokens);
+        let b = acc.accumulate_tokens(&tokens);
+        assert_eq!(a, b);
+        assert!(a.iter().any(|&x| x != 0.0));
+    }
+
+    #[test]
+    fn distill_round_trip_with_hash_teacher() {
+        let tokens = parse_vocab_token_list("checkout\ncart\norder\n");
+        let teacher = crate::semantic_embedder::SignHashEmbedder::new(64);
+        let blob = distill_vocab_matrix(&teacher, &tokens, 64, 2).unwrap();
+        let acc = TokenSpaceAccumulator::from_bytes(&blob).unwrap();
+        assert_eq!(acc.token_count(), 3);
+        assert_eq!(acc.dimensions(), 64);
+        let query = acc.accumulate_text("checkout cart", 64);
+        assert_eq!(query.len(), 64);
+        assert!(query.iter().any(|&x| x != 0.0));
     }
 
     #[test]

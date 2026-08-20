@@ -21,6 +21,7 @@
 //! | `check` | Pass → exit 0; fail → exit 1 on `publishEvent` scale breach |
 //! | `slice` | CFG + PDG topology; `--taint` flat schema |
 //! | `inspect` | `cfg`, `pdg`, and `dom` layers with structured topology |
+//! | `semantic` | index + query + distill (hash teacher) |
 //!
 //! Layer 1 (serializer fixtures): `cargo test --test cli_output`.
 //! Layer 2 (narrow golden paths): `cargo test --test subprocess_golden_path`.
@@ -507,6 +508,37 @@ fn test_all_cli_commands_json_schema_sanity() {
             .contains("vocab-accumulate"),
         "default embedder should be vocab, got {:?}",
         index_doc["model_id"]
+    );
+
+    let distill_path = sandbox.repo.join("vocab_matrix.bin");
+    let distill_path_str = distill_path.to_str().expect("utf8 distill path");
+    let semantic_distill = sandbox.run(&[
+        "-f",
+        "json",
+        "semantic",
+        "distill",
+        "--matrix",
+        distill_path_str,
+        "--embedder",
+        "hash",
+    ]);
+    assert_success(&semantic_distill, "semantic distill");
+    let distill_doc = sandbox.parse_stdout_json(&semantic_distill);
+    assert_schema_version(&distill_doc, 1);
+    assert_keys_present(
+        &distill_doc,
+        &[
+            "path",
+            "tokens",
+            "dimensions",
+            "teacher_model_id",
+            "compiled_model_id",
+        ],
+    );
+    assert!(distill_path.is_file(), "distill should write RBVK output");
+    assert!(
+        distill_doc["tokens"].as_u64().unwrap() > 0,
+        "distill should embed the compiled token list"
     );
 
     let semantic_query = sandbox.run(&[

@@ -360,6 +360,37 @@ pub enum SemanticCommands {
         scope: semantic::CliSemanticScope,
     },
 
+    /// Distill `vocab_tokens.txt` through a teacher embedder into an RBVK matrix
+    Distill {
+        /// RBVK destination (copy to crates/rgbuilder-analysis/assets/vocab_matrix.bin)
+        #[arg(long = "matrix", value_name = "PATH")]
+        matrix: std::path::PathBuf,
+
+        /// Token list (one identifier per line). Defaults to analysis crate assets.
+        #[arg(long, value_name = "PATH")]
+        tokens: Option<std::path::PathBuf>,
+
+        /// Teacher embedder (code-daemon recommended; hash for tests)
+        #[arg(long, value_enum, default_value = "code-daemon")]
+        embedder: semantic::CliEmbedderKind,
+
+        /// Output dimensions (multiple of 8) [default: 256]
+        #[arg(long, default_value_t = DEFAULT_EMBEDDING_DIMENSIONS)]
+        dimensions: usize,
+
+        /// Teacher batch size [default: 32]
+        #[arg(long, default_value_t = 32)]
+        batch_size: usize,
+
+        /// Path to ONNX model (required for `--embedder onnx`; optional for code-daemon)
+        #[arg(long, value_name = "PATH")]
+        model: Option<std::path::PathBuf>,
+
+        /// SentencePiece tokenizer for ONNX teachers
+        #[arg(long, value_name = "PATH")]
+        tokenizer: Option<std::path::PathBuf>,
+    },
+
     /// Hamming nearest-neighbor search over the semantic index
     Query {
         /// Natural-language or keyword query
@@ -674,6 +705,26 @@ impl Cli {
                         scope,
                     },
                 ),
+                SemanticCommands::Distill {
+                    matrix,
+                    tokens,
+                    embedder,
+                    dimensions,
+                    batch_size,
+                    model,
+                    tokenizer,
+                } => semantic::run_distill(
+                    &ctx,
+                    semantic::SemanticDistillArgs {
+                        output: matrix,
+                        tokens,
+                        embedder,
+                        dimensions,
+                        batch_size,
+                        model,
+                        tokenizer,
+                    },
+                ),
                 SemanticCommands::Query {
                     query,
                     limit,
@@ -848,6 +899,7 @@ fn command_label_for(command: &Commands) -> &'static str {
         Commands::Semantic { action } => match action {
             SemanticCommands::Index { .. } => "semantic index",
             SemanticCommands::Query { .. } => "semantic query",
+            SemanticCommands::Distill { .. } => "semantic distill",
         },
         Commands::Communities { action } => match action {
             CommunitiesCommands::List => "communities list",
