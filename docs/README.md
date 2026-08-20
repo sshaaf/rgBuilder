@@ -26,7 +26,7 @@ Agent-first docs: index once, query with `-f json`, deepen in the User Guide whe
 | Monolith migration (how-to) | [Building a migration plan](building-migration-plan.md) |
 | Research map | [Further reading](further-reading.md) |
 
-Optional browser UI (nice-to-have, not required for agents): [Dashboard user guide](dashboard-user-guide.md) after `discover --with-dashboard`.
+Optional browser UI (nice-to-have, not required for agents): [Universe user guide](universe-user-guide.md) after `discover --with-universe`.
 
 ## For contributors
 

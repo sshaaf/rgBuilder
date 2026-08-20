@@ -19,8 +19,13 @@ mod profile;
 mod slice_export;
 mod source_catalog;
 mod taint_export;
+mod universe_export;
+mod universe_layout;
 
-pub use bundle::{DASHBOARD_DIR_NAME, default_dashboard_path, dist_embedded};
+pub use bundle::{
+    DASHBOARD_DIR_NAME, UNIVERSE_DIR_NAME, default_dashboard_path, default_universe_path,
+    dist_embedded, resolve_ui_static_dir, universe_dist_embedded,
+};
 pub use communities::{COMMUNITIES_FILE, COMMUNITIES_SCHEMA_VERSION, CommunitiesPayload};
 pub use dataflow_export::{DATAFLOW_INDEX_FILE, DataflowExportSummary};
 pub use export_context::DashboardExportContext;
@@ -36,6 +41,11 @@ pub use migration_export::{
 };
 pub use mutations_export::{MUTATIONS_INDEX_FILE, MutationsExportSummary};
 pub use slice_export::{SLICE_INDEX_FILE, SliceExportSummary};
+pub use universe_export::{
+    SEARCH_LANDMARKS_FILE, UNIVERSE_JSON_FILE, SearchLandmarksPayload, layout_for_export,
+    universe_layout_fingerprint, write_search_landmarks, write_universe_json,
+};
+pub use universe_layout::{UniverseLayout, compute_universe_layout};
 pub use taint_export::{TAINT_INDEX_FILE, TaintExportSummary};
 
 use blast_export::{export_blast_bundle, load_columnar_uuid_indices};
@@ -115,6 +125,71 @@ pub fn export_dashboard_bundle_if_changed_with_context(
     Ok(true)
 }
 
+/// Write universe bundle: static UI, manifest, graph payload copy, universe layout JSON.
+pub fn export_universe_bundle(
+    backend: &MemoryBackend,
+    repo_root: &Path,
+    snapshot_path: &Path,
+) -> Result<(), String> {
+    export_universe_bundle_with_context(
+        backend,
+        repo_root,
+        snapshot_path,
+        DashboardExportContext::default(),
+    )
+}
+
+pub fn export_universe_bundle_with_context(
+    backend: &MemoryBackend,
+    repo_root: &Path,
+    snapshot_path: &Path,
+    ctx: DashboardExportContext<'_>,
+) -> Result<(), String> {
+    export_ui_bundle_inner(
+        UiBundleKind::Universe,
+        backend,
+        repo_root,
+        snapshot_path,
+        false,
+        ctx,
+    )
+}
+
+pub fn export_universe_bundle_if_changed_with_context(
+    backend: &MemoryBackend,
+    repo_root: &Path,
+    snapshot_path: &Path,
+    ctx: DashboardExportContext<'_>,
+) -> Result<bool, String> {
+    let out_dir = bundle::default_universe_path(repo_root);
+    let manifest_path = out_dir.join("manifest.json");
+    let fingerprint = compute_export_fingerprint(backend, repo_root);
+    if manifest_path.is_file() {
+        if let Ok(bytes) = fs::read_to_string(&manifest_path) {
+            if let Ok(manifest) = serde_json::from_str::<Manifest>(&bytes) {
+                if manifest.export_fingerprint.as_deref() == Some(fingerprint.as_str()) {
+                    return Ok(false);
+                }
+            }
+        }
+    }
+    export_ui_bundle_inner(
+        UiBundleKind::Universe,
+        backend,
+        repo_root,
+        snapshot_path,
+        true,
+        ctx,
+    )?;
+    Ok(true)
+}
+
+#[derive(Debug, Clone, Copy)]
+enum UiBundleKind {
+    Dashboard,
+    Universe,
+}
+
 fn export_dashboard_bundle_inner(
     backend: &MemoryBackend,
     repo_root: &Path,
@@ -122,7 +197,28 @@ fn export_dashboard_bundle_inner(
     replace_out_dir: bool,
     ctx: DashboardExportContext<'_>,
 ) -> Result<(), String> {
-    let out_dir = bundle::default_dashboard_path(repo_root);
+    export_ui_bundle_inner(
+        UiBundleKind::Dashboard,
+        backend,
+        repo_root,
+        snapshot_path,
+        replace_out_dir,
+        ctx,
+    )
+}
+
+fn export_ui_bundle_inner(
+    kind: UiBundleKind,
+    backend: &MemoryBackend,
+    repo_root: &Path,
+    snapshot_path: &Path,
+    replace_out_dir: bool,
+    ctx: DashboardExportContext<'_>,
+) -> Result<(), String> {
+    let out_dir = match kind {
+        UiBundleKind::Dashboard => bundle::default_dashboard_path(repo_root),
+        UiBundleKind::Universe => bundle::default_universe_path(repo_root),
+    };
     if replace_out_dir && out_dir.exists() {
         profile_stage("replace_out_dir", || {
             let trash = out_dir.with_file_name(format!(
@@ -130,7 +226,7 @@ fn export_dashboard_bundle_inner(
                 out_dir
                     .file_name()
                     .and_then(|s| s.to_str())
-                    .unwrap_or("dashboard"),
+                    .unwrap_or("bundle"),
                 std::process::id()
             ));
             if trash.exists() {
@@ -143,13 +239,16 @@ fn export_dashboard_bundle_inner(
     }
     fs::create_dir_all(&out_dir).map_err(|e| e.to_string())?;
 
-    profile_stage("extract_static_assets", || {
-        extract_static_assets(&out_dir).map_err(|e| e.to_string())
+    profile_stage("extract_static_assets", || match kind {
+        UiBundleKind::Dashboard => extract_static_assets(&out_dir).map_err(|e| e.to_string()),
+        UiBundleKind::Universe => {
+            bundle::extract_universe_static_assets(&out_dir).map_err(|e| e.to_string())
+        }
     })?;
 
     let (node_count, edge_count, digest) =
         profile_stage("payload_stats", || payload_stats(snapshot_path, backend))?;
-    let export_fingerprint = profile_stage("export_fingerprint", || {
+    let mut export_fingerprint = profile_stage("export_fingerprint", || {
         compute_export_fingerprint(backend, repo_root)
     });
     let metrics = profile_stage("collect_metrics", || collect_metrics(backend));
@@ -199,22 +298,59 @@ fn export_dashboard_bundle_inner(
         })?;
     }
     let semantic_summary = semantic_section(repo_root);
-    let manifest = Manifest::with_phases(
-        node_count,
-        edge_count,
-        digest,
-        export_fingerprint,
-        metrics,
-        &export,
-        &cfg_summary,
-        &slice_summary,
-        &blast_summary,
-        &dataflow_summary,
-        &mutations_summary,
-        &taint_summary,
-        &migration_summary,
-        semantic_summary,
-    );
+    let manifest = match kind {
+        UiBundleKind::Dashboard => Manifest::with_phases(
+            node_count,
+            edge_count,
+            digest,
+            export_fingerprint,
+            metrics,
+            &export,
+            &cfg_summary,
+            &slice_summary,
+            &blast_summary,
+            &dataflow_summary,
+            &mutations_summary,
+            &taint_summary,
+            &migration_summary,
+            semantic_summary,
+        ),
+        UiBundleKind::Universe => {
+            profile_stage("universe_export", || {
+                write_universe_json(&out_dir, &export)?;
+                let layout = layout_for_export(&export);
+                export_fingerprint = format!(
+                    "{}:{}",
+                    export_fingerprint,
+                    universe_layout_fingerprint(&layout)
+                );
+                write_search_landmarks(
+                    backend,
+                    repo_root,
+                    &out_dir,
+                    &layout,
+                    &uuid_to_index,
+                    ctx,
+                )
+            })?;
+            Manifest::with_universe_phases(
+                node_count,
+                edge_count,
+                digest,
+                export_fingerprint.clone(),
+                metrics,
+                &export,
+                &cfg_summary,
+                &slice_summary,
+                &blast_summary,
+                &dataflow_summary,
+                &mutations_summary,
+                &taint_summary,
+                &migration_summary,
+                semantic_summary,
+            )
+        }
+    };
     let (manifest_json, manifest_serialize_secs) = profile_stage("manifest_serialize", || {
         let start = std::time::Instant::now();
         let json = serde_json::to_string_pretty(&manifest).map_err(|e| e.to_string())?;

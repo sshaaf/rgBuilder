@@ -29,6 +29,7 @@ pub mod semantic_output;
 mod slice;
 pub mod slice_output;
 mod stage_profile;
+mod universe_actions;
 
 pub use args::OutputFormat;
 
@@ -106,9 +107,9 @@ pub enum Commands {
         #[arg(long = "write-json-graph")]
         write_json_graph: bool,
 
-        /// Export the static dashboard bundle under `.rgbuilder/dashboard/`. Off by default.
-        #[arg(long = "with-dashboard")]
-        with_dashboard: bool,
+        /// Export the rg universe 3D cosmos bundle under `.rgbuilder/universe/`. Off by default.
+        #[arg(long = "with-universe")]
+        with_universe: bool,
 
         /// Write a migration roadmap JSON after analysis (default: `.rgbuilder/migration_plan.json`).
         /// Alias: `--export-migration-plan` (deprecated name).
@@ -545,7 +546,7 @@ impl Cli {
                 with_dfg_loops,
                 with_ast_skeleton,
                 write_json_graph,
-                with_dashboard,
+                with_universe,
                 export_migration_hints,
                 with_harmonic,
                 migration_preset,
@@ -562,7 +563,7 @@ impl Cli {
                     with_dfg_loops,
                     with_ast_skeleton,
                     write_json_graph,
-                    with_dashboard,
+                    with_universe,
                     export_migration_hints,
                     with_harmonic,
                     migration_preset,

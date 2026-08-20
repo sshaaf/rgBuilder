@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "landmarks": [
+    {
+      "node_index": 12,
+      "name": "OrderService",
+      "qualified_name": "com.example.ecommerce.service.OrderService",
+      "community_id": 1,
+      "position": { "x": 180, "y": -80, "z": -20 }
+    }
+  ]
+}

@@ -6,21 +6,21 @@
 mod dashboard_harness;
 
 use dashboard_harness::{assert_dashboard_bundle, copy_dir_all, run_discover};
-use rgbuilder_dashboard::dist_embedded;
+use rgbuilder_dashboard::universe_dist_embedded;
 use std::path::Path;
 
 #[test]
 fn dashboard_dist_embedded_at_compile_time() {
     assert!(
-        dist_embedded(),
-        "dashboard/dist missing — run: ./scripts/build-dashboard.sh && cargo build"
+        universe_dist_embedded(),
+        "dashboard/dist-universe missing — run: cd dashboard && npm run build:universe && cargo build"
     );
 }
 
 #[test]
-fn discover_writes_dashboard_bundle_on_tiny_fixture() {
-    if !dist_embedded() {
-        eprintln!("skip: dashboard/dist not embedded");
+fn discover_writes_universe_bundle_on_tiny_fixture() {
+    if !universe_dist_embedded() {
+        eprintln!("skip: dashboard/dist-universe not embedded");
         return;
     }
 
@@ -28,6 +28,8 @@ fn discover_writes_dashboard_bundle_on_tiny_fixture() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let repo = tmp.path().join("repo");
     copy_dir_all(fixture, &repo).expect("copy fixture");
+    let _ = std::fs::remove_dir_all(repo.join(".rgbuilder"));
+    let _ = std::fs::remove_dir_all(repo.join(".rbuilder"));
 
     let output = run_discover(&repo, "java,rust");
     assert!(

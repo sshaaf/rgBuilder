@@ -1,4 +1,4 @@
-//! CLI coverage for discover `--with-dashboard` / `--export-migration-hints` (#31).
+//! CLI coverage for discover `--with-universe` / `--export-migration-hints` (#31).
 
 mod dashboard_harness;
 
@@ -34,13 +34,13 @@ fn materialize() -> (tempfile::TempDir, std::path::PathBuf) {
     let tmp = tempfile::tempdir().expect("tempdir");
     let repo = tmp.path().join("repo");
     copy_dir_all(&fixture, &repo).expect("copy fixture");
-    // Fixture may ship a stale `.rgbuilder/`; start clean so default-off is observable.
     let _ = std::fs::remove_dir_all(repo.join(".rgbuilder"));
+    let _ = std::fs::remove_dir_all(repo.join(".rbuilder"));
     (tmp, repo)
 }
 
 #[test]
-fn discover_default_skips_dashboard_dir() {
+fn discover_default_skips_universe_dir() {
     let (_tmp, repo) = materialize();
     let output = run_discover(&repo, &[]);
     assert_ok(&output, "discover default");
@@ -50,32 +50,49 @@ fn discover_default_skips_dashboard_dir() {
         "graph snapshot still required"
     );
     assert!(
-        !repo.join(".rgbuilder/dashboard").exists(),
-        "default discover must not write .rgbuilder/dashboard (#31)"
+        !repo.join(".rgbuilder/universe").exists(),
+        "default discover must not write .rgbuilder/universe"
     );
 }
 
 #[test]
-fn discover_with_dashboard_writes_bundle() {
-    if !rgbuilder_dashboard::dist_embedded() {
-        eprintln!("skip: dashboard/dist not embedded");
+fn discover_with_universe_writes_bundle() {
+    if !rgbuilder_dashboard::universe_dist_embedded() {
+        eprintln!("skip: dashboard/dist-universe not embedded");
         return;
     }
 
     let (_tmp, repo) = materialize();
-    let output = run_discover(&repo, &["--with-dashboard"]);
-    assert_ok(&output, "discover --with-dashboard");
+    let output = run_discover(&repo, &["--with-universe"]);
+    assert_ok(&output, "discover --with-universe");
 
-    let dash = repo.join(".rgbuilder/dashboard");
-    assert!(dash.join("index.html").is_file(), "missing index.html");
+    let uni = repo.join(".rgbuilder/universe");
+    assert!(uni.join("index.html").is_file(), "missing index.html");
+    assert!(uni.join("manifest.json").is_file(), "missing manifest.json");
+    assert!(uni.join("universe.json").is_file(), "missing universe.json");
+}
+
+#[test]
+fn discover_with_dashboard_flag_rejected() {
+    let (_tmp, repo) = materialize();
+    let output = run_discover(&repo, &["--with-dashboard"]);
     assert!(
-        dash.join("manifest.json").is_file(),
-        "missing manifest.json"
+        !output.status.success(),
+        "expected failure for removed --with-dashboard flag"
+    );
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stderr),
+        String::from_utf8_lossy(&output.stdout)
+    );
+    assert!(
+        combined.contains("with-dashboard") || combined.contains("unexpected"),
+        "expected clear error for --with-dashboard, got: {combined}"
     );
 }
 
 #[test]
-fn export_migration_hints_writes_plan_without_dashboard() {
+fn export_migration_hints_writes_plan_without_universe() {
     let (_tmp, repo) = materialize();
     let plan_path = repo.join("hints.json");
     let output = run_discover(
@@ -93,8 +110,8 @@ fn export_migration_hints_writes_plan_without_dashboard() {
         serde_json::from_slice(&std::fs::read(&plan_path).unwrap()).unwrap();
     assert_eq!(plan["schema_version"], 2);
     assert!(
-        !repo.join(".rgbuilder/dashboard").exists(),
-        "migration hints must not imply dashboard export"
+        !repo.join(".rgbuilder/universe").exists(),
+        "migration hints must not imply universe export"
     );
 }
 
@@ -111,7 +128,7 @@ fn export_migration_plan_alias_still_works() {
 }
 
 #[test]
-fn discover_help_documents_dashboard_flags() {
+fn discover_help_documents_universe_flags() {
     let output = Command::new(rgbuilder_bin())
         .args(["discover", "--help"])
         .output()
@@ -119,8 +136,12 @@ fn discover_help_documents_dashboard_flags() {
     assert_ok(&output, "discover --help");
     let help = String::from_utf8_lossy(&output.stdout);
     assert!(
-        help.contains("--with-dashboard"),
-        "missing --with-dashboard"
+        help.contains("--with-universe"),
+        "missing --with-universe"
+    );
+    assert!(
+        !help.contains("--with-dashboard"),
+        "removed --with-dashboard must not appear in help"
     );
     assert!(
         help.contains("--export-migration-hints"),

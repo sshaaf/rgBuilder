@@ -5,12 +5,18 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 static DASHBOARD_DIST: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../../dashboard/dist");
+static UNIVERSE_DIST: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../../dashboard/dist-universe");
 
 /// Root directory name under `.rgbuilder/`.
 pub const DASHBOARD_DIR_NAME: &str = "dashboard";
+pub const UNIVERSE_DIR_NAME: &str = "universe";
 
 fn workspace_dist_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../dashboard/dist")
+}
+
+fn workspace_universe_dist_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../dashboard/dist-universe")
 }
 
 /// True when a usable dashboard build exists (disk tree in dev, or full embed for release).
@@ -96,6 +102,51 @@ pub fn inject_manifest_bootstrap(out_dir: &Path, manifest_json: &str) -> Result<
 
 pub fn default_dashboard_path(repo_root: &Path) -> PathBuf {
     repo_root.join(".rgbuilder").join(DASHBOARD_DIR_NAME)
+}
+
+pub fn default_universe_path(repo_root: &Path) -> PathBuf {
+    repo_root.join(".rgbuilder").join(UNIVERSE_DIR_NAME)
+}
+
+/// Resolve static UI directory — universe bundle under `.rgbuilder/universe/`.
+pub fn resolve_ui_static_dir(repo_root: &Path) -> PathBuf {
+    default_universe_path(repo_root)
+}
+
+/// True when a usable universe build exists (disk tree in dev, or full embed for release).
+pub fn universe_dist_embedded() -> bool {
+    let disk = workspace_universe_dist_dir();
+    if disk.join("index.html").is_file() && disk.join("assets").is_dir() {
+        return true;
+    }
+    universe_embedded_file_count() > 1
+}
+
+fn universe_embedded_file_count() -> usize {
+    UNIVERSE_DIST.files().count()
+}
+
+/// Write all files from embedded `dashboard/dist-universe` into `out_dir`.
+pub fn extract_universe_static_assets(out_dir: &Path) -> Result<(), String> {
+    fs::create_dir_all(out_dir).map_err(|e| e.to_string())?;
+
+    let disk = workspace_universe_dist_dir();
+    if disk.join("index.html").is_file() && disk.join("assets").is_dir() {
+        copy_dir_recursive(&disk, out_dir)?;
+        return Ok(());
+    }
+
+    if universe_embedded_file_count() <= 1 {
+        return Err(
+            "dashboard/dist-universe incomplete — run: cd dashboard && npm run build:universe && cargo build --release"
+                .into(),
+        );
+    }
+
+    for file in UNIVERSE_DIST.files() {
+        write_embedded_file(out_dir, file.path(), file.contents())?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

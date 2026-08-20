@@ -40,7 +40,7 @@ pub(crate) struct AnalysisOptions<'a> {
     pub with_dfg_loops: bool,
     pub with_ast_skeleton: bool,
     pub write_json_graph: bool,
-    pub with_dashboard: bool,
+    pub with_universe: bool,
     pub export_migration_hints: bool,
     pub with_harmonic: bool,
     pub migration_preset: &'a str,
@@ -62,7 +62,7 @@ pub(crate) fn run_full_analysis(
         with_dfg_loops,
         with_ast_skeleton,
         write_json_graph,
-        with_dashboard,
+        with_universe,
         export_migration_hints,
         with_harmonic,
         migration_preset,
@@ -899,7 +899,7 @@ pub(crate) fn run_full_analysis(
     // co-residency of PreparedGraphSnapshot with the live backend (#33).
 
     let mut hydrated: Option<rgbuilder_graph::code_graph::CodeGraph> = None;
-    let need_hydrate = write_json_graph || with_dashboard || export_migration_hints;
+    let need_hydrate = write_json_graph || with_universe || export_migration_hints;
     if need_hydrate {
         hydrated = Some(rgbuilder_graph::code_graph::CodeGraph::open_snapshot(
             &snapshot_path,
@@ -919,12 +919,12 @@ pub(crate) fn run_full_analysis(
         }
     }
 
-    // Export static dashboard bundle only when requested (#31).
-    let save_dashboard_start = Instant::now();
-    let dashboard_dir = rgbuilder_graph::paths::artifact_path(root, "dashboard");
-    if with_dashboard {
-        let graph = hydrated.as_ref().expect("hydrated for dashboard");
-        match rgbuilder_dashboard::export_dashboard_bundle_if_changed_with_context(
+    // Export static universe bundle only when requested.
+    let save_universe_start = Instant::now();
+    let universe_dir = rgbuilder_graph::paths::artifact_path(root, "universe");
+    if with_universe {
+        let graph = hydrated.as_ref().expect("hydrated for universe");
+        match rgbuilder_dashboard::export_universe_bundle_if_changed_with_context(
             graph.backend(),
             root,
             &snapshot_path,
@@ -932,26 +932,26 @@ pub(crate) fn run_full_analysis(
         ) {
             Ok(true) => {
                 if human_output {
-                    info!("[✓] Dashboard: {}/index.html", dashboard_dir.display());
+                    info!("[✓] Universe: {}/index.html", universe_dir.display());
                 }
             }
             Ok(false) => {
                 if verbose {
-                    debug!("Dashboard bundle unchanged — skipped re-export");
+                    debug!("Universe bundle unchanged — skipped re-export");
                 }
             }
             Err(e) => {
                 if human_output {
-                    warn!("[!] Dashboard export failed: {e}");
+                    warn!("[!] Universe export failed: {e}");
                 } else if verbose {
-                    debug!(error = %e, "Dashboard bundle export failed");
+                    debug!(error = %e, "Universe bundle export failed");
                 }
             }
         }
     } else if verbose {
-        debug!("Dashboard export skipped (pass --with-dashboard to enable)");
+        debug!("Universe export skipped (pass --with-universe to enable)");
     }
-    profile.save_dashboard.secs = secs(save_dashboard_start.elapsed());
+    profile.save_universe.secs = secs(save_universe_start.elapsed());
 
     if export_migration_hints {
         let migration_start = Instant::now();
@@ -1036,8 +1036,11 @@ pub(crate) fn run_full_analysis(
         info!("[i] Next steps:");
         info!("   rg-build gql \"MATCH (n:Function) RETURN n\"  # Query the graph");
         info!("   rg-build slice <file> --line <N> --variable <VAR>");
-        if dashboard_dir.join("manifest.json").is_file() {
-            info!("   rg-build serve --open   # Dashboard + query API at http://127.0.0.1:8080");
+        if universe_dir.join("manifest.json").is_file() {
+            info!("   rg-build serve --open   # Universe UI + query API at http://127.0.0.1:8080");
+            if with_universe {
+                info!("   Universe bundle: {}/index.html", universe_dir.display());
+            }
         }
     }
 

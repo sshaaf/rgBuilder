@@ -150,14 +150,17 @@ fn run_discover_with_flags(repo: &Path, languages: Option<&str>, deep: bool) -> 
         "rg-build binary not found at {} — run cargo build --release",
         bin.display()
     );
+    // Fixture may ship stale `.rgbuilder/` or legacy `.rbuilder/` (migrated on discover).
+    let _ = std::fs::remove_dir_all(repo.join(".rgbuilder"));
+    let _ = std::fs::remove_dir_all(repo.join(".rbuilder"));
     let mut cmd = Command::new(&bin);
-    // Dashboard tests always opt in (#31 — bare discover skips dashboard).
+    // Dashboard tests always opt in — bare discover skips universe export.
     cmd.args([
         "-r",
         repo.to_str().unwrap(),
         "discover",
         ".",
-        "--with-dashboard",
+        "--with-universe",
     ]);
     if deep {
         // Former `--all` ≡ security + cfg + taint (#34).
@@ -178,13 +181,13 @@ pub fn metasfresh_repo_path() -> PathBuf {
         .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(DEFAULT_METASFRESH_REPO))
 }
 
-/// Assert Phase 0–2 bundle contract under `{repo}/.rgbuilder/dashboard/`.
+/// Assert Phase 0–2 bundle contract under `{repo}/.rgbuilder/universe/`.
 pub fn assert_dashboard_bundle(repo: &Path, min_nodes: u64) {
     assert_dashboard_bundle_with_meta(repo, min_nodes, 1);
 }
 
 pub fn assert_dashboard_bundle_with_meta(repo: &Path, min_nodes: u64, min_metanodes: u64) {
-    let dash = repo.join(".rgbuilder/dashboard");
+    let dash = repo.join(".rgbuilder/universe");
 
     assert!(dash.join("index.html").is_file(), "missing index.html");
     assert!(
@@ -199,7 +202,9 @@ pub fn assert_dashboard_bundle_with_meta(repo: &Path, min_nodes: u64, min_metano
     let manifest: Value =
         serde_json::from_slice(&std::fs::read(dash.join("manifest.json")).unwrap()).unwrap();
     assert_eq!(manifest["schema_version"], 1);
+    assert_eq!(manifest["ui_mode"], "universe");
     assert_eq!(manifest["graph"]["payload_format"], "columnar_v2");
+    assert!(dash.join("universe.json").is_file(), "missing universe.json");
     assert_eq!(manifest["phases"]["0"], "complete");
     assert_eq!(manifest["phases"]["1"], "complete");
     assert_eq!(manifest["phases"]["2"], "complete");
@@ -462,6 +467,10 @@ pub fn assert_dashboard_bundle_with_meta(repo: &Path, min_nodes: u64, min_metano
     assert!(
         !repo.join(".rgbuilder/dashboard.html").exists(),
         "legacy monolithic dashboard.html must not be written"
+    );
+    assert!(
+        !repo.join(".rgbuilder/dashboard").exists(),
+        "legacy dashboard bundle must not be written — use .rgbuilder/universe/"
     );
 
     let assets = dash.join("assets");

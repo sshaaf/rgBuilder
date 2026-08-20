@@ -10,7 +10,7 @@ End-to-end guide for installing rgBuilder, indexing an in-tree example, and quer
 |------|----------|------|
 | **Tutorial spine** | §1–4, §16 | Install → fixture → discover → recommended workflow |
 | **How-to** | §5–14 | Flags and feature commands with sample output |
-| **Optional UI** | §15 | `serve` / dashboard — nice-to-have, not required for agents |
+| **Optional UI** | §15 | `serve` / universe — nice-to-have, not required for agents |
 | **Reference** | §17–18 | Command cheat sheet + troubleshooting |
 
 ---
@@ -264,7 +264,7 @@ rg-build discover . -l java,typescript -e target,node_modules,dist
 
 Bare `discover` (no `--with-*`) always runs: index/extract → topology → community → complexity → PageRank/betweenness → dependency cycles → blast engine → persist analysis + snapshot.
 
-Harmonic, dashboard, migration export, security, CFG/PDG, and discover-time taint are **opt-in** via the flags below.
+Harmonic, universe UI, migration export, security, CFG/PDG, and discover-time taint are **opt-in** via the flags below.
 
 ### Deeper analysis (opt-in)
 
@@ -274,7 +274,7 @@ Harmonic, dashboard, migration export, security, CFG/PDG, and discover-time tain
 | `--with-cfg` | Per-function CFG, dominators, PDG (archive under `.rgbuilder/analysis/`) |
 | `--with-taint` | Discover-time taint into archive (implies CFG/PDG pass) |
 | `--with-harmonic` | Harmonic centrality (migration ranking) |
-| `--with-dashboard` | Static dashboard bundle under `.rgbuilder/dashboard/` |
+| `--with-universe` | Static universe bundle under `.rgbuilder/universe/` |
 | `--export-migration-hints` | Migration roadmap JSON (alias: `--export-migration-plan`) |
 
 ```bash
@@ -283,7 +283,7 @@ rg-build discover . -l java -e target --with-cfg
 
 # Full walkthrough set used for the samples below
 rg-build discover . -l java -e target \
-  --with-cfg --with-dashboard --with-harmonic --export-migration-hints
+  --with-cfg --with-universe --with-harmonic --export-migration-hints
 ```
 
 Example lines from that richer run:
@@ -294,7 +294,7 @@ Example lines from that richer run:
   CFG/PDG/Dominance: 178 functions analyzed
   Skipped: 9 functions (unsupported language or parse error)
 [✓] Migration plan (Hybrid Default): 9 steps → …/ecommerce-java/./.rgbuilder/migration_plan.json
-[✓] Dashboard: …/ecommerce-java/./.rgbuilder/dashboard/index.html
+[✓] Universe: …/ecommerce-java/./.rgbuilder/universe/index.html
 ```
 
 Use `--with-cfg` when you need `inspect` / slice overlays; add `--with-taint` for discover-time taint flows. On large monorepos (100k+ functions) expect minutes to hours.
@@ -353,7 +353,7 @@ ecommerce-java/.rgbuilder/
 ├── migration_plan.json         # With --export-migration-hints
 ├── analysis/                   # Per-function CFG/PDG/taint (with --with-cfg / --with-taint)
 │   └── cfg_pdg.archive.bin
-└── dashboard/                  # Only with --with-dashboard
+└── universe/                  # Only with --with-universe
     ├── index.html
     ├── manifest.json
     ├── migration_plan.json
@@ -835,7 +835,7 @@ rg-build -r "$REPO" blast-radius 'ShoppingCartService::priceShoppingCart'
 # → Callers include CartEndpoint.add / delete / checkout and checkOutShoppingCart
 ```
 
-**Dashboard:** after `discover --with-cfg --with-dashboard`, the **Dataflow** tab includes a **Field mutations (CPG)** panel (same filters). Click a hit to open that function’s PDG and highlight the write line. See [Dashboard user guide](dashboard-user-guide.md#dataflow).
+**Universe:** after `discover --with-cfg --with-universe`, the L3 context panel can show CFG/dataflow insets. See [Universe user guide](universe-user-guide.md).
 
 JSON for agents:
 
@@ -882,7 +882,7 @@ rg-build -r "$REPO" -f json metrics --communities | jq .
 ```
 
 That summary is counts only. For **named** communities and membership, use GQL / `communities list`
-([§6](#6-query-the-graph-with-gql)) or `.rgbuilder/dashboard/communities.json` after `--with-dashboard`.
+([§6](#6-query-the-graph-with-gql)) or `.rgbuilder/universe/communities.json` after `--with-universe`.
 
 ```bash
 rg-build -r "$REPO" -f json metrics --pagerank | jq '.pagerank | {iterations, converged, top: .top[:3]}'
@@ -1047,14 +1047,14 @@ The fixture also ships a shared policy at [`rgbuilder-tests/rgbuilder-policy.jso
 
 ## 15. HTTP server (`serve`) — optional
 
-`serve` exposes an HTTP **query API** (and a **dashboard UI** only if you previously ran `discover --with-dashboard`). Agents should prefer CLI `-f json`; use `serve` when you want HTTP or a browser UI.
+`serve` exposes an HTTP **query API** (and the **universe UI** only if you previously ran `discover --with-universe`). Agents should prefer CLI `-f json`; use `serve` when you want HTTP or a browser UI.
 
 ```bash
 # API-only is fine without dashboard assets
 rg-build -r "$REPO" serve --port 8080
 
 # Optional UI
-rg-build -r "$REPO" discover . -l java -e target --with-dashboard
+rg-build -r "$REPO" discover . -l java -e target --with-universe
 rg-build -r "$REPO" serve --open
 ```
 
@@ -1098,7 +1098,7 @@ cd "$REPO"
 
 # 2. Index (add CFG + dashboard for the rest of this walkthrough)
 rg-build discover . -l java -e target \
-  --with-cfg --with-dashboard --with-harmonic --export-migration-hints
+  --with-cfg --with-universe --with-harmonic --export-migration-hints
 
 # 3. Explore structure
 rg-build -r "$REPO" -f json gql --macro-name all_functions unused | jq '.count'
@@ -1132,7 +1132,7 @@ rg-build -r "$REPO" export --export-format mermaid \
 rg-build -r "$REPO" serve --open
 ```
 
-Migration hints (with `--export-migration-hints`) land under `.rgbuilder/migration_plan.json` and `.rgbuilder/dashboard/migration_plan.json` — package-level steps such as `com.example.ecommerce.service`, `…repository`, `…controller`, and CoolStore `…coolstore.*`.
+Migration hints (with `--export-migration-hints`) land under `.rgbuilder/migration_plan.json` and `.rgbuilder/universe/migration_plan.json` when `--with-universe` ran — package-level steps such as `com.example.ecommerce.service`, `…repository`, `…controller`, and CoolStore `…coolstore.*`.
 
 ---
 
@@ -1151,7 +1151,7 @@ Migration hints (with `--export-migration-hints`) land under `.rgbuilder/migrati
 | `export` | Serialize graph (json, graphml, dot, mermaid, obsidian vault, okf) |
 | `check` | CI policy gateway |
 | `semantic` | Opt-in semantic index + query (`--scope community`, `docs`, `all`) |
-| `serve` | HTTP dashboard + `/api/query` + `/api/semantic/*` (default); `serve --daemon` for blast socket |
+| `serve` | HTTP universe UI + `/api/query` + `/api/semantic/*` (default); `serve --daemon` for blast socket |
 
 ### `discover` flags
 
@@ -1166,7 +1166,7 @@ Migration hints (with `--export-migration-hints`) land under `.rgbuilder/migrati
 | `--with-dfg-loops` | Tag loop-carried `DataDependency` edges in PDG (with `--with-cfg`) |
 | `--with-ast-skeleton` | Build AST skeleton archive for `cpg ast` |
 | `--with-harmonic` | Harmonic centrality (default off; needed for migration ranking) |
-| `--with-dashboard` | Static dashboard bundle (default off) |
+| `--with-universe` | Static universe bundle (default off) |
 | `--export-migration-hints` | Migration roadmap JSON (alias `--export-migration-plan`) |
 | `--migration-preset` | Preset for migration hints (`hybrid`, `foundational`, …) |
 | `--migration-order` | `scheduled` (topological) or `priority` |
@@ -1214,7 +1214,7 @@ Confirm `cpg status` shows a field-write index, then match the **resolved type n
 
 ### Slow `discover`
 
-Start with the default mode. Add `--with-cfg` or `--with-taint` only when you need inspect, slice overlays, or taint. Keep `--with-harmonic` / `--with-dashboard` off unless you need migration ranking or the static UI.
+Start with the default mode. Add `--with-cfg` or `--with-taint` only when you need inspect, slice overlays, or taint. Keep `--with-harmonic` / `--with-universe` off unless you need migration ranking or the static UI.
 
 On **very large repos** (500k+ graph nodes), discover automatically:
 
@@ -1234,7 +1234,8 @@ RUST_LOG=info,profile=info rg-build discover . -v 2>&1 | grep '\[profile\]'
 
 - [Introduction](Introduction.md) — concepts and feature goals
 - [cli-getting-started.md](cli-getting-started.md) — deprecated stub (use this User Guide)
-- [http-api.md](http-api.md) — dashboard HTTP API
+- [http-api.md](http-api.md) — serve HTTP API
+- [universe-user-guide.md](universe-user-guide.md) — 3D universe UI
 - [json-api.md](json-api.md) — machine-readable output + field catalogs
 - [AGENTS.md](../AGENTS.md) — agent-oriented command recipes
 - [`rgbuilder-tests/README.md`](../rgbuilder-tests/README.md) — all language fixtures + correctness suite

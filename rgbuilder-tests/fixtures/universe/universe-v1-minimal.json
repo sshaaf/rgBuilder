@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "communities": [
+    {
+      "id": 0,
+      "label": "platform",
+      "color": "#3b82f6",
+      "position": { "x": -200, "y": 100, "z": 10 },
+      "member_count": 50,
+      "glow_radius": 60
+    },
+    {
+      "id": 1,
+      "label": "payments",
+      "color": "#f97316",
+      "position": { "x": 180, "y": -80, "z": -20 },
+      "member_count": 40,
+      "glow_radius": 55
+    }
+  ],
+  "bridges": [
+    { "source_community_id": 0, "target_community_id": 1, "weight": 3 }
+  ],
+  "packages": []
+}

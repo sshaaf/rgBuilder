@@ -14,7 +14,7 @@ use axum::{
     routing::{get, post},
 };
 use rgbuilder_analysis::{CommunityQueryContext, SemanticIndex};
-use rgbuilder_dashboard::default_dashboard_path;
+use rgbuilder_dashboard::resolve_ui_static_dir;
 use rgbuilder_gql::{
     QueryMacroRegistry, execute_explain_with_community, execute_macro_with_community,
     execute_with_community,
@@ -43,6 +43,8 @@ struct AppState {
     registry: QueryMacroRegistry,
     semantic: Option<Arc<SemanticIndex>>,
     community: Option<CommunityQueryContext>,
+    rg_build_bin: PathBuf,
+    action_lock: Arc<tokio::sync::Mutex<()>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -99,13 +101,13 @@ pub fn serve(ctx: &CliContext, args: HttpServeArgs) -> Result<()> {
     let dashboard_dir = args
         .dashboard_dir
         .clone()
-        .unwrap_or_else(|| default_dashboard_path(&ctx.repo));
+        .unwrap_or_else(|| resolve_ui_static_dir(&ctx.repo));
 
     if !args.query_only {
         let index = dashboard_dir.join("index.html");
         if !index.is_file() {
             bail!(
-                "dashboard not found at {} (run `rg-build discover` first)",
+                "universe UI not found at {} (run `rg-build discover . --with-universe` first)",
                 dashboard_dir.display()
             );
         }
@@ -119,12 +121,15 @@ pub fn serve(ctx: &CliContext, args: HttpServeArgs) -> Result<()> {
             .context("load graph for query API (run `rg-build discover` first)")?;
         let community = super::gql::load_community_context(ctx, graph.backend());
         let semantic = load_semantic_index(&ctx.repo);
+        let rg_build_bin = std::env::current_exe().context("resolve rg-build executable path")?;
         Some(Arc::new(AppState {
             repo: ctx.repo.clone(),
             graph: RwLock::new(graph),
             registry: QueryMacroRegistry::with_defaults(),
             semantic: semantic.map(Arc::new),
             community,
+            rg_build_bin,
+            action_lock: Arc::new(tokio::sync::Mutex::new(())),
         }))
     };
 
@@ -171,6 +176,7 @@ async fn run_server(
             .route("/graphql", post(api_query))
             .route("/api/semantic/status", get(api_semantic_status))
             .route("/api/semantic/query", post(api_semantic_query))
+            .route("/api/universe/actions", post(api_universe_actions))
             .with_state(state);
         app = app.merge(query);
     }
@@ -199,6 +205,7 @@ async fn run_server(
             eprintln!("[✓] Query API: http://{bound}/api/query");
             eprintln!("[✓] GraphQL alias: http://{bound}/graphql");
             eprintln!("[✓] Semantic search: http://{bound}/ (Search tab)");
+            eprintln!("[✓] Universe actions: POST http://{bound}/api/universe/actions");
         }
         eprintln!("[i] Press Ctrl+C to stop");
     } else {
@@ -316,6 +323,19 @@ async fn api_semantic_query(
         .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
     Ok(Json(query_response_to_json(&response)))
+}
+
+async fn api_universe_actions(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<super::universe_actions::UniverseActionRequest>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    super::universe_actions::handle_universe_action(
+        state.rg_build_bin.clone(),
+        state.repo.clone(),
+        state.action_lock.clone(),
+        body,
+    )
+    .await
 }
 
 fn parse_expand_mode(

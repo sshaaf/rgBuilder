@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "dashboard_version": "0.4.5",
+  "ui_mode": "universe",
+  "universe_json_path": "universe.json",
+  "search_landmarks_path": "search_landmarks.json",
+  "graph": {
+    "payload_path": "graph_payload.bin",
+    "payload_format": "columnar_v2",
+    "node_count": 120,
+    "edge_count": 80,
+    "digest": "fixture"
+  },
+  "view": {
+    "metagraph_path": "metagraph.json",
+    "community_count": 2
+  }
+}

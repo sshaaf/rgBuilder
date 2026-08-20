@@ -51,7 +51,7 @@ rg-build -r "$REPO" -f json gql 'MATCH (n:Function) RETURN n LIMIT 20'
 | Loop-carried DFG tags | `rg-build discover . --with-cfg --with-dfg-loops` (tags `DataDependency.loop_carried` in PDG) |
 | AST skeleton | `rg-build discover --with-ast-skeleton` then `rg-build -f json cpg ast <Symbol>` |
 | CPG export | `rg-build cpg export --format graphson --output cpg.json [--path-contains src/]` |
-| Migration plan | `rg-build discover . --with-cfg --with-security --with-taint --with-dashboard --with-harmonic --export-migration-hints` then read `.rgbuilder/migration_plan.json` (or dashboard copy) |
+| Migration plan | `rg-build discover . --with-cfg --with-security --with-taint --with-universe --with-harmonic --export-migration-hints` then read `.rgbuilder/migration_plan.json` (or universe bundle copy) |
 | CI gate on changes | `rg-build -f json check --policy-file policy.json` (exit 1 = violations) |
 
 ---
@@ -86,7 +86,7 @@ rg-build -r "$REPO" serve --daemon
 6. **Deep analysis** needs `discover --with-cfg` (and `--with-taint` for discover-time taint) (slice, inspect, taint).
 7. **Semantic search** needs `semantic index` (separate from discover). Default **code-daemon** needs LFS ONNX weights from source; offline use `--embedder vocab` or `--embedder hash`. Doc sections: `semantic index --scope docs` (embeds headings + code blocks); query `--scope docs` does not filter hits — only index scope matters (`community` is the exception). Fusion is on by default (`--no-fusion` to disable).
 8. **Profile discover** — `discover -v` with `RUST_LOG=profile=info` for `[profile] stage` and centrality sub-phase timings (see [analysis-architecture.md](docs/analysis-architecture.md)). **Cold profile** (accurate perf): delete `.rgbuilder/`, build release `rg-build`, then run ignored gates — warm/partial caches skew timings. `cargo build --release --bin rg-build` then `cargo test --release --test cold_profile_gates -- --ignored --nocapture`. Linux: `linux_cold_discover_within_baseline` on `example/linux` (baseline ~170s). Markdown: `./scripts/fetch-profile-repos.sh` then `k8s_website_markdown_cold_discover_within_baseline` on `example/k8s-website` (baseline ~3s, `-l markdown`). See `example/README.md`.
-9. **Dashboard is optional** — only with `--with-dashboard` / `serve` when a human wants a UI; never required for structural answers.
+9. **Universe UI is optional** — only with `--with-universe` / `serve` when a human wants a 3D UI; never required for structural answers.
 10. **Markdown docs** — `.md` / `.mdx` are indexed on `discover` (headings, links, frontmatter). Use GQL for doc navigation; `semantic index --scope docs` for NL section search; Obsidian export for human vault browsing; `slice` / `inspect` / `cpg flows` reject markup paths. See [markdown-context.md](docs/markdown-context.md).
 ---
 
@@ -98,9 +98,9 @@ After `discover`:
 |------|---------|
 | `.rgbuilder/graph.snapshot.bin` | Graph snapshot |
 | `.rgbuilder/content_store.bin` | Large markdown bodies / files (Blake3-keyed; used by Obsidian export + doc semantic index) |
-| `.rgbuilder/dashboard/manifest.json` | Counts, feature flags |
-| `.rgbuilder/dashboard/migration_plan.json` | Migration export (with `--with-dashboard` and/or `--export-migration-hints`) |
-| `.rgbuilder/dashboard/graph_payload.bin` | Columnar graph for dashboard WASM |
+| `.rgbuilder/universe/manifest.json` | Counts, feature flags (with `--with-universe`) |
+| `.rgbuilder/universe/migration_plan.json` | Migration export (with `--with-universe` and/or `--export-migration-hints`) |
+| `.rgbuilder/universe/graph_payload.bin` | Columnar graph for universe WASM |
 | `.rgbuilder/semantic_index.bin` | Opt-in semantic search index (`semantic index`) |
 
 ---

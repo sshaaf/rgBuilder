@@ -5,11 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:universe": "vite --open /universe.html",
     "build": "tsc -b && vite build",
+    "build:universe": "tsc -b && vite build && node scripts/copy-universe-dist.mjs",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:universe": "vitest run src/universe",
     "test:unit": "vitest run src/migration src/MutationsPanel.test.ts",
-    "test:mutations": "node scripts/test-mutations-panel.mjs"
+    "test:mutations": "node scripts/test-mutations-panel.mjs",
+    "test:e2e:universe": "playwright test e2e/universe-smoke.spec.ts"
   },
   "dependencies": {
     "@codemirror/lang-java": "^6.0.2",
@@ -23,10 +27,12 @@
     "graphology-layout": "^0.6.1",
     "graphology-layout-forceatlas2": "^0.10.1",
     "preact": "^10.25.4",
-    "sigma": "^3.0.2"
+    "sigma": "^3.0.2",
+    "three": "^0.175.0"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.1",
+    "@types/three": "^0.185.4",
     "playwright": "^1.61.1",
     "typescript": "~5.7.2",
     "vite": "^6.0.7",

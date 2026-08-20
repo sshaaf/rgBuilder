@@ -20,8 +20,8 @@ pub struct DiscoverArgs {
     pub with_ast_skeleton: bool,
     /// Also write legacy JSON graph files (`graph.db` / `graph.json`).
     pub write_json_graph: bool,
-    /// Export `.rgbuilder/dashboard/` bundle. Default off.
-    pub with_dashboard: bool,
+    /// Export `.rgbuilder/universe/` bundle. Default off.
+    pub with_universe: bool,
     /// Write a migration roadmap JSON after analysis completes.
     pub export_migration_hints: bool,
     /// Compute harmonic centrality (HyperBall on large graphs). Default off.
@@ -57,7 +57,7 @@ pub fn run(ctx: &CliContext, args: DiscoverArgs) -> Result<()> {
             with_dfg_loops: args.with_dfg_loops,
             with_ast_skeleton: args.with_ast_skeleton,
             write_json_graph: args.write_json_graph,
-            with_dashboard: args.with_dashboard,
+            with_universe: args.with_universe,
             export_migration_hints: args.export_migration_hints,
             with_harmonic: args.with_harmonic,
             migration_preset: &args.migration_preset,

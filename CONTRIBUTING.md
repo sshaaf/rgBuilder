@@ -25,14 +25,26 @@ cargo build --release
 ./target/release/rg-build --version
 ```
 
-### Dashboard (when changing `dashboard/`)
+### Universe UI (when changing `dashboard/src/universe/`)
+
+```bash
+cd dashboard
+pnpm install   # or npm ci
+pnpm run build:universe
+cd ..
+cargo build --release   # embeds dashboard/dist-universe
+```
+
+Legacy tabbed dashboard (`dashboard/src/App.tsx`) is deprecated — universe is the primary UI.
+
+### Dashboard dist (legacy embed)
 
 ```bash
 cd dashboard
 npm ci
 npm run build
 cd ..
-cargo build --release   # embeds dashboard/dist
+cargo build --release   # embeds dashboard/dist (still used by shared WASM build)
 ```
 
 WASM worker:
@@ -54,21 +66,23 @@ cargo test
 cargo test --release --test subprocess_golden_path
 cargo test --release --test all_commands_sanity
 
-# Dashboard bundle assertions
+# Dashboard bundle assertions (universe export path)
 cargo test dashboard_harness
+cargo test --test with_universe_cli --test universe_ecommerce_java --test universe_deep_manifest
+cargo test --test universe_export_baseline -- --ignored --nocapture  # optional perf gate
 
 # Golden repos (optional, long)
 ./scripts/validate-golden-repos.sh
-# Discover timing baselines (manual): cargo test --release --test discover_perf_baselines -- --ignored --nocapture
 ```
 
-### Dashboard Playwright scripts
-
-Serve a discovered dashboard, then:
+### Universe Playwright + Vitest
 
 ```bash
 cd dashboard
-DASHBOARD_URL=http://127.0.0.1:8765/ node scripts/test-guide-cli.mjs
+pnpm run test:universe
+# E2E (requires discovered bundle):
+export UNIVERSE_BUNDLE_DIR=/path/to/.rgbuilder/universe
+pnpm run test:e2e:universe
 ```
 
 ---

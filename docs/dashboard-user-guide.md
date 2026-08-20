@@ -1,5 +1,7 @@
 # Dashboard user guide
 
+> **Deprecated:** the tabbed dashboard has been replaced by **[rg Universe](universe-user-guide.md)** (`discover --with-universe`, `serve --open`). This page remains for historical reference.
+
 Interactive browser UI for exploring a repository after `discover`. This guide is for **end users**; engineering detail lives in [dashboard-design.md](dashboard-design.md).
 
 **CLI equivalents:** each tab’s **Query Guide** panel lists matching `rg-build` commands.

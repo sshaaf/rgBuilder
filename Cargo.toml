@@ -174,6 +174,7 @@ pulldown-cmark = "0.9"
 bincode = "1.3"
 ignore = "0.4"
 axum = "0.8"
+tokio-stream = "0.1"
 tower-http = { version = "0.6", features = ["fs"] }
 
 [dev-dependencies]
@@ -269,6 +270,26 @@ path = "tests/with_harmonic_cli.rs"
 [[test]]
 name = "with_dashboard_cli"
 path = "tests/with_dashboard_cli.rs"
+
+[[test]]
+name = "with_universe_cli"
+path = "tests/with_universe_cli.rs"
+
+[[test]]
+name = "universe_ecommerce_java"
+path = "tests/universe_ecommerce_java.rs"
+
+[[test]]
+name = "http_serve_universe"
+path = "tests/http_serve_universe.rs"
+
+[[test]]
+name = "universe_expand"
+path = "tests/universe_expand.rs"
+
+[[test]]
+name = "universe_actions_serve"
+path = "tests/universe_actions_serve.rs"
 
 [[test]]
 name = "with_cfg_cli"

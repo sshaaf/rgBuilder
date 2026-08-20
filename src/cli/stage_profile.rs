@@ -36,6 +36,7 @@ pub struct DiscoverStageReport {
     pub save_tracker: StageTiming,
     pub save_snapshot: StageTiming,
     pub save_dashboard: StageTiming,
+    pub save_universe: StageTiming,
     pub migration_plan: StageTiming,
     /// Absolute high-water RSS for the whole discover run (ingest + analysis).
     pub peak_rss_mb: f64,
@@ -67,6 +68,7 @@ impl DiscoverStageReport {
             + self.save_tracker.secs
             + self.save_snapshot.secs
             + self.save_dashboard.secs
+            + self.save_universe.secs
             + self.migration_plan.secs;
 
         let stages: &[(&str, f64)] = &[
@@ -89,6 +91,7 @@ impl DiscoverStageReport {
             ("save_tracker", self.save_tracker.secs),
             ("save_snapshot", self.save_snapshot.secs),
             ("save_dashboard", self.save_dashboard.secs),
+            ("save_universe", self.save_universe.secs),
             ("migration_plan", self.migration_plan.secs),
         ];
 

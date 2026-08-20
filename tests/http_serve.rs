@@ -20,9 +20,9 @@ fn rgbuilder_bin() -> std::path::PathBuf {
         })
 }
 
-fn repo_with_dashboard() -> Option<std::path::PathBuf> {
-    let repo = std::path::PathBuf::from("/Users/sshaaf/git/java/gbuilder");
-    if repo.join(".rgbuilder/dashboard/index.html").is_file() {
+fn repo_with_universe() -> Option<std::path::PathBuf> {
+    let repo = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("rgbuilder-tests/ecommerce-java");
+    if repo.join(".rgbuilder/universe/index.html").is_file() {
         return Some(repo);
     }
     None
@@ -54,9 +54,9 @@ fn wait_for_health(base: &str, timeout: Duration) -> bool {
 }
 
 #[test]
-fn http_serve_serves_dashboard_and_query_api() {
-    let Some(repo) = repo_with_dashboard() else {
-        eprintln!("skip: gbuilder dashboard bundle not present");
+fn http_serve_serves_universe_and_query_api() {
+    let Some(repo) = repo_with_universe() else {
+        eprintln!("skip: ecommerce-java universe bundle not present — run discover --with-universe first");
         return;
     };
     let bin = rgbuilder_bin();
@@ -92,16 +92,16 @@ fn http_serve_serves_dashboard_and_query_api() {
 
     let client = reqwest::blocking::Client::new();
 
-    let dashboard = client
+    let ui = client
         .get(format!("{base}/"))
         .send()
         .expect("GET /")
         .text()
-        .expect("dashboard body");
+        .expect("universe body");
     assert!(
-        dashboard.contains("rgBuilder")
-            || dashboard.contains("rb-app")
-            || dashboard.contains("<!doctype html")
+        ui.contains("rgBuilder")
+            || ui.contains("universe")
+            || ui.contains("<!doctype html")
     );
 
     let query = client
@@ -124,7 +124,7 @@ fn http_serve_serves_dashboard_and_query_api() {
         .status();
     assert!(gql_alias.is_success());
 
-    if let Ok(entries) = std::fs::read_dir(repo.join(".rgbuilder/dashboard/assets")) {
+    if let Ok(entries) = std::fs::read_dir(repo.join(".rgbuilder/universe/assets")) {
         if let Some(wasm) = entries.flatten().find(|e| {
             e.path()
                 .extension()

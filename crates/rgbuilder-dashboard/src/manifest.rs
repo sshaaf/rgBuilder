@@ -12,6 +12,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 pub const MANIFEST_SCHEMA_VERSION: u32 = 1;
+pub const UI_MODE_DASHBOARD: &str = "dashboard";
+pub const UI_MODE_UNIVERSE: &str = "universe";
+
+fn default_ui_mode_dashboard() -> String {
+    UI_MODE_DASHBOARD.into()
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SemanticSection {
@@ -39,6 +45,13 @@ pub struct DashboardManifest {
     /// Stable fingerprint for incremental dashboard export (semantic, not volatile UUID digest).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub export_fingerprint: Option<String>,
+    /// Human UI surface: `dashboard` (legacy tabs) or `universe` (3D cosmos).
+    #[serde(default = "default_ui_mode_dashboard")]
+    pub ui_mode: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub universe_json_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub search_landmarks_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -287,7 +300,50 @@ impl DashboardManifest {
             metrics,
             generated_at: chrono_now_rfc3339(),
             export_fingerprint: Some(export_fingerprint),
+            ui_mode: UI_MODE_DASHBOARD.into(),
+            universe_json_path: None,
+            search_landmarks_path: None,
         }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_universe_phases(
+        node_count: u64,
+        edge_count: u64,
+        digest: String,
+        export_fingerprint: String,
+        metrics: MetricsSection,
+        export: &MetagraphExport,
+        cfg: &CfgExportSummary,
+        slice: &SliceExportSummary,
+        blast: &BlastExportSummary,
+        dataflow: &DataflowExportSummary,
+        mutations: &MutationsExportSummary,
+        taint: &TaintExportSummary,
+        migration: &MigrationExportSummary,
+        semantic: Option<SemanticSection>,
+    ) -> Self {
+        let mut manifest = Self::with_phases(
+            node_count,
+            edge_count,
+            digest,
+            export_fingerprint,
+            metrics,
+            export,
+            cfg,
+            slice,
+            blast,
+            dataflow,
+            mutations,
+            taint,
+            migration,
+            semantic,
+        );
+        manifest.ui_mode = UI_MODE_UNIVERSE.into();
+        manifest.universe_json_path = Some(crate::universe_export::UNIVERSE_JSON_FILE.into());
+        manifest.search_landmarks_path =
+            Some(crate::universe_export::SEARCH_LANDMARKS_FILE.into());
+        manifest
     }
 }
 
