@@ -241,7 +241,7 @@ Quick links into **[Introduction](docs/Introduction.md)** — see [Where most to
 | **[Documentation index](docs/README.md)** | Map of all docs by persona |
 | **[Introduction](docs/Introduction.md)** | Concepts — graph, reachability, capability map |
 | **[User Guide](docs/user-guide.md)** | Install, ecommerce-java fixture, every CLI command |
-| **[Agent skill](skills/rgbuilder/SKILL.md)** | **Canonical agent playbook** — NL routing + CLI samples |
+| **[Agent skill](skills/rgbuilder/SKILL.md)** | **Canonical agent playbook** — NL routing + CLI samples. Install with `rg-build install --skill` |
 | **[AGENTS.md](AGENTS.md)** | Minimal agent contract (points at skill) |
 | **[Agent recipes](docs/agent-recipes.md)** | Copy-paste automation workflows |
 | **[JSON API](docs/json-api.md)** | Parse `-f json` payloads + field catalogs |

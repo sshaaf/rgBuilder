@@ -18,6 +18,8 @@ pub mod gql_output;
 mod http_serve;
 mod inspect;
 pub mod inspect_output;
+mod install;
+pub mod install_output;
 mod markup;
 mod metrics;
 pub mod metrics_output;
@@ -34,7 +36,7 @@ pub use args::OutputFormat;
 
 use crate::BUILD_INFO;
 use crate::analysis::{DEFAULT_CANDIDATE_POOL, DEFAULT_EMBEDDING_DIMENSIONS};
-use args::{ExportFormat, InspectLayer, PdgEdgeLayer, SliceDirection, SliceView};
+use args::{ExportFormat, InspectLayer, PdgEdgeLayer, SkillHost, SliceDirection, SliceView};
 use clap::{Parser, Subcommand};
 use context::CliContext;
 use std::time::{Duration, Instant};
@@ -304,6 +306,21 @@ pub enum Commands {
         /// Daemon idle exit in seconds [default: 300]
         #[arg(long, default_value_t = 300)]
         idle_secs: u64,
+    },
+
+    /// Install bundled artifacts into a repository
+    Install {
+        /// Install the rgBuilder agent skill (Claude Code + Cursor project dirs)
+        #[arg(long = "skill")]
+        skill: bool,
+
+        /// Which agent skill directories to write
+        #[arg(long = "host", value_enum, default_value = "all")]
+        host: SkillHost,
+
+        /// Overwrite existing skill files that differ from the bundle
+        #[arg(long)]
+        force: bool,
     },
 }
 
@@ -849,6 +866,9 @@ impl Cli {
                     query,
                 },
             ),
+            Commands::Install { skill, host, force } => {
+                install::run(&ctx, install::InstallArgs { skill, host, force })
+            }
             Commands::Serve {
                 host,
                 port,
@@ -918,6 +938,7 @@ fn command_label_for(command: &Commands) -> &'static str {
         },
         Commands::Check { .. } => "check",
         Commands::Export { .. } => "export",
+        Commands::Install { .. } => "install",
         Commands::Serve { .. } => "serve",
     }
 }

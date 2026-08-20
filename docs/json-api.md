@@ -27,6 +27,7 @@ Programmatic reference for parsing rgBuilder output. Every structured CLI comman
 15. [`semantic`](#15-semantic)
 16. [`communities`](#16-communities)
 17. [`cpg`](#17-cpg)
+18. [`install`](#18-install)
 
 ---
 
@@ -87,6 +88,7 @@ if (doc.schema_version !== 2) {
 | `semantic distill` | **1** | RBVK matrix write (hash/code-daemon teacher) |
 | `communities` | **1** | list / label |
 | `cpg` (status / mutations / flows / …) | **1** | per-subcommand shapes |
+| `install` | **1** | skill write report |
 
 **Omitted vs null:** optional fields are **absent** when unset (not `null`), unless noted otherwise. Empty collections are usually `[]`, not omitted.
 
@@ -108,6 +110,7 @@ if (doc.schema_version !== 2) {
 | `semantic` | ✅ | `hits` / `functions_indexed` | Opt-in NL / keyword search |
 | `communities` | ✅ | `communities`, `modularity` | Named community labels |
 | `cpg` | ✅ | varies by subcommand | Hybrid CPG façade |
+| `install` | ✅ | `writes` | Install bundled agent skill |
 | `export` | ❌ (file) | — | Full-graph serialization |
 | `serve` | ❌ | — | HTTP dashboard + `/api/query` (default); `--daemon` = Unix socket blast daemon |
 
@@ -694,6 +697,7 @@ Binary artifacts (`graph.snapshot.bin`, `graph_payload.bin`, `blast_engine.snaps
 | `blast-radius` | Success, or policy skipped | `--policy-file` + `policy_status == "VIOLATED"` (JSON still on stdout) |
 | `check` | `passed == true` | `passed == false` |
 | `slice` / `inspect` / `metrics` / `export` | Success | Error |
+| `install` | Skill files written or unchanged | Missing `--skill`, dest differs without `--force` (`skipped_exists`; JSON still on stdout), or I/O error |
 
 **CI pattern:** capture stdout first, then check `$?`.
 
@@ -953,6 +957,39 @@ rg-build -r "$REPO" -f json cpg calls priceShoppingCart | jq '.edges[:10]'
 
 ---
 
+## 18. `install`
+
+Copy the bundled rgBuilder agent skill into project skill directories. Does **not** require a prior `discover`. Types: `src/cli/install_output.rs`. `schema_version` is **1**.
+
+```bash
+rg-build -r "$REPO" -f json install --skill [--host all|claude|cursor] [--force]
+```
+
+```typescript
+type InstallWriteStatus = "created" | "unchanged" | "overwritten" | "skipped_exists";
+
+type InstallResponse = {
+  schema_version: 1;
+  command: "install";
+  skill: "rgbuilder";
+  repo: string; // absolute repository root
+  force: boolean;
+  writes: Array<{
+    host: "claude" | "cursor";
+    path: string; // absolute dest path
+    status: InstallWriteStatus;
+  }>;
+};
+```
+
+Without `--skill` the process exits 1 and does not emit this payload. If any write is `skipped_exists`, JSON is still printed and the process exits 1.
+
+```bash
+rg-build -r "$REPO" -f json install --skill | jq '.writes[] | {host, status}'
+```
+
+---
+
 ## Verification
 
 Schema fixtures are tested in CI:
@@ -978,14 +1015,14 @@ See [cli-io-sanity-qe.md](cli-io-sanity-qe.md) for the full coverage matrix.
 
 ## Conventions matrix
 
-| Convention | blast-radius | discover | gql | metrics | check | slice | inspect | semantic | communities | cpg |
-|------------|:------------:|:--------:|:---:|:-------:|:-----:|:-----:|:-------:|:--------:|:-----------:|:---:|
-| `schema_version` | ✅ v2 | ✅ v2 | ✅ v1 | ✅ v1 | ✅ v1 | ✅ v1 | ✅ v1 | ✅ v2/v3 | ✅ v1 | ✅ v1 |
-| Typed `*_output.rs` / analysis types | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Explicit empty arrays | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Omitted optional keys | — | — | — | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ |
-| Composable graph topology | ✅ | — | — | — | — | ✅ | ✅ | — | — | — |
-| Stable node UUIDs (no nil) | ✅ | — | — | — | — | — | — | — | — | — |
+| Convention | blast-radius | discover | gql | metrics | check | slice | inspect | semantic | communities | cpg | install |
+|------------|:------------:|:--------:|:---:|:-------:|:-----:|:-----:|:-------:|:--------:|:-----------:|:---:|:-------:|
+| `schema_version` | ✅ v2 | ✅ v2 | ✅ v1 | ✅ v1 | ✅ v1 | ✅ v1 | ✅ v1 | ✅ v2/v3 | ✅ v1 | ✅ v1 | ✅ v1 |
+| Typed `*_output.rs` / analysis types | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Explicit empty arrays | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Omitted optional keys | — | — | — | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
+| Composable graph topology | ✅ | — | — | — | — | ✅ | ✅ | — | — | — | — |
+| Stable node UUIDs (no nil) | ✅ | — | — | — | — | — | — | — | — | — | — |
 
 **Tests:** See [cli-io-sanity-qe.md](cli-io-sanity-qe.md) for the full coverage matrix, harness design, and extension guide.
 
@@ -1628,6 +1665,23 @@ See [json-api.md §17](json-api.md#17-cpg). Requires `discover --with-cfg`.
 | `export` | file output (`--format` / `--output`), not stdout JSON |
 
 All `-f json` CPG payloads use `schema_version: 1`.
+
+---
+
+## 12. `install`
+
+See [json-api.md §18](json-api.md#18-install). Source: `src/cli/install_output.rs`. Does not require `discover`.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `schema_version` | number | **1** |
+| `command` | string | Always `"install"` |
+| `skill` | string | Always `"rgbuilder"` |
+| `repo` | string | Absolute repository root |
+| `force` | bool | Whether `--force` was set |
+| `writes[].host` | string | `"claude"` or `"cursor"` |
+| `writes[].path` | string | Absolute dest path |
+| `writes[].status` | string | `created` / `unchanged` / `overwritten` / `skipped_exists` |
 
 ---
 

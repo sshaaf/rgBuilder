@@ -808,4 +808,4 @@ See [docs/http-api.md](../../docs/http-api.md). Prefer this over `serve --daemon
 - HTTP API: [docs/http-api.md](../../docs/http-api.md)
 - Policy format: [docs/policy-format.md](../../docs/policy-format.md)
 
-**Other repos / OpenCode:** copy or symlink this `skills/rgbuilder` directory into that project’s `.claude/skills/` or `.cursor/skills/` (or the runtime’s skills path).
+**Other repos / OpenCode:** run `rg-build install --skill` in the target repo (or `rg-build -r /path/to/repo install --skill`). That writes `.claude/skills/rgbuilder/` and `.cursor/skills/rgbuilder/` from the skill embedded in the binary. Manual copy or symlink of this `skills/rgbuilder` directory remains a fallback if you have a git checkout.

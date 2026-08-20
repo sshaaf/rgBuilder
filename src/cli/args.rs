@@ -37,6 +37,18 @@ pub enum PdgEdgeLayer {
     Control,
 }
 
+/// Agent host directories for `rg-build install --skill`.
+#[derive(ValueEnum, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SkillHost {
+    /// Claude Code and Cursor project skill dirs.
+    #[default]
+    All,
+    /// `<repo>/.claude/skills/rgbuilder/`
+    Claude,
+    /// `<repo>/.cursor/skills/rgbuilder/`
+    Cursor,
+}
+
 /// File serialization format for `rg-build export` (not the global `-f` output format).
 #[derive(ValueEnum, Clone, Debug)]
 pub enum ExportFormat {

@@ -9,6 +9,12 @@ rgBuilder is designed so agents answer **structural questions** from a pre-built
 
 Do **not** open the browser dashboard unless the user asks for a visual UI — default to CLI `-f json`.
 
+Install the project skill once (Claude Code + Cursor dirs under the repo):
+
+```bash
+rg-build -r "$REPO" install --skill
+```
+
 ---
 
 ## Agent workflow

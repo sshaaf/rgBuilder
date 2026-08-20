@@ -88,6 +88,23 @@ cargo build --release
 
 All **nine** Tier 1 languages (Rust, Python, JavaScript, TypeScript, Go, Java, C#, C, C++) are always included in the binary.
 
+### Install the agent skill
+
+After `rg-build` is on your `PATH`, install the bundled rgBuilder skill into the **target repository** (the same root you pass to `discover` via `-r` / `--repo`, or the current directory):
+
+```bash
+rg-build install --skill
+# or, from another cwd:
+rg-build -r /path/to/repo install --skill
+```
+
+That writes:
+
+- `<repo>/.claude/skills/rgbuilder/` (Claude Code)
+- `<repo>/.cursor/skills/rgbuilder/` (Cursor)
+
+Limit hosts with `--host claude` or `--host cursor` (default is `all`). Identical files are left unchanged. If a dest file differs, the command exits 1 unless you pass `--force`. Re-run `install --skill --force` after upgrading `rg-build` to refresh the project copy. Manual copy of `skills/rgbuilder/` remains a fallback if you have a git checkout.
+
 ---
 
 ## 2. Add rgBuilder to your PATH
@@ -1160,6 +1177,7 @@ Migration hints (with `--export-migration-hints`) land under `.rgbuilder/migrati
 | `metrics` | PageRank, betweenness, communities summary |
 | `export` | Serialize graph (json, graphml, dot, mermaid, obsidian vault, okf) |
 | `check` | CI policy gateway |
+| `install` | Copy the bundled agent skill into `.claude/skills/` and `.cursor/skills/` |
 | `semantic` | Opt-in semantic index + query (`--scope community`, `docs`, `all`) |
 | `serve` | HTTP dashboard + `/api/query` + `/api/semantic/*` (default); `serve --daemon` for blast socket |
 
