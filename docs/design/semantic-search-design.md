@@ -1,6 +1,6 @@
 # Semantic Search — Engineering Design
 
-**Opt-in natural-language and keyword search** over indexed function symbols: binary-quantized code embeddings (default **code-daemon**), Hamming retrieval, optional **late fusion** with blast radius, PageRank, name overlap, and eager **token-bloom** sketches from discover.
+**Opt-in natural-language and keyword search** over indexed function symbols: binary-quantized embeddings (default **vocab** token table), Hamming retrieval, optional **late fusion** with blast radius, PageRank, name overlap, and eager **token-bloom** sketches from discover.
 
 ![Search tab — query form and fusion-ranked results (gbuilder)](../images/design/semantic-search/semantic-search-results.png)
 
@@ -12,12 +12,12 @@
 
 | Goal | How |
 |------|-----|
-| Find functions by intent, not exact names | code-daemon ONNX embeddings (256-d MRL default) |
+| Find functions by intent, not exact names | vocab token-table embeddings (256-d default); optional code-daemon ONNX |
 | Keep discover lean | Separate `.rgbuilder/semantic_index.bin` — built via `semantic index` |
 | Fast retrieval at scale | Sign-quantized vectors + Hamming top-k |
 | Blend structure + semantics | Late fusion re-ranks Hamming pool with graph signals |
 | Agent-ready output | `-f json semantic query` + HTTP `/api/semantic/query` |
-| Incremental rebuilds | Reuse rows when `code_hash` unchanged |
+| Incremental rebuilds | Reuse rows when `code_hash` unchanged (toggling `--embed-bodies` changes `model_id`) |
 
 ---
 
@@ -34,8 +34,8 @@ flowchart TB
   end
 
   subgraph semantic_index["semantic index (opt-in)"]
-    EX[semantic_extract body tokens]
-    EM[code-daemon / vocab / hash / ONNX]
+    EX[declaration metadata]
+    EM[vocab / hash / code-daemon / ONNX]
     DIF[optional call-graph Jacobi diffuse]
     BIN[semantic_index.bin Hamming rows]
     EX --> EM --> DIF --> BIN
@@ -62,12 +62,12 @@ flowchart TB
 
 | Embedder | CLI | Notes |
 |----------|-----|-------|
-| **code-daemon** (default) | `--embedder code-daemon` | Bundled ONNX + SentencePiece in `rgbuilder-analysis/assets/`; requires `semantic-onnx` feature (default) |
-| **vocab** | `--embedder vocab` | Compiled bag-of-tokens (`vocab-accumulate-v1`); offline, no ONNX; native **256-d** |
+| **vocab** (default) | `--embedder vocab` | Compiled bag-of-tokens (`vocab-accumulate-v1` FNV, or `v2` after `semantic distill`); offline; native **256-d** |
 | **sign-hash** | `--embedder hash` | Deterministic FNV sign-hash — CI / `--no-default-features` |
+| **code-daemon** | `--embedder code-daemon` | Bundled ONNX + SentencePiece in `rgbuilder-analysis/assets/`; requires `semantic-onnx` feature |
 | **custom ONNX** | `--embedder onnx --model PATH` | Optional `--tokenizer` for SentencePiece |
 
-Default dimensions: **256** (MRL for code-daemon; vocab native width). Clone needs `git lfs pull` for ~206 MB code-daemon weights.
+Default dimensions: **256**. Declaration metadata only unless `--embed-bodies`. `git lfs pull` is needed only for `--embedder code-daemon` (~206 MB weights).
 
 **Index-time diffusion (opt-in):** `--diffuse` runs Jacobi mixing over the call graph on dense `f32` buffers (CallGraph-sized, one scratch) before sign quantization. Defaults: α=0.25, 2 iterations, callees-only (`--diffuse-bidirectional` for callers+callees). Query does not re-diffuse — structure is baked into bits. **`--diffuse` always re-embeds** (skips the pure incremental bit-reuse shortcut) so bits reflect the diffused dense vectors. Extra RSS ≈ `n_functions × dims × 4 × 2` bytes (≈ 3.8 GB peak buffers at 1.86M × 256); keep `--diffuse` off on huge repos until profiled.
 
@@ -75,7 +75,7 @@ Escape hatch for builds without ONNX:
 
 ```bash
 cargo build --release --no-default-features
-rg-build semantic index --embedder vocab   # preferred offline
+rg-build semantic index                    # vocab still works without ONNX
 # or: rg-build semantic index --embedder hash
 ```
 
@@ -127,7 +127,9 @@ Requires `rg-build serve` (not static `python -m http.server`) so the semantic A
 
 ```bash
 rg-build discover .
-rg-build semantic index                    # default code-daemon, 256-d
+rg-build semantic index                    # default vocab, 256-d, no source re-read
+rg-build semantic distill --matrix crates/rgbuilder-analysis/assets/vocab_matrix.bin
+# teacher: code-daemon (our ONNX). Rebuild rg-build to compile v2 into the binary.
 rg-build semantic index --incremental      # reuse unchanged code_hash rows
 rg-build -f json semantic query "shopping cart checkout" --limit 10
 rg-build -f json semantic query "OrderService" --keyword-and
@@ -137,15 +139,16 @@ rg-build -f json semantic query "auth login" --expand neighbors --expand-depth 2
 rg-build serve --open   # dashboard Search tab + /api/semantic/*
 ```
 
-Index-only flags: `--embedder`, `--dimensions`, `--model`, `--tokenizer`, `--incremental`,
+Index-only flags: `--embedder`, `--dimensions`, `--model`, `--tokenizer`, `--embed-bodies`, `--incremental`,
 `--diffuse` / `--no-diffuse`, `--diffuse-alpha`, `--diffuse-iters`, `--diffuse-bidirectional`.
 
 Query flags: `--no-fusion` (fusion is on by default), `--keyword-and`, `--candidate-pool`, `--expand`, `--expand-depth`.
 
 ```bash
-# Offline / no ONNX (preferred)
-rg-build semantic index --embedder vocab
-rg-build semantic index --embedder vocab --diffuse
+# Neural extra / hash CI
+rg-build semantic index --embedder code-daemon
+rg-build semantic index --embedder hash
+rg-build semantic index --embed-bodies          # append function-body identifier tokens
 ```
 
 ---

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::sync::Mutex;
 
 pub const SOURCE_INDEX_FILE: &str = "sources_index.json";
 pub const SOURCE_FILES_DIR: &str = "sources";
@@ -31,12 +32,16 @@ pub fn source_id_for_path(file_path: &str) -> String {
 }
 
 /// Write deduplicated source text files and return id + line count for `file_path`.
+///
+/// File IO happens outside the cache lock so Rayon workers are not serialized on reads.
 pub fn ensure_source_file(
     out_dir: &Path,
     file_path: &str,
-    cache: &mut HashMap<String, SourceFileEntry>,
+    cache: &Mutex<HashMap<String, SourceFileEntry>>,
 ) -> Option<SourceFileEntry> {
-    if let Some(entry) = cache.get(file_path) {
+    if let Ok(guard) = cache.lock()
+        && let Some(entry) = guard.get(file_path)
+    {
         return Some(entry.clone());
     }
     let text = fs::read_to_string(file_path).ok()?;
@@ -49,11 +54,16 @@ pub fn ensure_source_file(
         fs::write(&dest, &text).ok()?;
     }
     let entry = SourceFileEntry {
-        source_id: source_id.clone(),
+        source_id,
         file_path: file_path.to_string(),
         total_lines,
     };
-    cache.insert(file_path.to_string(), entry.clone());
+    if let Ok(mut guard) = cache.lock() {
+        let stored = guard
+            .entry(file_path.to_string())
+            .or_insert_with(|| entry.clone());
+        return Some(stored.clone());
+    }
     Some(entry)
 }
 

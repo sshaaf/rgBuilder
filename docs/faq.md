@@ -25,9 +25,11 @@ rg-build discover . --with-cfg --with-security --with-taint \
 
 | Embedder | When |
 |----------|------|
-| `code-daemon` (default) | Best quality; needs `git lfs pull` for ONNX weights (~206 MB) |
-| `vocab` | Offline, deterministic, no ONNX |
+| `vocab` (default) | Fast compiled token table; no ONNX; declaration metadata only |
+| `code-daemon` | Higher quality code retriever; needs `git lfs pull` for ONNX weights (~206 MB) |
 | `hash` | Offline smoke / CI without model weights |
+
+`--embed-bodies` (off by default) re-reads function source and appends identifier tokens. Query fusion still uses discover token-blooms without this flag.
 
 ### What does exit code 1 mean?
 

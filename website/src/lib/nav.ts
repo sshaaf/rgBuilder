@@ -1,5 +1,6 @@
 export const primaryNav = [
   { href: "/docs/", label: "Docs" },
+  { href: "/docs/guides/", label: "Guides" },
   { href: "/agents/", label: "Agents" },
   { href: "/demo/", label: "Demo" },
   { href: "/community/", label: "Community" },
@@ -7,6 +8,7 @@ export const primaryNav = [
 
 export const footerLearn = [
   { href: "/docs/", label: "Documentation" },
+  { href: "/docs/guides/", label: "Guides" },
   { href: "/install/", label: "Install" },
   { href: "/docs/user-guide/", label: "User Guide" },
   { href: "/docs/faq/", label: "FAQ" },

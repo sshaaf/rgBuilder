@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use uuid::Uuid;
 
 /// Stable cache key across graph re-indexes (UUIDs may change).
@@ -52,10 +53,10 @@ pub struct FunctionAnalysis {
     /// BLAKE3 of function body (or file fallback) for incremental reuse
     #[serde(default)]
     pub code_hash: Option<String>,
-    /// Control flow graph
-    pub cfg: Option<ControlFlowGraph>,
-    /// Program dependence graph
-    pub pdg: Option<ProgramDependenceGraph>,
+    /// Control flow graph (shared with the CFG/PDG archive via [`Arc`]).
+    pub cfg: Option<Arc<ControlFlowGraph>>,
+    /// Program dependence graph (shared with the CFG/PDG archive via [`Arc`]).
+    pub pdg: Option<Arc<ProgramDependenceGraph>>,
     /// Dominator tree
     pub dominance: Option<DominatorTree>,
     /// Taint flows (source→sink paths)
@@ -376,7 +377,7 @@ impl AnalysisStorage {
             let bytes = fs::read(path)?;
             let mut analysis = decode_function_analysis_bincode(&bytes)?;
             if let Some(pdg) = analysis.pdg.as_mut() {
-                pdg.restore_derived_indexes();
+                Arc::make_mut(pdg).restore_derived_indexes();
             }
             return Ok(Some(analysis));
         }
@@ -450,7 +451,7 @@ impl FunctionAnalysisPdgFour {
             function_name: self.function_name,
             file_path: self.file_path,
             code_hash: self.code_hash,
-            cfg: self.cfg,
+            cfg: self.cfg.map(Arc::new),
             pdg: self.pdg.map(|pdg| {
                 let mut graph = ProgramDependenceGraph::from_parts(
                     pdg.nodes,
@@ -461,7 +462,7 @@ impl FunctionAnalysisPdgFour {
                     HashMap::new(),
                 );
                 graph.restore_derived_indexes();
-                graph
+                Arc::new(graph)
             }),
             dominance: self.dominance,
             taint: self.taint,
@@ -476,7 +477,7 @@ impl FunctionAnalysisPdgThree {
             function_name: self.function_name,
             file_path: self.file_path,
             code_hash: self.code_hash,
-            cfg: self.cfg,
+            cfg: self.cfg.map(Arc::new),
             pdg: self.pdg.map(|pdg| {
                 let mut graph = ProgramDependenceGraph::from_parts(
                     pdg.nodes,
@@ -487,7 +488,7 @@ impl FunctionAnalysisPdgThree {
                     HashMap::new(),
                 );
                 graph.restore_derived_indexes();
-                graph
+                Arc::new(graph)
             }),
             dominance: self.dominance,
             taint: self.taint,
@@ -680,8 +681,8 @@ mod tests {
                 function_name: "add".into(),
                 file_path: "src/lib.rs".into(),
                 code_hash: Some("hash1".into()),
-                cfg: Some(cfg.clone()),
-                pdg: Some(pdg.clone()),
+                cfg: Some(Arc::new(cfg.clone())),
+                pdg: Some(Arc::new(pdg.clone())),
                 dominance: None,
                 taint: None,
             })

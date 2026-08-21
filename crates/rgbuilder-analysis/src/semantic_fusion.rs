@@ -5,9 +5,12 @@ use crate::semantic_embedder::{OnnxReloadOptions, embedder_for_index};
 use crate::semantic_extract::tokenize_string_into;
 use crate::semantic_search::{SemanticEntry, SemanticHit, SemanticIndex, hamming_top_k};
 use rgbuilder_error::Result;
+use rgbuilder_graph::backend::{GraphBackend, MemoryBackend};
+use rgbuilder_graph::schema::EdgeType;
 use rgbuilder_graph::{TokenBloom, keyword_overlap_score, satisfies_keyword_and};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use uuid::Uuid;
 
 /// Default Hamming candidate pool size before late fusion.
 pub const DEFAULT_CANDIDATE_POOL: usize = 256;
@@ -31,6 +34,12 @@ pub struct SemanticFusionConfig {
     pub w_name: f64,
     /// Weight for eager token bloom overlap (body + declaration sketch).
     pub w_sketch: f64,
+    /// Weight for sharing the name-hit community (graph-native).
+    pub w_community: f64,
+    /// Weight for sharing the name-hit package / path prefix.
+    pub w_package: f64,
+    /// Weight for callee-name overlap with the query (API-signature analog).
+    pub w_callees: f64,
 }
 
 impl Default for SemanticFusionConfig {
@@ -44,6 +53,9 @@ impl Default for SemanticFusionConfig {
             w_centrality: 0.20,
             w_name: 0.05,
             w_sketch: 0.15,
+            w_community: 0.08,
+            w_package: 0.08,
+            w_callees: 0.10,
         }
     }
 }
@@ -147,12 +159,60 @@ pub fn hamming_similarity(distance: u32, dimensions: usize) -> f64 {
     1.0 - (distance as f64 / dimensions as f64)
 }
 
+/// Package / module key from a qualified name or parent directory.
+pub fn entry_package_key(entry: &SemanticEntry) -> Option<String> {
+    if let Some(qn) = &entry.qualified_name {
+        let parts: Vec<&str> = qn
+            .split(|c: char| c == '.' || c == ':' || c == '/')
+            .filter(|part| !part.is_empty())
+            .collect();
+        if parts.len() >= 2 {
+            let keep = parts.len().saturating_sub(2).max(1);
+            return Some(parts[..keep].join(".").to_ascii_lowercase());
+        }
+    }
+    entry.file_path.as_ref().and_then(|path| {
+        std::path::Path::new(path)
+            .parent()
+            .and_then(|dir| dir.file_name())
+            .map(|name| name.to_string_lossy().to_ascii_lowercase())
+    })
+}
+
+fn callee_token_set(backend: &MemoryBackend, node_id: Uuid) -> HashSet<String> {
+    let Ok(edges) = backend.get_outgoing_edges(node_id) else {
+        return HashSet::new();
+    };
+    let mut tokens = HashSet::new();
+    for edge in edges {
+        if edge.edge_type != EdgeType::Calls {
+            continue;
+        }
+        if let Ok(Some(node)) = backend.get_node(edge.to) {
+            tokenize_string_into(&node.name, &mut tokens);
+            if let Some(qn) = &node.qualified_name {
+                tokenize_string_into(qn, &mut tokens);
+            }
+        }
+    }
+    tokens
+}
+
+fn jaccard(left: &HashSet<String>, right: &[String]) -> f64 {
+    if right.is_empty() {
+        return 0.0;
+    }
+    let matched = right.iter().filter(|token| left.contains(*token)).count();
+    matched as f64 / right.len() as f64
+}
+
 /// Blend semantic and structural signals for Hamming candidates.
 pub fn fuse_candidates(
     candidates: &mut [FusionCandidate],
     keywords: &[String],
     dimensions: usize,
     analysis: Option<&AnalysisResults>,
+    backend: Option<&MemoryBackend>,
     config: &SemanticFusionConfig,
 ) {
     let max_pagerank = analysis
@@ -166,6 +226,21 @@ pub fn fuse_candidates(
                 .max(f32::EPSILON)
         })
         .unwrap_or(1.0) as f64;
+
+    let mut best_name = -1.0f64;
+    let mut anchor_community: Option<usize> = None;
+    let mut anchor_package: Option<String> = None;
+    for candidate in candidates.iter() {
+        let name_score = name_overlap_score(&candidate.entry, keywords);
+        if name_score > best_name {
+            best_name = name_score;
+            anchor_community =
+                analysis.and_then(|results| results.get_community(candidate.entry.node_id));
+            anchor_package = entry_package_key(&candidate.entry);
+        }
+    }
+
+    let mut callee_cache: HashMap<Uuid, HashSet<String>> = HashMap::new();
 
     for candidate in candidates.iter_mut() {
         let node_bloom = analysis
@@ -197,11 +272,34 @@ pub fn fuse_candidates(
             .map(|bloom| keyword_overlap_score(keywords, bloom))
             .unwrap_or(0.0);
 
+        let community_score = match (anchor_community, analysis) {
+            (Some(anchor), Some(results)) => results
+                .get_community(candidate.entry.node_id)
+                .map(|cid| if cid == anchor { 1.0 } else { 0.0 })
+                .unwrap_or(0.0),
+            _ => 0.0,
+        };
+        let package_score = match (&anchor_package, entry_package_key(&candidate.entry)) {
+            (Some(anchor), Some(key)) if &key == anchor => 1.0,
+            _ => 0.0,
+        };
+        let callee_score = backend
+            .map(|graph| {
+                let tokens = callee_cache
+                    .entry(candidate.entry.node_id)
+                    .or_insert_with(|| callee_token_set(graph, candidate.entry.node_id));
+                jaccard(tokens, keywords)
+            })
+            .unwrap_or(0.0);
+
         candidate.fused_score = config.w_semantic * semantic
             + config.w_blast * blast_score
             + config.w_centrality * pagerank_score
             + config.w_name * name_score
-            + config.w_sketch * sketch_score;
+            + config.w_sketch * sketch_score
+            + config.w_community * community_score
+            + config.w_package * package_score
+            + config.w_callees * callee_score;
     }
 
     candidates.sort_by(|left, right| {
@@ -222,6 +320,7 @@ pub fn query_index_with_fusion(
     reload: &OnnxReloadOptions,
     fusion: &SemanticFusionConfig,
     analysis: Option<&AnalysisResults>,
+    backend: Option<&MemoryBackend>,
     _repo_root: Option<&Path>,
 ) -> Result<Vec<SemanticHit>> {
     let embedder = embedder_for_index(index, reload)?;
@@ -254,6 +353,7 @@ pub fn query_index_with_fusion(
             &keywords,
             index.dimensions,
             analysis,
+            backend,
             fusion,
         );
     } else {
@@ -363,6 +463,7 @@ mod tests {
             &query_keywords("invoice process"),
             256,
             None,
+            None,
             &config,
         );
         assert_eq!(candidates[0].entry.node_id, id_b);
@@ -403,7 +504,7 @@ mod tests {
             w_sketch: 0.0,
             ..Default::default()
         };
-        fuse_candidates(&mut candidates, &[], 256, Some(&results), &config);
+        fuse_candidates(&mut candidates, &[], 256, Some(&results), None, &config);
         assert!(candidates[0].fused_score > 0.8);
     }
 
@@ -413,5 +514,54 @@ mod tests {
         assert!(keywords.iter().any(|token| token == "invoice"));
         assert!(!keywords.iter().any(|token| token == "a" || token == "do"));
         assert!(keywords.iter().all(|token| token.len() >= 3));
+    }
+
+    #[test]
+    fn package_key_from_java_qn() {
+        let entry = sample_entry("checkout", "com.example.cart.CartService.checkout");
+        assert_eq!(
+            entry_package_key(&entry).as_deref(),
+            Some("com.example.cart")
+        );
+    }
+
+    #[test]
+    fn fusion_boosts_same_package_as_name_anchor() {
+        let mut candidates = vec![
+            FusionCandidate {
+                row: 0,
+                hamming_distance: 80,
+                fused_score: 0.0,
+                entry: sample_entry("checkout", "com.example.cart.CartService.checkout"),
+            },
+            FusionCandidate {
+                row: 1,
+                hamming_distance: 80,
+                fused_score: 0.0,
+                entry: sample_entry("helper", "com.other.util.Helper.helper"),
+            },
+        ];
+        let config = SemanticFusionConfig {
+            enabled: true,
+            w_semantic: 0.0,
+            w_blast: 0.0,
+            w_centrality: 0.0,
+            w_name: 0.0,
+            w_sketch: 0.0,
+            w_community: 0.0,
+            w_package: 1.0,
+            w_callees: 0.0,
+            ..Default::default()
+        };
+        fuse_candidates(
+            &mut candidates,
+            &query_keywords("checkout cart"),
+            256,
+            None,
+            None,
+            &config,
+        );
+        assert_eq!(candidates[0].entry.name, "checkout");
+        assert!(candidates[0].fused_score > candidates[1].fused_score);
     }
 }

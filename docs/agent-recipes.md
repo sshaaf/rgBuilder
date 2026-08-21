@@ -77,7 +77,6 @@ rg-build -r "$REPO" -f json gql \
 
 ```bash
 rg-build -r "$REPO" semantic index
-# Offline / no ONNX: add --embedder vocab   (or --embedder hash)
 rg-build -r "$REPO" -f json semantic query "shopping cart checkout" --limit 10 \
   | jq '.hits[] | {name, file_path, score: .fused_score}'
 # Fusion is on by default; add --keyword-and to require every query token to match

@@ -275,13 +275,6 @@ async fn api_semantic_query(
 
     let expand = parse_expand_mode(body.expand.as_deref())?;
 
-    let graph = state.graph.read().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "graph lock poisoned".into(),
-        )
-    })?;
-
     let scope = match body
         .scope
         .as_deref()
@@ -299,6 +292,17 @@ async fn api_semantic_query(
         }
     };
 
+    let index = Arc::clone(index);
+    let graph = {
+        let guard = state.graph.read().map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "graph lock poisoned".into(),
+            )
+        })?;
+        guard.clone()
+    };
+    let repo = state.repo.clone();
     let args = SemanticQueryArgs {
         query: query.to_string(),
         limit: body.limit.clamp(1, 100),
@@ -312,8 +316,11 @@ async fn api_semantic_query(
         scope,
     };
 
-    let response = execute_semantic_query(&state.repo, &graph, index, &args)
-        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+    let response =
+        tokio::task::spawn_blocking(move || execute_semantic_query(&repo, &graph, &index, &args))
+            .await
+            .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, format!("{err}")))?
+            .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
     Ok(Json(query_response_to_json(&response)))
 }

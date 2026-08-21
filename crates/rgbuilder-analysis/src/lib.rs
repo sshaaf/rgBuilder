@@ -181,8 +181,8 @@ pub use semantic_extract::{
 };
 pub use semantic_fusion::{
     DEFAULT_CANDIDATE_POOL, FusionCandidate, SemanticFusionConfig, entry_metadata_tokens,
-    fuse_candidates, hamming_similarity, keyword_and_matches, name_overlap_score,
-    query_index_with_fusion, query_keywords,
+    entry_package_key, fuse_candidates, hamming_similarity, keyword_and_matches,
+    name_overlap_score, query_index_with_fusion, query_keywords,
 };
 pub use semantic_hybrid::{
     BlastSummaryProvider, SemanticBlastSummary, SemanticExpandConfig, SemanticExpandMode,
@@ -190,16 +190,18 @@ pub use semantic_hybrid::{
     expand_semantic_hits,
 };
 pub use semantic_search::{
-    CommunitySemanticHit, DEFAULT_EMBEDDING_DIMENSIONS, SEMANTIC_INDEX_FILE,
-    SEMANTIC_INDEX_SCHEMA_VERSION, SIGN_HASH_MODEL_ID, SemanticBuildOptions, SemanticBuildStats,
-    SemanticEntry, SemanticHit, SemanticIndex, SemanticIndexScope, build_from_backend, build_index,
-    embed_text_for_doc_node, embed_text_for_function, embed_text_for_node, embed_text_for_scope,
-    hamming_distance, hamming_top_k, quantize_binary, query_communities, query_index,
+    CommunitySemanticHit, DEFAULT_EMBEDDING_DIMENSIONS, EMBED_BODIES_MODEL_SUFFIX,
+    SEMANTIC_INDEX_FILE, SEMANTIC_INDEX_SCHEMA_VERSION, SIGN_HASH_MODEL_ID, SemanticBuildOptions,
+    SemanticBuildStats, SemanticEntry, SemanticHit, SemanticIndex, SemanticIndexScope,
+    build_from_backend, build_index, embed_text_for_doc_node, embed_text_for_function,
+    embed_text_for_node, embed_text_for_scope, embedder_model_id, hamming_distance, hamming_top_k,
+    persist_semantic_model_id, quantize_binary, query_communities, query_index,
     query_index_with_embedder, sign_hash_embed,
 };
 pub use semantic_vocab::{
-    TokenSpaceAccumulator, VOCAB_ACCUMULATE_MODEL_ID, VOCAB_NATIVE_DIMENSIONS,
-    VocabAccumulateEmbedder,
+    DEFAULT_VOCAB_TOKEN_LIST, TokenSpaceAccumulator, VOCAB_ACCUMULATE_DISTILLED_ID,
+    VOCAB_ACCUMULATE_MODEL_ID, VOCAB_NATIVE_DIMENSIONS, VocabAccumulateEmbedder,
+    distill_vocab_matrix, encode_rbvk, parse_vocab_token_list,
 };
 pub use slicing::{
     BackwardSlicer, CodeSlice, ForwardSlicer, SliceCriterion, SliceDirection, SliceOptions,

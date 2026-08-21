@@ -7,7 +7,7 @@
 //!
 //! - **`Sandbox`** — copies [`tests/fixtures/tiny_polyglot_repo`] into a temp dir;
 //!   passes `-r {repo}` and `-d {repo}/sandbox_graph.db` on every invocation.
-//! - **Binary** — `CARGO_BIN_EXE_rg_build` (built by `cargo test` for the active profile).
+//! - **Binary** — `CARGO_BIN_EXE_rg_build` when set; otherwise `target/debug/rg-build`.
 //! - **Helpers** — schema version, key presence/absence, nil-UUID scan, exit-code checks.
 //!
 //! # Coverage (see `docs/cli-io-sanity-qe.md` for the full matrix)
@@ -21,6 +21,7 @@
 //! | `check` | Pass → exit 0; fail → exit 1 on `publishEvent` scale breach |
 //! | `slice` | CFG + PDG topology; `--taint` flat schema |
 //! | `inspect` | `cfg`, `pdg`, and `dom` layers with structured topology |
+//! | `semantic` | index + query + distill (hash teacher) |
 //!
 //! Layer 1 (serializer fixtures): `cargo test --test cli_output`.
 //! Layer 2 (narrow golden paths): `cargo test --test subprocess_golden_path`.
@@ -34,11 +35,17 @@ use std::str;
 const NIL_UUID: &str = "00000000-0000-0000-0000-000000000000";
 
 fn rgbuilder_bin() -> PathBuf {
-    option_env!("CARGO_BIN_EXE_rg_build")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/release/rg-build")
-        })
+    for key in ["CARGO_BIN_EXE_rg_build", "CARGO_BIN_EXE_rg-build"] {
+        if let Ok(p) = std::env::var(key) {
+            return PathBuf::from(p);
+        }
+    }
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let debug = root.join("target/debug/rg-build");
+    if debug.is_file() {
+        return debug;
+    }
+    root.join("target/release/rg-build")
 }
 
 fn fixture_root() -> PathBuf {
@@ -493,6 +500,45 @@ fn test_all_cli_commands_json_schema_sanity() {
     assert!(
         index_doc["functions_indexed"].as_u64().unwrap() > 0,
         "semantic index should cover functions"
+    );
+    assert!(
+        index_doc["model_id"]
+            .as_str()
+            .unwrap_or("")
+            .contains("vocab-accumulate"),
+        "default embedder should be vocab, got {:?}",
+        index_doc["model_id"]
+    );
+
+    let distill_path = sandbox.repo.join("vocab_matrix.bin");
+    let distill_path_str = distill_path.to_str().expect("utf8 distill path");
+    let semantic_distill = sandbox.run(&[
+        "-f",
+        "json",
+        "semantic",
+        "distill",
+        "--matrix",
+        distill_path_str,
+        "--embedder",
+        "hash",
+    ]);
+    assert_success(&semantic_distill, "semantic distill");
+    let distill_doc = sandbox.parse_stdout_json(&semantic_distill);
+    assert_schema_version(&distill_doc, 1);
+    assert_keys_present(
+        &distill_doc,
+        &[
+            "path",
+            "tokens",
+            "dimensions",
+            "teacher_model_id",
+            "compiled_model_id",
+        ],
+    );
+    assert!(distill_path.is_file(), "distill should write RBVK output");
+    assert!(
+        distill_doc["tokens"].as_u64().unwrap() > 0,
+        "distill should embed the compiled token list"
     );
 
     let semantic_query = sandbox.run(&[

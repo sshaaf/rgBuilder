@@ -1,6 +1,7 @@
 //! Export blast-radius assets for the dashboard bundle (Phase 6).
 
 use crate::export_context::{DashboardExportContext, resolve_analysis};
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -99,31 +100,35 @@ fn export_function_scores(
     };
 
     let snapshot_bytes = mmap_snapshot(snapshot_path)?;
-    let mut scores = Vec::new();
+    let node_count = results.node_count();
 
-    for compact_id in 0..results.node_count() {
-        let Some(uuid) = results.get_uuid(compact_id as u32) else {
-            continue;
-        };
-        let Some(&index) = uuid_to_index.get(&uuid) else {
-            continue;
-        };
-        if columnar_node_type(&snapshot_bytes, index)? != FUNCTION_NODE_TYPE {
-            continue;
-        }
-        let score = blast.scores[compact_id];
-        let direct = blast.direct_callers[compact_id];
-        let zone = blast.impact_zone_size[compact_id];
-        if score <= 0.0 && direct == 0 && zone == 0 {
-            continue;
-        }
-        scores.push(BlastFunctionScore {
-            index,
-            score,
-            direct,
-            zone,
-        });
-    }
+    let scored: Result<Vec<Option<BlastFunctionScore>>, String> = (0..node_count)
+        .into_par_iter()
+        .map(|compact_id| {
+            let Some(uuid) = results.get_uuid(compact_id as u32) else {
+                return Ok(None);
+            };
+            let Some(&index) = uuid_to_index.get(&uuid) else {
+                return Ok(None);
+            };
+            if columnar_node_type(&snapshot_bytes, index)? != FUNCTION_NODE_TYPE {
+                return Ok(None);
+            }
+            let score = blast.scores[compact_id];
+            let direct = blast.direct_callers[compact_id];
+            let zone = blast.impact_zone_size[compact_id];
+            if score <= 0.0 && direct == 0 && zone == 0 {
+                return Ok(None);
+            }
+            Ok(Some(BlastFunctionScore {
+                index,
+                score,
+                direct,
+                zone,
+            }))
+        })
+        .collect();
+    let mut scores: Vec<BlastFunctionScore> = scored?.into_iter().flatten().collect();
 
     scores.sort_by(|a, b| {
         b.score

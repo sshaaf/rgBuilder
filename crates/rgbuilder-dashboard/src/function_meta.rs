@@ -17,47 +17,50 @@ pub fn function_meta_map(repo_root: &Path, backend: &MemoryBackend) -> HashMap<U
     map
 }
 
-/// Lookup with fallbacks: explicit record fields → analysis storage → backend → UUID.
+/// Lookup with fallbacks: explicit record fields → analysis index cache → UUID.
 pub fn resolve_function_meta(
     function_id: &Uuid,
     record_name: &str,
     record_path: &Option<String>,
     _repo_root: &Path,
-    backend: &MemoryBackend,
+    _backend: &MemoryBackend,
     cache: &HashMap<Uuid, FunctionMeta>,
 ) -> FunctionMeta {
     if !record_name.is_empty() && !looks_like_uuid(record_name) {
         return (record_name.to_string(), record_path.clone());
     }
-    if let Some(meta) = cache.get(function_id) {
-        if !looks_like_uuid(&meta.0) {
-            return meta.clone();
-        }
-    }
-    if let Some((name, path)) = function_meta_from_backend(backend).get(function_id) {
-        if !looks_like_uuid(name) {
-            return (name.clone(), path.clone());
-        }
+    if let Some(meta) = cache.get(function_id).filter(|m| !looks_like_uuid(&m.0)) {
+        return meta.clone();
     }
     (function_id.to_string(), record_path.clone())
 }
 
 fn merge_analysis_storage(repo_root: &Path, map: &mut HashMap<Uuid, FunctionMeta>) {
     let storage = AnalysisStorage::new(repo_root.join(".rgbuilder/analysis"));
-    let Ok(analyses) = storage.load_all() else {
+    let Ok(index) = storage.load_analysis_index() else {
         return;
     };
-    for analysis in analyses {
-        if analysis.function_name.is_empty() {
+    for entry in index.values() {
+        let Some((name, path)) = meta_from_stable_key(&entry.stable_key) else {
             continue;
-        }
-        let path = if analysis.file_path.is_empty() {
-            None
-        } else {
-            Some(analysis.file_path)
         };
-        map.insert(analysis.function_id, (analysis.function_name, path));
+        map.insert(entry.function_id, (name, path));
     }
+}
+
+fn meta_from_stable_key(key: &str) -> Option<(String, Option<String>)> {
+    let mut parts = key.split('\x1f');
+    let file = parts.next()?;
+    let name = parts.next()?;
+    if name.is_empty() {
+        return None;
+    }
+    let path = if file.is_empty() {
+        None
+    } else {
+        Some(file.to_string())
+    };
+    Some((name.to_string(), path))
 }
 
 fn function_meta_from_backend(backend: &MemoryBackend) -> HashMap<Uuid, FunctionMeta> {

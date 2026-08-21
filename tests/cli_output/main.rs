@@ -15,6 +15,7 @@ mod check;
 mod discover;
 mod gql;
 mod inspect;
+mod install;
 mod metrics;
 mod slice;
 mod uuid_resolution;

@@ -95,7 +95,7 @@ Errors return HTTP 400 with a plain-text message body.
 
 ## Semantic search API
 
-Requires `rg-build semantic index` before `serve` (embedder chosen at index time: `code-daemon` default, or `vocab` / `hash` / `onnx`). Restart `serve` after rebuilding `.rgbuilder/semantic_index.bin`. Same origin as the dashboard.
+Requires `rg-build semantic index` before `serve` (embedder chosen at index time: **vocab** default, or `hash` / `code-daemon` / `onnx`). Restart `serve` after rebuilding `.rgbuilder/semantic_index.bin`. Same origin as the dashboard.
 
 ### `GET /api/semantic/status`
 

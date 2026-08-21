@@ -18,6 +18,8 @@ pub mod gql_output;
 mod http_serve;
 mod inspect;
 pub mod inspect_output;
+mod install;
+pub mod install_output;
 mod markup;
 mod metrics;
 pub mod metrics_output;
@@ -34,7 +36,7 @@ pub use args::OutputFormat;
 
 use crate::BUILD_INFO;
 use crate::analysis::{DEFAULT_CANDIDATE_POOL, DEFAULT_EMBEDDING_DIMENSIONS};
-use args::{ExportFormat, InspectLayer, PdgEdgeLayer, SliceDirection, SliceView};
+use args::{ExportFormat, InspectLayer, PdgEdgeLayer, SkillHost, SliceDirection, SliceView};
 use clap::{Parser, Subcommand};
 use context::CliContext;
 use std::time::{Duration, Instant};
@@ -305,6 +307,21 @@ pub enum Commands {
         #[arg(long, default_value_t = 300)]
         idle_secs: u64,
     },
+
+    /// Install bundled artifacts into a repository
+    Install {
+        /// Install the rgBuilder agent skill (Claude Code + Cursor project dirs)
+        #[arg(long = "skill")]
+        skill: bool,
+
+        /// Which agent skill directories to write
+        #[arg(long = "host", value_enum, default_value = "all")]
+        host: SkillHost,
+
+        /// Overwrite existing skill files that differ from the bundle
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -319,8 +336,8 @@ pub enum SemanticCommands {
         #[arg(long, default_value_t = true)]
         incremental: bool,
 
-        /// Embedder backend: code-daemon (default, bundled), hash, vocab, or onnx
-        #[arg(long, value_enum, default_value = "code-daemon")]
+        /// Embedder backend: vocab (default, compiled token table), hash, onnx, or code-daemon
+        #[arg(long, value_enum, default_value_t = semantic::CliEmbedderKind::Vocab)]
         embedder: semantic::CliEmbedderKind,
 
         /// Path to ONNX model (required for `--embedder onnx`; optional for code-daemon)
@@ -330,6 +347,10 @@ pub enum SemanticCommands {
         /// SentencePiece tokenizer for ONNX embedders (auto-detected beside `--model` when omitted)
         #[arg(long, value_name = "PATH")]
         tokenizer: Option<std::path::PathBuf>,
+
+        /// Re-read function source and append body identifier tokens (off: declaration metadata only)
+        #[arg(long, default_value_t = false)]
+        embed_bodies: bool,
 
         /// Diffuse dense embeddings over the call graph before sign quantization
         #[arg(long, default_value_t = false)]
@@ -354,6 +375,37 @@ pub enum SemanticCommands {
         /// Index scope: functions (default), docs (headings), or all
         #[arg(long, value_enum, default_value = "function")]
         scope: semantic::CliSemanticScope,
+    },
+
+    /// Distill `vocab_tokens.txt` through a teacher embedder into an RBVK matrix
+    Distill {
+        /// RBVK destination (copy to crates/rgbuilder-analysis/assets/vocab_matrix.bin)
+        #[arg(long = "matrix", value_name = "PATH")]
+        matrix: std::path::PathBuf,
+
+        /// Token list (one identifier per line). Defaults to analysis crate assets.
+        #[arg(long, value_name = "PATH")]
+        tokens: Option<std::path::PathBuf>,
+
+        /// Teacher embedder (code-daemon recommended; hash for tests)
+        #[arg(long, value_enum, default_value = "code-daemon")]
+        embedder: semantic::CliEmbedderKind,
+
+        /// Output dimensions (multiple of 8) [default: 256]
+        #[arg(long, default_value_t = DEFAULT_EMBEDDING_DIMENSIONS)]
+        dimensions: usize,
+
+        /// Teacher batch size [default: 32]
+        #[arg(long, default_value_t = 32)]
+        batch_size: usize,
+
+        /// Path to ONNX model (required for `--embedder onnx`; optional for code-daemon)
+        #[arg(long, value_name = "PATH")]
+        model: Option<std::path::PathBuf>,
+
+        /// SentencePiece tokenizer for ONNX teachers
+        #[arg(long, value_name = "PATH")]
+        tokenizer: Option<std::path::PathBuf>,
     },
 
     /// Hamming nearest-neighbor search over the semantic index
@@ -647,6 +699,7 @@ impl Cli {
                     embedder,
                     model,
                     tokenizer,
+                    embed_bodies,
                     diffuse,
                     no_diffuse,
                     diffuse_alpha,
@@ -661,11 +714,32 @@ impl Cli {
                         embedder,
                         model,
                         tokenizer,
+                        embed_bodies,
                         diffuse: diffuse && !no_diffuse,
                         diffuse_alpha,
                         diffuse_iters,
                         diffuse_bidirectional,
                         scope,
+                    },
+                ),
+                SemanticCommands::Distill {
+                    matrix,
+                    tokens,
+                    embedder,
+                    dimensions,
+                    batch_size,
+                    model,
+                    tokenizer,
+                } => semantic::run_distill(
+                    &ctx,
+                    semantic::SemanticDistillArgs {
+                        output: matrix,
+                        tokens,
+                        embedder,
+                        dimensions,
+                        batch_size,
+                        model,
+                        tokenizer,
                     },
                 ),
                 SemanticCommands::Query {
@@ -792,6 +866,9 @@ impl Cli {
                     query,
                 },
             ),
+            Commands::Install { skill, host, force } => {
+                install::run(&ctx, install::InstallArgs { skill, host, force })
+            }
             Commands::Serve {
                 host,
                 port,
@@ -842,6 +919,7 @@ fn command_label_for(command: &Commands) -> &'static str {
         Commands::Semantic { action } => match action {
             SemanticCommands::Index { .. } => "semantic index",
             SemanticCommands::Query { .. } => "semantic query",
+            SemanticCommands::Distill { .. } => "semantic distill",
         },
         Commands::Communities { action } => match action {
             CommunitiesCommands::List => "communities list",
@@ -860,6 +938,7 @@ fn command_label_for(command: &Commands) -> &'static str {
         },
         Commands::Check { .. } => "check",
         Commands::Export { .. } => "export",
+        Commands::Install { .. } => "install",
         Commands::Serve { .. } => "serve",
     }
 }

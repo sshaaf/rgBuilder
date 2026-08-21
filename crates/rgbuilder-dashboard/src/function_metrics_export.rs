@@ -2,6 +2,7 @@
 
 use crate::export_context::{DashboardExportContext, resolve_analysis};
 use crate::metagraph::COMMUNITY_ONLY_THRESHOLD;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -56,52 +57,50 @@ pub fn export_function_metrics(
 
     let centrality = results.centrality.as_ref();
     let blast = results.blast_radius.as_ref();
+    let community = results.community.as_ref();
+    let node_count = results.node_count();
 
-    let mut rows = Vec::new();
-    for compact_id in 0..results.node_count() {
-        let Some(uuid) = results.get_uuid(compact_id as u32) else {
-            continue;
-        };
-        let Some(&index) = uuid_to_index.get(&uuid) else {
-            continue;
-        };
+    let mut rows: Vec<FunctionMetricRow> = (0..node_count)
+        .into_par_iter()
+        .filter_map(|compact_id| {
+            let uuid = results.get_uuid(compact_id as u32)?;
+            let &index = uuid_to_index.get(&uuid)?;
 
-        let pagerank = centrality
-            .and_then(|c| c.pagerank.get(compact_id).copied())
-            .unwrap_or(0.0);
-        let betweenness = centrality
-            .and_then(|c| c.betweenness.get(compact_id).copied())
-            .unwrap_or(0.0);
-        let harmonic = centrality
-            .and_then(|c| c.harmonic.get(compact_id).copied())
-            .unwrap_or(0.0);
-        let blast_score = blast
-            .and_then(|b| b.scores.get(compact_id).copied())
-            .unwrap_or(0.0);
-        let community_id = results
-            .community
-            .as_ref()
-            .and_then(|c| c.get(compact_id as u32))
-            .map(|id| id as u32);
+            let pagerank = centrality
+                .and_then(|c| c.pagerank.get(compact_id).copied())
+                .unwrap_or(0.0);
+            let betweenness = centrality
+                .and_then(|c| c.betweenness.get(compact_id).copied())
+                .unwrap_or(0.0);
+            let harmonic = centrality
+                .and_then(|c| c.harmonic.get(compact_id).copied())
+                .unwrap_or(0.0);
+            let blast_score = blast
+                .and_then(|b| b.scores.get(compact_id).copied())
+                .unwrap_or(0.0);
+            let community_id = community
+                .and_then(|c| c.get(compact_id as u32))
+                .map(|id| id as u32);
 
-        if pagerank <= 0.0
-            && betweenness <= 0.0
-            && harmonic <= 0.0
-            && blast_score <= 0.0
-            && community_id.is_none()
-        {
-            continue;
-        }
+            if pagerank <= 0.0
+                && betweenness <= 0.0
+                && harmonic <= 0.0
+                && blast_score <= 0.0
+                && community_id.is_none()
+            {
+                return None;
+            }
 
-        rows.push(FunctionMetricRow {
-            index,
-            pagerank,
-            betweenness,
-            harmonic,
-            blast: blast_score,
-            community_id,
-        });
-    }
+            Some(FunctionMetricRow {
+                index,
+                pagerank,
+                betweenness,
+                harmonic,
+                blast: blast_score,
+                community_id,
+            })
+        })
+        .collect();
 
     rows.sort_by_key(|a| a.index);
     write_payload(out_dir, rows, sparse_mode)

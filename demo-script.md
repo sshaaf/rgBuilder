@@ -226,14 +226,14 @@ tool_use: rg-build {
 }
 ```
 
-> `semantic index` is **opt-in** (not part of `discover`). Default embedder is `code-daemon` (needs Git LFS weights); use `--embedder vocab|hash` offline.
+> `semantic index` is **opt-in** (not part of `discover`). Default embedder is **vocab** (compiled token table). Use `--embedder code-daemon` for the ONNX retriever (Git LFS weights) or `--embedder hash` in CI.
 
 * **rgBuilder Skill Output (JSON):**
 ```json
 {
   "schema_version": 3,
   "query": "checkout flow",
-  "model_id": "code-daemon-embed-v1",
+  "model_id": "vocab-accumulate-v1",
   "dimensions": 256,
   "hits": [
     {
@@ -276,7 +276,7 @@ tool_use: rg-build {
 {
   "schema_version": 3,
   "query": "checkout",
-  "model_id": "code-daemon-embed-v1",
+  "model_id": "vocab-accumulate-v1",
   "dimensions": 256,
   "hits": [
     {

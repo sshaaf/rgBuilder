@@ -23,12 +23,17 @@ fn oracles_path() -> PathBuf {
 }
 
 fn rgbuilder_bin() -> PathBuf {
-    if let Some(bin) = std::env::var_os("CARGO_BIN_EXE_rg-build")
-        .or_else(|| std::env::var_os("CARGO_BIN_EXE_rg_build"))
-    {
-        return PathBuf::from(bin);
+    for key in ["CARGO_BIN_EXE_rg_build", "CARGO_BIN_EXE_rg-build"] {
+        if let Ok(p) = std::env::var(key) {
+            return PathBuf::from(p);
+        }
     }
-    panic!("CARGO_BIN_EXE_rg_build is not set; run via `cargo test`");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let debug = root.join("target/debug/rg-build");
+    if debug.is_file() {
+        return debug;
+    }
+    panic!("rg-build binary not found; run via `cargo test` or `cargo build`");
 }
 
 fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
@@ -279,6 +284,8 @@ fn semantic_vocab_and_diffuse_find_checkout() {
         vocab_doc["model_id"]
     );
 
+    // Distilled vocab-accumulate-v2 Hamming is weaker than FNV v1 identity matching.
+    // Product ranking is fusion (default); that is what must surface checkout.
     let q = sandbox.run(&[
         "-f",
         "json",
@@ -287,13 +294,12 @@ fn semantic_vocab_and_diffuse_find_checkout() {
         "checkout order cart",
         "--limit",
         "5",
-        "--no-fusion",
     ]);
     assert_success(&q, "vocab query");
     let names = hit_names(&sandbox.parse_json(&q));
     assert!(
         names.iter().any(|n| n.contains("checkout")),
-        "vocab Hamming should rank checkout: {names:?}"
+        "vocab fusion should rank checkout: {names:?}"
     );
 
     let index_diffuse = sandbox.run(&[
@@ -316,7 +322,6 @@ fn semantic_vocab_and_diffuse_find_checkout() {
         "checkout order cart",
         "--limit",
         "5",
-        "--no-fusion",
     ]);
     assert_success(&q2, "vocab+diffuse query");
     let names2 = hit_names(&sandbox.parse_json(&q2));

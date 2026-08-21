@@ -1,8 +1,8 @@
 //! ONNX Runtime embedder (feature `semantic-onnx`).
 
 use crate::semantic_embedder::SemanticEmbedder;
-use crate::semantic_onnx_tokenizer::OnnxTokenizer;
-use ndarray::{Array2, ArrayD, Axis};
+use crate::semantic_onnx_tokenizer::{OnnxTokenizer, pad_encoded_batch};
+use ndarray::{Array2, ArrayD, ArrayView2, Axis};
 use ort::inputs;
 use ort::session::Session;
 use ort::session::builder::SessionBuilder;
@@ -11,9 +11,12 @@ use rgbuilder_error::{Error, Result};
 use std::borrow::Cow;
 use std::path::Path;
 use std::sync::Mutex;
+use tracing::warn;
 
 const DEFAULT_MAX_SEQ_LEN: usize = 128;
 const DEFAULT_VOCAB_SIZE: usize = 30_522;
+/// Padded `[N, seq]` width for index/distill. Small enough for CPU cache; large enough to amortize `session.run`.
+const ONNX_INDEX_BATCH: usize = 32;
 
 /// Post-inference vector processing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -200,12 +203,74 @@ impl SemanticEmbedder for SharedOnnxEmbedder {
         self.dimensions
     }
 
+    fn preferred_batch_size(&self) -> usize {
+        ONNX_INDEX_BATCH
+    }
+
     fn embed(&self, text: &str) -> Result<Vec<f32>> {
+        self.infer_one(text)
+    }
+
+    fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+        if texts.is_empty() {
+            return Ok(Vec::new());
+        }
+        if texts.len() == 1 {
+            return Ok(vec![self.infer_one(texts[0])?]);
+        }
+        match self.infer_batch(texts) {
+            Ok(rows) => Ok(rows),
+            Err(err) => {
+                warn!(
+                    error = %err,
+                    batch = texts.len(),
+                    "ONNX batched session.run failed; falling back to serial embeds"
+                );
+                texts.iter().map(|text| self.infer_one(text)).collect()
+            }
+        }
+    }
+}
+
+impl SharedOnnxEmbedder {
+    fn infer_one(&self, text: &str) -> Result<Vec<f32>> {
         let (ids, mask) = self.tokenizer.encode(text)?;
         let seq_len = ids.len();
         let input_ids = Array2::from_shape_vec((1, seq_len), ids).map_err(map_shape)?;
-        let attention = Array2::from_shape_vec((1, seq_len), mask).map_err(map_shape)?;
+        let attention = Array2::from_shape_vec((1, seq_len), mask.clone()).map_err(map_shape)?;
+        let tensor = self.run_session(input_ids, attention)?;
+        let mut rows = vectors_from_output(tensor, 1, self.native_dims, &[mask])?;
+        apply_postprocess(
+            rows.pop().ok_or_else(|| {
+                Error::ConfigError("ONNX produced no vectors for a single input".into())
+            })?,
+            self.dimensions,
+            self.postprocess,
+        )
+    }
 
+    fn infer_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+        let encoded = self.tokenizer.encode_batch(texts)?;
+        if encoded.len() != texts.len() {
+            return Err(Error::ConfigError(format!(
+                "encode_batch returned {} rows for {} texts",
+                encoded.len(),
+                texts.len()
+            )));
+        }
+        let pad_id = self.tokenizer.pad_id();
+        let (batch, seq, ids, mask) = pad_encoded_batch(&encoded, pad_id);
+        let input_ids = Array2::from_shape_vec((batch, seq), ids).map_err(map_shape)?;
+        let attention = Array2::from_shape_vec((batch, seq), mask.clone()).map_err(map_shape)?;
+        let tensor = self.run_session(input_ids, attention)?;
+        let row_masks: Vec<Vec<i64>> = mask.chunks(seq).map(<[i64]>::to_vec).collect();
+        let rows = vectors_from_output(tensor, batch, self.native_dims, &row_masks)?;
+        rows.into_iter()
+            .map(|row| apply_postprocess(row, self.dimensions, self.postprocess))
+            .collect()
+    }
+
+    fn run_session(&self, input_ids: Array2<i64>, attention: Array2<i64>) -> Result<ArrayD<f32>> {
         let mut session = self
             .session
             .lock()
@@ -229,22 +294,18 @@ impl SemanticEmbedder for SharedOnnxEmbedder {
                 .map_err(map_ort)?
         };
 
-        let tensor = outputs[0]
+        outputs[0]
             .try_extract_array::<f32>()
-            .map_err(map_ort)?
-            .to_owned();
-
-        postprocess_vector(tensor, self.dimensions, self.native_dims, self.postprocess)
+            .map_err(map_ort)
+            .map(|tensor| tensor.to_owned())
     }
 }
 
-fn postprocess_vector(
-    tensor: ArrayD<f32>,
+fn apply_postprocess(
+    mut values: Vec<f32>,
     dimensions: usize,
-    native_dims: usize,
     mode: Postprocess,
 ) -> Result<Vec<f32>> {
-    let mut values = vector_from_output(tensor, native_dims)?;
     match mode {
         Postprocess::Resize => Ok(resize_or_truncate(&values, dimensions)),
         Postprocess::CodeDaemonMrl => {
@@ -257,42 +318,74 @@ fn postprocess_vector(
     }
 }
 
-fn vector_from_output(tensor: ArrayD<f32>, native_dims: usize) -> Result<Vec<f32>> {
+fn vectors_from_output(
+    tensor: ArrayD<f32>,
+    batch: usize,
+    native_dims: usize,
+    masks: &[Vec<i64>],
+) -> Result<Vec<Vec<f32>>> {
     match tensor.ndim() {
-        1 => Ok(resize_or_truncate(
-            tensor
-                .as_slice()
-                .ok_or_else(|| Error::ConfigError("ONNX output not contiguous".into()))?,
-            native_dims,
-        )),
-        2 => {
-            let row = tensor.index_axis(Axis(0), 0);
-            Ok(resize_or_truncate(
-                row.as_slice().unwrap_or(&[]),
+        1 => {
+            if batch != 1 {
+                return Err(Error::ConfigError(format!(
+                    "ONNX rank-1 output cannot serve batch {batch}"
+                )));
+            }
+            Ok(vec![resize_or_truncate(
+                tensor
+                    .as_slice()
+                    .ok_or_else(|| Error::ConfigError("ONNX output not contiguous".into()))?,
                 native_dims,
-            ))
+            )])
+        }
+        2 => {
+            let mut out = Vec::with_capacity(batch);
+            for i in 0..batch {
+                let row = tensor.index_axis(Axis(0), i);
+                let owned: Vec<f32> = row.iter().copied().collect();
+                out.push(resize_or_truncate(&owned, native_dims));
+            }
+            Ok(out)
         }
         3 => {
-            let batch = tensor.index_axis(Axis(0), 0);
-            let hidden = batch.shape()[1];
-            let mut pooled = vec![0f32; hidden];
-            let seq = batch.shape()[0];
-            for seq_idx in 0..seq {
-                let row = batch.index_axis(Axis(0), seq_idx);
-                for (slot, value) in pooled.iter_mut().zip(row.iter()) {
-                    *slot += *value;
-                }
+            let mut out = Vec::with_capacity(batch);
+            for i in 0..batch {
+                let seq = tensor.index_axis(Axis(0), i);
+                let seq2 = seq.into_dimensionality::<ndarray::Ix2>().map_err(|_| {
+                    Error::ConfigError("ONNX rank-3 row is not [seq, hidden]".into())
+                })?;
+                let mask = masks.get(i).map(Vec::as_slice).unwrap_or(&[]);
+                out.push(mean_pool_masked(seq2, mask, native_dims));
             }
-            let denom = seq.max(1) as f32;
-            for value in &mut pooled {
-                *value /= denom;
-            }
-            Ok(resize_or_truncate(&pooled, native_dims))
+            Ok(out)
         }
         other => Err(Error::ConfigError(format!(
             "unsupported ONNX output rank {other}"
         ))),
     }
+}
+
+fn mean_pool_masked(seq_hidden: ArrayView2<f32>, mask: &[i64], native_dims: usize) -> Vec<f32> {
+    let seq_len = seq_hidden.shape()[0];
+    let hidden = seq_hidden.shape()[1];
+    let mut pooled = vec![0f32; hidden];
+    let mut count = 0f32;
+    for seq_idx in 0..seq_len {
+        if mask.get(seq_idx).copied().unwrap_or(1) == 0 {
+            continue;
+        }
+        let row = seq_hidden.index_axis(Axis(0), seq_idx);
+        for (slot, value) in pooled.iter_mut().zip(row.iter()) {
+            *slot += *value;
+        }
+        count += 1.0;
+    }
+    if count > 0.0 {
+        for value in &mut pooled {
+            *value /= count;
+        }
+    }
+    resize_or_truncate(&pooled, native_dims)
 }
 
 fn resize_or_truncate(values: &[f32], dimensions: usize) -> Vec<f32> {
@@ -326,4 +419,24 @@ fn map_builder(err: ort::Error<SessionBuilder>) -> Error {
 
 fn map_shape(err: ndarray::ShapeError) -> Error {
     Error::ConfigError(format!("tensor shape: {err}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rank2_batch_keeps_row_order() {
+        let tensor = ArrayD::from_shape_vec(vec![2, 2], vec![1.0, 2.0, 3.0, 4.0]).unwrap();
+        let rows = vectors_from_output(tensor, 2, 2, &[]).unwrap();
+        assert_eq!(rows[0], vec![1.0, 2.0]);
+        assert_eq!(rows[1], vec![3.0, 4.0]);
+    }
+
+    #[test]
+    fn rank3_mean_pool_skips_masked_tokens() {
+        let tensor = ArrayD::from_shape_vec(vec![1, 2, 1], vec![10.0, 999.0]).unwrap();
+        let rows = vectors_from_output(tensor, 1, 1, &[vec![1, 0]]).unwrap();
+        assert_eq!(rows[0][0], 10.0);
+    }
 }

@@ -254,7 +254,7 @@ fn helper() -> i32 { 42 }
                 code_hash: hash_code(source),
                 function_name: String::new(),
                 file_path: None,
-                cfg,
+                cfg: Arc::new(cfg),
                 pdg: Arc::new(pdg.clone()),
             });
         }

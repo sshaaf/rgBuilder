@@ -147,20 +147,27 @@ fn export_dashboard_bundle_inner(
         extract_static_assets(&out_dir).map_err(|e| e.to_string())
     })?;
 
-    let (node_count, edge_count, digest) =
-        profile_stage("payload_stats", || payload_stats(snapshot_path, backend))?;
-    let export_fingerprint = profile_stage("export_fingerprint", || {
-        compute_export_fingerprint(backend, repo_root)
+    let (payload_stats_res, uuid_to_index_res) = profile_stage("payload_and_uuid", || {
+        rayon::join(
+            || payload_stats(snapshot_path, backend),
+            || {
+                if snapshot_path.is_file() {
+                    load_columnar_uuid_indices(snapshot_path)
+                } else {
+                    Ok(HashMap::new())
+                }
+            },
+        )
     });
-    let metrics = profile_stage("collect_metrics", || collect_metrics(backend));
+    let (node_count, edge_count, digest) = payload_stats_res?;
+    let uuid_to_index = uuid_to_index_res?;
 
-    let uuid_to_index = profile_stage("load_uuid_index", || {
-        if snapshot_path.is_file() {
-            load_columnar_uuid_indices(snapshot_path)
-        } else {
-            Ok(HashMap::new())
-        }
-    })?;
+    let (export_fingerprint, metrics) = profile_stage("fingerprint_and_metrics", || {
+        rayon::join(
+            || compute_export_fingerprint(backend, repo_root),
+            || collect_metrics(backend),
+        )
+    });
 
     let export = profile_stage("write_metagraph", || {
         write_metagraph(
@@ -177,23 +184,20 @@ fn export_dashboard_bundle_inner(
     })?;
     let cfg_summary = streamed.cfg;
     let slice_summary = streamed.slice;
-    let dataflow_summary = profile_stage("export_dataflow", || {
-        export_dataflow_index(&slice_summary, &out_dir)
+
+    let sidecars = profile_stage("export_sidecars", || {
+        export_sidecars_parallel(SidecarJob {
+            backend,
+            repo_root,
+            snapshot_path,
+            out_dir: &out_dir,
+            ctx,
+            uuid_to_index: &uuid_to_index,
+            node_count,
+            dataflow_functions: streamed.dataflow,
+        })
     })?;
-    let mutations_summary = profile_stage("export_mutations", || {
-        export_mutations_index(repo_root, &out_dir)
-    })?;
-    let taint_summary = profile_stage("export_taint", || export_taint_bundle(repo_root, &out_dir))?;
-    let blast_summary = profile_stage("export_blast", || {
-        export_blast_bundle(repo_root, snapshot_path, &out_dir, ctx, &uuid_to_index)
-    })?;
-    profile_stage("export_function_metrics", || {
-        export_function_metrics(snapshot_path, &out_dir, node_count, ctx, &uuid_to_index)
-    })?;
-    let (migration_summary, migration_graph) = profile_stage("export_migration", || {
-        migration_export::export_migration_graph(backend, repo_root, &out_dir, ctx)
-    })?;
-    if let Some(ref graph) = migration_graph {
+    if let Some(ref graph) = sidecars.migration_graph {
         profile_stage("export_migration_plan", || {
             migration_export::export_default_migration_plan(graph, &out_dir)
         })?;
@@ -208,11 +212,11 @@ fn export_dashboard_bundle_inner(
         &export,
         &cfg_summary,
         &slice_summary,
-        &blast_summary,
-        &dataflow_summary,
-        &mutations_summary,
-        &taint_summary,
-        &migration_summary,
+        &sidecars.blast,
+        &sidecars.dataflow,
+        &sidecars.mutations,
+        &sidecars.taint,
+        &sidecars.migration,
         semantic_summary,
     );
     let (manifest_json, manifest_serialize_secs) = profile_stage("manifest_serialize", || {
@@ -243,13 +247,121 @@ fn export_dashboard_bundle_inner(
 fn copy_graph_payload(snapshot_path: &Path, out_dir: &Path) -> Result<(), String> {
     let dest = out_dir.join("graph_payload.bin");
     if snapshot_path.is_file() {
-        fs::copy(snapshot_path, &dest).map_err(|e| e.to_string())?;
+        export_util::link_or_copy(snapshot_path, &dest)?;
         return Ok(());
     }
     Err(format!(
         "graph snapshot not found at {} — run discover first",
         snapshot_path.display()
     ))
+}
+
+struct SidecarJob<'a> {
+    backend: &'a MemoryBackend,
+    repo_root: &'a Path,
+    snapshot_path: &'a Path,
+    out_dir: &'a Path,
+    ctx: DashboardExportContext<'a>,
+    uuid_to_index: &'a HashMap<uuid::Uuid, u32>,
+    node_count: u64,
+    dataflow_functions: Vec<dataflow_export::DataflowFunctionEntry>,
+}
+
+struct SidecarExport {
+    dataflow: DataflowExportSummary,
+    mutations: MutationsExportSummary,
+    taint: taint_export::TaintExportSummary,
+    blast: blast_export::BlastExportSummary,
+    migration: MigrationExportSummary,
+    migration_graph: Option<rgbuilder_analysis::MigrationGraphPayload>,
+}
+
+/// Independent dashboard artifacts after CFG/slice. Rayon (not Tokio): CPU + many small files.
+fn export_sidecars_parallel(job: SidecarJob<'_>) -> Result<SidecarExport, String> {
+    let SidecarJob {
+        backend,
+        repo_root,
+        snapshot_path,
+        out_dir,
+        ctx,
+        uuid_to_index,
+        node_count,
+        dataflow_functions,
+    } = job;
+    let dataflow_rows = dataflow_functions;
+    let ((dataflow, mutations), (taint, (blast, (metrics, migration)))) = rayon::join(
+        || {
+            rayon::join(
+                || {
+                    profile_stage("export_dataflow", || {
+                        export_dataflow_index(dataflow_rows, out_dir)
+                    })
+                },
+                || {
+                    profile_stage("export_mutations", || {
+                        export_mutations_index(repo_root, out_dir)
+                    })
+                },
+            )
+        },
+        || {
+            rayon::join(
+                || profile_stage("export_taint", || export_taint_bundle(repo_root, out_dir)),
+                || {
+                    rayon::join(
+                        || {
+                            profile_stage("export_blast", || {
+                                export_blast_bundle(
+                                    repo_root,
+                                    snapshot_path,
+                                    out_dir,
+                                    ctx,
+                                    uuid_to_index,
+                                )
+                            })
+                        },
+                        || {
+                            rayon::join(
+                                || {
+                                    profile_stage("export_function_metrics", || {
+                                        export_function_metrics(
+                                            snapshot_path,
+                                            out_dir,
+                                            node_count,
+                                            ctx,
+                                            uuid_to_index,
+                                        )
+                                    })
+                                },
+                                || {
+                                    profile_stage("export_migration", || {
+                                        migration_export::export_migration_graph(
+                                            backend, repo_root, out_dir, ctx,
+                                        )
+                                    })
+                                },
+                            )
+                        },
+                    )
+                },
+            )
+        },
+    );
+
+    let dataflow = dataflow?;
+    let mutations = mutations?;
+    let taint = taint?;
+    let blast = blast?;
+    metrics?;
+    let (migration, migration_graph) = migration?;
+    Ok(SidecarExport {
+        dataflow,
+        mutations,
+        taint,
+        blast,
+        migration,
+        migration_graph,
+    })
 }
 
 fn payload_stats(

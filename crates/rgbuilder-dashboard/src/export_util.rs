@@ -34,3 +34,19 @@ pub fn link_or_copy(src: &Path, dst: &Path) -> Result<(), String> {
     fs::copy(src, dst).map_err(|e| e.to_string())?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn link_or_copy_makes_readable_dest() {
+        let tmp = TempDir::new().unwrap();
+        let src = tmp.path().join("src.bin");
+        let dst = tmp.path().join("dst.bin");
+        fs::write(&src, b"payload").unwrap();
+        link_or_copy(&src, &dst).unwrap();
+        assert_eq!(fs::read(&dst).unwrap(), b"payload");
+    }
+}

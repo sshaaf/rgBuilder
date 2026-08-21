@@ -596,7 +596,7 @@ public class OrderProcessor {
             code_hash: "a".into(),
             function_name: "OrderDTO".into(),
             file_path: Some("OrderDTO.java".into()),
-            cfg: cfg_ctor,
+            cfg: Arc::new(cfg_ctor),
             pdg: Arc::new(pdg_ctor),
         });
         archive.insert(CfgPdgRecord {
@@ -604,7 +604,7 @@ public class OrderProcessor {
             code_hash: "b".into(),
             function_name: "process".into(),
             file_path: Some("OrderProcessor.java".into()),
-            cfg: cfg_proc,
+            cfg: Arc::new(cfg_proc),
             pdg: Arc::new(pdg_proc),
         });
 
@@ -666,7 +666,7 @@ public class Dual {
             code_hash: "1".into(),
             function_name: "first".into(),
             file_path: Some(file.clone()),
-            cfg: cfg_first,
+            cfg: Arc::new(cfg_first),
             pdg: Arc::new(pdg_first),
         });
         archive.insert(CfgPdgRecord {
@@ -674,7 +674,7 @@ public class Dual {
             code_hash: "2".into(),
             function_name: "second".into(),
             file_path: Some(file.clone()),
-            cfg: cfg_second,
+            cfg: Arc::new(cfg_second),
             pdg: Arc::new(pdg_second),
         });
 
@@ -748,7 +748,7 @@ public class OrderProcessor {
             code_hash: "a".into(),
             function_name: ctor_fn.name.to_string(),
             file_path: ctor_fn.file_path.as_ref().map(|s| s.to_string()),
-            cfg: cfg_ctor,
+            cfg: Arc::new(cfg_ctor),
             pdg: Arc::new(pdg_ctor),
         });
         archive.insert(CfgPdgRecord {
@@ -756,7 +756,7 @@ public class OrderProcessor {
             code_hash: "b".into(),
             function_name: process_fn.name.to_string(),
             file_path: process_fn.file_path.as_ref().map(|s| s.to_string()),
-            cfg: cfg_proc,
+            cfg: Arc::new(cfg_proc),
             pdg: Arc::new(pdg_proc),
         });
 
