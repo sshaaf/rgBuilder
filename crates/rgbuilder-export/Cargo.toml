@@ -1,6 +1,6 @@
 [package]
 name = "rgbuilder-export"
-version = "0.4.5"
+version = "0.4.6"
 edition.workspace = true
 rust-version.workspace = true
 description = "Graph export and visualization for rgBuilder"
