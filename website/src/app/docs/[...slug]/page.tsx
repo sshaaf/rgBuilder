@@ -22,7 +22,7 @@ export default async function DocPage({ params }: Props) {
   const { slug } = await params;
   const raw = readDoc(slug);
   if (!raw) notFound();
-  const md = rewriteDocLinks(raw);
+  const md = rewriteDocLinks(raw, slug);
   const githubPath = `${GITHUB_REPO}/blob/main/docs/${slug.join("/")}.md`;
 
   return (

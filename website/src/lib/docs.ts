@@ -20,6 +20,10 @@ export function listDocSlugs(): string[][] {
       if (!name.endsWith(".md")) continue;
       const stem = name.replace(/\.md$/, "");
       out.push([...parts, stem]);
+      // Also emit the directory-level slug so /docs/DIR/ resolves to README.md
+      if (stem === "README" && parts.length > 0) {
+        out.push(parts);
+      }
     }
   }
   walk(contentRoot, []);
@@ -37,10 +41,31 @@ export function readDoc(slug: string[]): string | null {
   return null;
 }
 
+/**
+ * Determine the directory context for a slug (used for resolving relative links).
+ * If the slug resolves to a README.md, the slug itself is the directory.
+ * Otherwise, the directory is the slug minus its last segment.
+ */
+export function slugDir(slug: string[]): string[] {
+  // Check if the slug resolves via the README.md fallback
+  const direct = join(contentRoot, ...slug) + ".md";
+  if (existsSync(direct)) {
+    // Resolved as <slug>.md — directory is everything except the last segment
+    return slug.length > 1 ? slug.slice(0, -1) : [];
+  }
+  // Resolved as <slug>/README.md — the slug itself is the directory
+  return slug;
+}
+
 /** Rewrite repo-relative markdown links for the site `/docs/` tree. */
-export function rewriteDocLinks(md: string): string {
+export function rewriteDocLinks(md: string, slug?: string[]): string {
   const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
   const prefix = `${base}/docs`;
+
+  // Determine the directory context from the slug so relative links resolve
+  // correctly for documents in subdirectories (e.g. guides/README → guides/).
+  const dirParts = slug ? slugDir(slug) : [];
+  const dirPrefix = dirParts.length > 0 ? dirParts.join("/") + "/" : "";
 
   return md.replace(/\]\(([^)]+)\)/g, (full, target: string) => {
     if (/^(https?:|mailto:|#|\/)/i.test(target)) return full;
@@ -54,7 +79,18 @@ export function rewriteDocLinks(md: string): string {
     if (rel === "../AGENTS.md" || rel === "AGENTS.md") {
       return `](${prefix}/AGENTS/${hash})`;
     }
+
+    // Resolve parent-directory references (../) against the current directory
+    let resolvedDir = dirPrefix;
+    while (rel.startsWith("../")) {
+      rel = rel.slice(3);
+      // Strip one directory level from resolvedDir
+      const parts = resolvedDir.replace(/\/$/, "").split("/").filter(Boolean);
+      parts.pop();
+      resolvedDir = parts.length > 0 ? parts.join("/") + "/" : "";
+    }
+
     rel = rel.replace(/\.md$/, "");
-    return `](${prefix}/${rel}/${hash})`;
+    return `](${prefix}/${resolvedDir}${rel}/${hash})`;
   });
 }
