@@ -6,13 +6,14 @@ Agent-first docs: index once, query with `-f json`, deepen in the User Guide whe
 
 | Goal | Canon |
 |------|--------|
+| Step-by-step feature how-tos (CoolStore) | **[Guides](guides/README.md)** |
 | LLM / agent workflows | [AGENTS.md](../AGENTS.md) · [Agent recipes](agent-recipes.md) |
 | JSON shapes (`schema_version`, fields) | [JSON API](json-api.md) |
 | Install + CLI walkthrough (ecommerce-java) | [User Guide](user-guide.md) |
 | Concepts (what / why) | [Introduction](Introduction.md) |
 
 **Agent loop:** [AGENTS.md](../AGENTS.md) → `discover` once → `gql` / `blast-radius` / `cpg` with `-f json`.  
-**First hour (human):** User Guide §1–4 on [ecommerce-java](user-guide.md#3-example-project-ecommerce-java).
+**First hour (human):** User Guide §1–4 on [ecommerce-java](user-guide.md#3-example-project-ecommerce-java), then a [Guide](guides/README.md) for the feature you need.
 
 ## Secondary
 

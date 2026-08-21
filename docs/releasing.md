@@ -24,14 +24,17 @@ Pushing a tag matching `v*` triggers [`.github/workflows/release.yml`](../.githu
    - `x86_64-apple-darwin`
    - `x86_64-pc-windows-msvc`
 2. **Package** as `rgbuilder-<version>-<target>.tar.gz` (or `.zip` on Windows).
-3. **Publish** a GitHub Release with auto-generated notes and `SHA256SUMS.txt`.
+3. **Publish** a GitHub Release with notes from `docs/releases/<tag>.md` (if present) plus GitHub-generated PR/commit notes, and `SHA256SUMS.txt`.
+
+Curated notes live under [`docs/releases/`](releases/) (`v0.4.6.md`, …). If that file is missing, the workflow still publishes auto-generated notes.
 
 ### Tag and push
 
 ```bash
 # On main, with a clean tree and versions already bumped
-git tag -a v0.2.0 -m "Release v0.2.0"
-git push origin v0.2.0
+# Write docs/releases/v0.4.6.md first so CI attaches it to the GitHub Release.
+git tag -a v0.4.6 -m "Release v0.4.6"
+git push origin v0.4.6
 ```
 
 Track the run: **Actions → Release**.

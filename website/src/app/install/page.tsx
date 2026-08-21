@@ -35,9 +35,24 @@ export default function InstallPage() {
             Releases
           </a>
           , put <code className="font-mono text-[var(--body-strong)]">rg-build</code>{" "}
-          on your <code className="font-mono">PATH</code>, then:
+          on your <code className="font-mono">PATH</code>, then install the agent
+          skill into the repo you will index:
         </p>
-        <TerminalBlock lines={["rg-build --version"]} />
+        <TerminalBlock
+          lines={[
+            "rg-build --version",
+            "rg-build install --skill",
+          ]}
+        />
+        <p className="text-sm text-[var(--mute)]">
+          That writes{" "}
+          <code className="font-mono">.claude/skills/rgbuilder/</code> and{" "}
+          <code className="font-mono">.cursor/skills/rgbuilder/</code>. See the{" "}
+          <Link href="/docs/guides/agent-skill/" className="underline">
+            agent skill guide
+          </Link>
+          .
+        </p>
         <Button variant="ghost" asChild>
           <a href={GITHUB_RELEASES} target="_blank" rel="noreferrer">
             Open releases
@@ -85,7 +100,10 @@ export default function InstallPage() {
 
       <section className="mt-12 flex flex-wrap gap-3">
         <Button asChild>
-          <Link href="/docs/">Read the docs</Link>
+          <Link href="/docs/guides/">Read the guides</Link>
+        </Button>
+        <Button variant="ghost" asChild>
+          <Link href="/docs/">Docs hub</Link>
         </Button>
         <Button variant="ghost" asChild>
           <Link href="/demo/">Try demos</Link>

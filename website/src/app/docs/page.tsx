@@ -6,6 +6,39 @@ export const metadata: Metadata = {
   title: "Docs",
 };
 
+const guides = [
+  {
+    title: "All guides",
+    blurb: "CoolStore walkthroughs for discover, GQL, blast-radius, CPG, semantic, install --skill, and more.",
+    href: "/docs/guides/",
+  },
+  {
+    title: "Discovering and indexing",
+    blurb: "Build the knowledge graph from source.",
+    href: "/docs/guides/discovering-and-indexing/",
+  },
+  {
+    title: "Graph query language",
+    blurb: "Cypher-like MATCH over functions, types, and docs.",
+    href: "/docs/guides/graph-query-language/",
+  },
+  {
+    title: "Blast radius",
+    blurb: "Upstream impact before you edit a symbol.",
+    href: "/docs/guides/blast-radius-analysis/",
+  },
+  {
+    title: "Hybrid CPG",
+    blurb: "CALL + CFG/PDG: mutations, flows, slices.",
+    href: "/docs/guides/hybrid-cpg/",
+  },
+  {
+    title: "Agent skill",
+    blurb: "rg-build install --skill for Claude Code and Cursor.",
+    href: "/docs/guides/agent-skill/",
+  },
+];
+
 const primary = [
   {
     title: "AGENTS.md",
@@ -59,7 +92,30 @@ export default function DocsPage() {
         the optional browser UI.
       </p>
 
-      <h2 className="mt-10 text-lg font-medium text-[var(--ink)]">Primary</h2>
+      <h2 className="mt-10 text-lg font-medium text-[var(--ink)]">
+        Guides
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm text-[var(--body)]">
+        Feature how-tos with a shared CoolStore example. Full list on the{" "}
+        <Link href="/docs/guides/" className="underline">
+          guides index
+        </Link>
+        .
+      </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {guides.map((c) => (
+          <Link
+            key={c.title}
+            href={c.href}
+            className="group flex flex-col rounded-[4px] border border-[var(--hairline)] bg-[var(--canvas-soft)]/50 p-5 transition-colors hover:border-[var(--mute)]"
+          >
+            <h3 className="text-base font-medium text-[var(--ink)]">{c.title}</h3>
+            <p className="mt-2 text-sm text-[var(--body)]">{c.blurb}</p>
+          </Link>
+        ))}
+      </div>
+
+      <h2 className="mt-12 text-lg font-medium text-[var(--ink)]">Primary</h2>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {primary.map((c) => (
           <Link
