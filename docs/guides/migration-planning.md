@@ -1,0 +1,229 @@
+# Migration Planning
+
+## Introduction
+
+rgBuilder can generate a **dependency-aware migration roadmap** that tells you the optimal order for extracting modules from a monolith into separate services or packages. The roadmap is produced by combining community detection, blast-radius analysis, PageRank, and harmonic centrality into a prioritized, topologically-sorted extraction plan.
+
+Migration planning answers the critical question: "In what order should we extract pieces of this monolith so that each step is safe and dependencies are respected?"
+
+## Use Cases
+
+- **Monolith decomposition.** Generate a step-by-step plan for breaking a monolith into microservices.
+- **Risk-ordered extraction.** Start with low-risk, low-dependency modules and work toward the core.
+- **Stakeholder communication.** Present a data-driven migration plan to decision-makers.
+- **Sprint planning.** Map migration steps to development sprints based on priority scores.
+- **Architecture evolution.** Track how the migration plan changes as modules are extracted.
+
+## Example Project
+
+This guide uses the **CoolStore Monolith** (`example/coolstore-weblogic`) -- a Java EE 7 e-commerce application that is a realistic migration candidate.
+
+## Step-by-Step
+
+### 1. Run Discovery with Migration Flags
+
+Migration planning requires harmonic centrality and the migration hints export:
+
+```bash
+rg-build -r example/coolstore-weblogic discover . \
+  --with-cfg \
+  --with-harmonic \
+  --export-migration-hints
+```
+
+**Output:**
+
+```
+[>] rg-build discover
+[!] Deep analysis enabled (--with-cfg / --with-taint).
+   CFG/PDG on large codebases (>50K functions) may take several minutes.
+[!] Found 186 circular dependencies
+
+✓ Control flow analysis:
+  Field writes indexed: 3299
+  CFG/PDG/Dominance: 6585 functions analyzed
+[✓] rg-build discover finished in 20.7s
+```
+
+**What happened:**
+
+- `--with-harmonic` computed harmonic centrality for every node, measuring how "reachable" each module is from the rest of the graph. This feeds into the migration priority score.
+- `--export-migration-hints` generated `.rgbuilder/migration_plan.json` with the full roadmap.
+- `--with-cfg` provided deep analysis data for more accurate blast-radius scoring.
+
+### 2. Read the Migration Plan
+
+The migration plan is a JSON file with ordered extraction steps:
+
+```bash
+cat example/coolstore-weblogic/.rgbuilder/migration_plan.json
+```
+
+**Output (truncated):**
+
+```json
+{
+  "schema_version": 2,
+  "preset": "hybrid_default",
+  "preset_label": "Hybrid Default",
+  "weights": {
+    "alpha": 0.33,
+    "beta": 0.33,
+    "gamma": 0.34
+  },
+  "order_mode": "scheduled",
+  "steps": [
+    {
+      "step": 1,
+      "community_id": 74,
+      "label": "main.webapp.bower_components.matches-selector",
+      "priority_score": -0.143,
+      "schedule_step": 1,
+      "priority_rank": 60,
+      "avg_pagerank": 0.0000634,
+      "avg_harmonic": 0.0000407,
+      "max_blast": 0.0
+    },
+    {
+      "step": 2,
+      "community_id": 13,
+      "label": "com.redhat.coolstore.model",
+      "priority_score": -0.155,
+      "schedule_step": 2,
+      "priority_rank": 73,
+      "avg_pagerank": 0.0000532,
+      "avg_harmonic": 0.0000339,
+      "max_blast": 0.0
+    }
+  ]
+}
+```
+
+**What this tells you:**
+
+- **`preset: "hybrid_default"`** -- the default migration strategy, balancing PageRank, harmonic centrality, and blast radius with equal weights (0.33/0.33/0.34).
+- **`order_mode: "scheduled"`** -- steps are topologically sorted so dependencies are extracted before dependents.
+- **Step 1** -- extract `matches-selector` (a bower component with zero blast radius, low centrality) first. It is the safest, most independent module.
+- **Step 2** -- extract `com.redhat.coolstore.model` (the domain model) next. It has low blast radius and low centrality, meaning it can be extracted without breaking many callers.
+- **`priority_score`** -- a combined score from the three metrics. Lower (more negative) scores come first in the scheduled order.
+- **`max_blast: 0.0`** -- neither of the first two steps has any blast-radius impact, making them safe starting points.
+
+### 3. Migration Presets
+
+rgBuilder offers four migration strategy presets:
+
+```bash
+# Foundational-first: extract shared libraries and utilities first
+rg-build -r example/coolstore-weblogic discover . \
+  --with-harmonic --export-migration-hints \
+  --migration-preset foundational_first
+
+# Dense cluster: extract tightly-coupled clusters together
+rg-build -r example/coolstore-weblogic discover . \
+  --with-harmonic --export-migration-hints \
+  --migration-preset dense_cluster
+
+# Risk mitigation: prioritize low-risk extractions
+rg-build -r example/coolstore-weblogic discover . \
+  --with-harmonic --export-migration-hints \
+  --migration-preset risk_mitigation
+```
+
+| Preset | Strategy | Best For |
+|--------|----------|----------|
+| `hybrid_default` | Equal weight to PageRank, harmonic, blast radius | General purpose |
+| `foundational_first` | Prioritize shared infrastructure | Libraries-first approach |
+| `dense_cluster` | Group tightly-coupled modules | Cluster extraction |
+| `risk_mitigation` | Prioritize low-risk, low-impact modules | Conservative migration |
+
+### 4. Migration Order Modes
+
+Control how steps are sorted:
+
+```bash
+# Scheduled: dependency-aware topological sort (default)
+rg-build -r example/coolstore-weblogic discover . \
+  --with-harmonic --export-migration-hints \
+  --migration-order scheduled
+
+# Priority: sort by priority score regardless of dependencies
+rg-build -r example/coolstore-weblogic discover . \
+  --with-harmonic --export-migration-hints \
+  --migration-order priority
+```
+
+| Mode | Sorting | Use When |
+|------|---------|----------|
+| `scheduled` | Topological (respects dependencies) | You want a safe, step-by-step plan |
+| `priority` | By priority score (highest risk reduction first) | You want to see which modules matter most |
+
+### 5. Reading the Plan Fields
+
+Each step in the migration plan contains:
+
+| Field | Meaning |
+|-------|---------|
+| `step` | Extraction order (1 = first) |
+| `community_id` | The community (module cluster) to extract |
+| `label` | Human-readable name for the community |
+| `priority_score` | Combined metric score |
+| `schedule_step` | Position in the topological sort |
+| `priority_rank` | Position in the pure priority ranking |
+| `avg_pagerank` | Average PageRank of functions in this community |
+| `avg_harmonic` | Average harmonic centrality of functions in this community |
+| `max_blast` | Maximum blast-radius score of any function in this community |
+
+### 6. Exploring Migration Steps
+
+After reviewing the plan, use other rgBuilder commands to dig deeper:
+
+```bash
+# See what functions are in the community being extracted
+rg-build -r example/coolstore-weblogic -f json gql \
+  "MATCH (f:Function) WHERE f.community_id = '13' RETURN f LIMIT 20"
+
+# Check blast radius of a specific function before extracting
+rg-build -r example/coolstore-weblogic blast-radius getShoppingCart --depth 3
+
+# View mutations on the domain model being extracted
+rg-build -r example/coolstore-weblogic -f json cpg mutations \
+  --type ShoppingCart --exclude-ctors
+```
+
+### 7. Dashboard Visualization
+
+If you enabled `--with-dashboard`, the migration plan is also available in the browser dashboard:
+
+```bash
+rg-build -r example/coolstore-weblogic serve --open
+```
+
+Navigate to the **Migration** tab to see the roadmap as an interactive timeline.
+
+## The Migration Algorithm
+
+The migration plan is generated by:
+
+1. **Community detection** -- partition the graph into functional clusters (Louvain algorithm).
+2. **Metric computation** -- compute PageRank, harmonic centrality, and blast radius for every function.
+3. **Community scoring** -- aggregate metrics per community (average PageRank, average harmonic, max blast).
+4. **Priority ranking** -- combine the three scores with configurable weights (alpha, beta, gamma).
+5. **Topological sorting** -- order communities so dependencies come before dependents.
+
+See [Migration Algorithms](../migration-algorithms.md) for the academic background.
+
+## Benefits
+
+- **Data-driven ordering.** Replace intuition with quantitative analysis for deciding what to extract first.
+- **Dependency-safe.** The scheduled order ensures you never extract a module before its dependencies.
+- **Configurable strategy.** Four presets and two ordering modes let you tailor the plan to your migration approach.
+- **Full traceability.** Every step includes the metrics that justify its position in the plan.
+- **Composable.** Use GQL, blast-radius, and CPG to investigate each migration step in detail.
+
+## Related Guides
+
+- [Discovering and Indexing a Codebase](discovering-and-indexing.md) -- `discover` with migration flags
+- [Graph Metrics](graph-metrics.md) -- the metrics that feed into migration scoring
+- [Community Detection](community-detection.md) -- communities define the extraction units
+- [Blast Radius Analysis](blast-radius-analysis.md) -- per-function impact analysis for migration steps
+- [CI Policy Checks](ci-policy-checks.md) -- enforce architectural rules during migration
