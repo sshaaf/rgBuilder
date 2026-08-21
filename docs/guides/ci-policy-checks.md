@@ -16,17 +16,17 @@ Policy checks automate what would otherwise be manual code review: ensuring that
 
 ## Example Project
 
-This guide uses the **CoolStore Monolith** (`example/coolstore-weblogic`). Make sure you have run `discover` first:
+This guide uses the **CoolStore** (`example/coolstore`). Make sure you have run `discover` first:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover .
+rg-build -r example/coolstore discover .
 ```
 
 ## Step-by-Step
 
 ### 1. Examine the Policy File
 
-The CoolStore example ships with a policy file at `example/coolstore-weblogic/policy.json`:
+The CoolStore example ships with a policy file at `example/coolstore/policy.json`:
 
 ```json
 {"max_impact_nodes": 15, "centrality_alert_threshold": 0.8}
@@ -42,8 +42,8 @@ This policy defines two rules:
 ### 2. Run the Policy Check
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json check \
-  --policy-file example/coolstore-weblogic/policy.json
+rg-build -r example/coolstore -f json check \
+  --policy-file example/coolstore/policy.json
 ```
 
 **Output (truncated):**
@@ -51,7 +51,7 @@ rg-build -r example/coolstore-weblogic -f json check \
 ```json
 {
   "passed": false,
-  "policy": "example/coolstore-weblogic/policy.json",
+  "policy": "example/coolstore/policy.json",
   "schema_version": 1,
   "violations": [
     {
@@ -91,8 +91,8 @@ rg-build -r example/coolstore-weblogic -f json check \
 The `check` command exits with code 1 on violations, making it suitable for CI:
 
 ```bash
-rg-build -r example/coolstore-weblogic check \
-  --policy-file example/coolstore-weblogic/policy.json
+rg-build -r example/coolstore check \
+  --policy-file example/coolstore/policy.json
 echo "Exit code: $?"
 ```
 
@@ -115,8 +115,8 @@ If any violation is found, the step fails and the build is blocked.
 Use text format for readable output in pull request comments:
 
 ```bash
-rg-build -r example/coolstore-weblogic check \
-  --policy-file example/coolstore-weblogic/policy.json
+rg-build -r example/coolstore check \
+  --policy-file example/coolstore/policy.json
 ```
 
 ### 5. Per-Function Policy Check with Blast Radius
@@ -124,8 +124,8 @@ rg-build -r example/coolstore-weblogic check \
 You can also apply a policy to a single function using `blast-radius --policy-file`:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json blast-radius priceShoppingCart \
-  --policy-file example/coolstore-weblogic/policy.json
+rg-build -r example/coolstore -f json blast-radius priceShoppingCart \
+  --policy-file example/coolstore/policy.json
 ```
 
 This runs blast-radius analysis on `priceShoppingCart` and checks the result against the policy. The `gatekeeping` section of the output shows whether the function passes or violates the policy.

@@ -16,10 +16,10 @@ Slicing works in two directions: **backward** (what statements contributed to th
 
 ## Example Project
 
-This guide uses the **CoolStore Monolith** (`example/coolstore-weblogic`). Make sure you have run `discover` with `--with-cfg` to enable CFG/PDG analysis:
+This guide uses the **CoolStore** (`example/coolstore`). Make sure you have run `discover` with `--with-cfg` to enable CFG/PDG analysis:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover . --with-cfg
+rg-build -r example/coolstore discover . --with-cfg
 ```
 
 The `--with-cfg` flag is required because slicing depends on the Program Dependence Graph (PDG), which is built from the control-flow graph.
@@ -31,7 +31,7 @@ The `--with-cfg` flag is required because slicing depends on the Program Depende
 Find all statements that contribute to the value of `sc` at line 68 in `ShoppingCartService.java`:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json slice \
+rg-build -r example/coolstore -f json slice \
   ./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java \
   --line 68 --variable sc --function priceShoppingCart --direction backward
 ```
@@ -99,7 +99,7 @@ rg-build -r example/coolstore-weblogic -f json slice \
 Trace how the variable `sc` at line 68 influences later statements:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json cpg flows \
+rg-build -r example/coolstore -f json cpg flows \
   ./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java \
   --line 68 --variable sc --function priceShoppingCart --direction forward
 ```
@@ -109,7 +109,7 @@ rg-build -r example/coolstore-weblogic -f json cpg flows \
 ```json
 {
   "direction": "forward",
-  "file": "example/coolstore-weblogic/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
+  "file": "example/coolstore/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
   "function": "priceShoppingCart",
   "line": 68,
   "lines": [64, 68, 81, 83],

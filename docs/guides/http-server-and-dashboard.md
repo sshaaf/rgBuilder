@@ -14,10 +14,10 @@ The `serve` command launches an HTTP server that provides both a **browser-based
 
 ## Example Project
 
-This guide uses the **CoolStore Monolith** (`example/coolstore-weblogic`). Make sure you have run `discover` with `--with-dashboard`:
+This guide uses the **CoolStore** (`example/coolstore`). Make sure you have run `discover` with `--with-dashboard`:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover . --with-cfg --with-dashboard
+rg-build -r example/coolstore discover . --with-cfg --with-dashboard
 ```
 
 The `--with-dashboard` flag exports the static dashboard bundle to `.rgbuilder/dashboard/`.
@@ -29,7 +29,7 @@ The `--with-dashboard` flag exports the static dashboard bundle to `.rgbuilder/d
 Launch the HTTP server with the dashboard:
 
 ```bash
-rg-build -r example/coolstore-weblogic serve --open
+rg-build -r example/coolstore serve --open
 ```
 
 **What happens:**
@@ -43,7 +43,7 @@ rg-build -r example/coolstore-weblogic serve --open
 Bind to a different address or port:
 
 ```bash
-rg-build -r example/coolstore-weblogic serve --host 0.0.0.0 --port 3000
+rg-build -r example/coolstore serve --host 0.0.0.0 --port 3000
 ```
 
 This makes the server accessible on all network interfaces at port 3000, useful for team sharing.
@@ -53,7 +53,7 @@ This makes the server accessible on all network interfaces at port 3000, useful 
 If you only need the API (no dashboard UI):
 
 ```bash
-rg-build -r example/coolstore-weblogic serve --query-only
+rg-build -r example/coolstore serve --query-only
 ```
 
 This starts a lighter server with only the `/api/query` and `/api/semantic/*` endpoints.
@@ -63,7 +63,7 @@ This starts a lighter server with only the `/api/query` and `/api/semantic/*` en
 If you only need the visual dashboard:
 
 ```bash
-rg-build -r example/coolstore-weblogic serve --dashboard-only
+rg-build -r example/coolstore serve --dashboard-only
 ```
 
 ### 5. Querying the API with curl
@@ -85,7 +85,7 @@ curl -s http://127.0.0.1:8080/api/query \
     [
       {
         "binding": "f",
-        "file": "example/coolstore-weblogic/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
+        "file": "example/coolstore/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
         "node": "priceShoppingCart",
         "qualified_name": "com.redhat.coolstore.service.ShoppingCartService.priceShoppingCart",
         "type": "Function"
@@ -111,7 +111,7 @@ curl -s http://127.0.0.1:8080/api/semantic/query \
 For backward compatibility, the legacy Unix socket daemon is still available:
 
 ```bash
-rg-build -r example/coolstore-weblogic serve --daemon
+rg-build -r example/coolstore serve --daemon
 ```
 
 This creates a Unix socket at `.rgbuilder/query.sock` that the `blast-radius` command auto-connects to for faster repeated queries.
@@ -121,7 +121,7 @@ This creates a Unix socket at `.rgbuilder/query.sock` that the `blast-radius` co
 The server automatically exits after 300 seconds (5 minutes) of inactivity by default. Adjust with `--idle-secs`:
 
 ```bash
-rg-build -r example/coolstore-weblogic serve --idle-secs 3600
+rg-build -r example/coolstore serve --idle-secs 3600
 ```
 
 ## Dashboard Tabs

@@ -34,10 +34,10 @@ With the skill installed, every code review conversation has access to architect
 
 ## Example Project
 
-This guide uses the **CoolStore Monolith** (`example/coolstore-weblogic`). Make sure you have run `discover` first:
+This guide uses the **CoolStore** (`example/coolstore`). Make sure you have run `discover` first:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover . --with-cfg
+rg-build -r example/coolstore discover . --with-cfg
 ```
 
 ## Step-by-Step
@@ -47,7 +47,7 @@ rg-build -r example/coolstore-weblogic discover . --with-cfg
 Install the rgBuilder agent skill into your repository:
 
 ```bash
-rg-build -r example/coolstore-weblogic install --skill
+rg-build -r example/coolstore install --skill
 ```
 
 **Output:**
@@ -55,8 +55,8 @@ rg-build -r example/coolstore-weblogic install --skill
 ```
 [>] rg-build install
 Installed rgbuilder skill:
-  created  /path/to/example/coolstore-weblogic/.claude/skills/rgbuilder/SKILL.md
-  created  /path/to/example/coolstore-weblogic/.cursor/skills/rgbuilder/SKILL.md
+  created  /path/to/example/coolstore/.claude/skills/rgbuilder/SKILL.md
+  created  /path/to/example/coolstore/.cursor/skills/rgbuilder/SKILL.md
 [✓] rg-build install finished in 1ms
 ```
 
@@ -72,7 +72,7 @@ Installed rgbuilder skill:
 Check the install status programmatically:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json install --skill
+rg-build -r example/coolstore -f json install --skill
 ```
 
 **Output:**
@@ -81,7 +81,7 @@ rg-build -r example/coolstore-weblogic -f json install --skill
 {
   "command": "install",
   "force": false,
-  "repo": "/path/to/example/coolstore-weblogic",
+  "repo": "/path/to/example/coolstore",
   "schema_version": 1,
   "skill": "rgbuilder",
   "writes": [
@@ -111,10 +111,10 @@ If you only use one agent platform:
 
 ```bash
 # Claude Code only
-rg-build -r example/coolstore-weblogic install --skill --host claude
+rg-build -r example/coolstore install --skill --host claude
 
 # Cursor only
-rg-build -r example/coolstore-weblogic install --skill --host cursor
+rg-build -r example/coolstore install --skill --host cursor
 ```
 
 ### 4. Update After Upgrading rgBuilder
@@ -122,7 +122,7 @@ rg-build -r example/coolstore-weblogic install --skill --host cursor
 When you upgrade rgBuilder, the embedded skill may have changed. Update it with `--force`:
 
 ```bash
-rg-build -r example/coolstore-weblogic install --skill --force
+rg-build -r example/coolstore install --skill --force
 ```
 
 This overwrites any existing skill files, even if they have been modified locally.
@@ -156,7 +156,7 @@ When you ask the agent: *"What happens if I change priceShoppingCart?"*
 The agent follows the skill's decision table (row 10: "Impact if I change X") and runs:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json blast-radius priceShoppingCart
+rg-build -r example/coolstore -f json blast-radius priceShoppingCart
 ```
 
 **Output:**
@@ -170,7 +170,7 @@ rg-build -r example/coolstore-weblogic -f json blast-radius priceShoppingCart
   },
   "target": {
     "canonical_fqn": "ShoppingCartService::priceShoppingCart",
-    "file_path": "example/coolstore-weblogic/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
+    "file_path": "example/coolstore/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
     "signature": "public void priceShoppingCart(ShoppingCart sc) {"
   },
   "topology": {
@@ -194,7 +194,7 @@ The agent then reports:
 The agent can then trace the call neighborhood to understand what `priceShoppingCart` itself depends on:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json cpg calls priceShoppingCart
+rg-build -r example/coolstore -f json cpg calls priceShoppingCart
 ```
 
 **Output (truncated):**
@@ -220,7 +220,7 @@ The agent reports: *"priceShoppingCart calls 7 functions: it initializes pricing
 Before splitting the function, check which fields it modifies:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json cpg mutations \
+rg-build -r example/coolstore -f json cpg mutations \
   --type ShoppingCart --exclude-ctors
 ```
 
@@ -247,7 +247,7 @@ The agent reports: *"ShoppingCart has 6 mutable fields. The priceShoppingCart me
 
 ### Scenario
 
-You need to decompose the CoolStore monolith into microservices and want a data-driven extraction plan.
+You need to decompose the CoolStore application into microservices and want a data-driven extraction plan.
 
 ### What the Agent Does
 
@@ -256,7 +256,7 @@ When you ask: *"Generate a migration plan for this codebase"*
 The agent follows the skill's decision table (row 1: "Generate a migration plan") and runs:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover . \
+rg-build -r example/coolstore discover . \
   --with-cfg --with-harmonic --export-migration-hints \
   --migration-preset hybrid_default --migration-order scheduled
 ```
@@ -295,14 +295,14 @@ When the user asks: *"Tell me more about the coolstore model community"*
 The agent queries community members:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json gql \
+rg-build -r example/coolstore -f json gql \
   "MATCH (f:Function) WHERE f.community_id = '13' RETURN f LIMIT 20"
 ```
 
 And checks blast radius on key functions:
 
 ```bash
-rg-build -r example/coolstore-weblogic blast-radius getShoppingCart --depth 3
+rg-build -r example/coolstore blast-radius getShoppingCart --depth 3
 ```
 
 ---
@@ -320,7 +320,7 @@ You are migrating `priceShoppingCart` from Java to Go (or TypeScript, Rust, Pyth
 The agent captures the function's data-flow graph, which is language-independent:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json cpg flows \
+rg-build -r example/coolstore -f json cpg flows \
   ./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java \
   --line 68 --variable sc --function priceShoppingCart --direction forward
 ```
@@ -344,7 +344,7 @@ rg-build -r example/coolstore-weblogic -f json cpg flows \
 **Step 2: Extract the call neighborhood.**
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json cpg calls priceShoppingCart
+rg-build -r example/coolstore -f json cpg calls priceShoppingCart
 ```
 
 This gives the agent the complete list of outgoing calls that the new implementation must replicate.
@@ -352,7 +352,7 @@ This gives the agent the complete list of outgoing calls that the new implementa
 **Step 3: Extract field mutations.**
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json cpg mutations \
+rg-build -r example/coolstore -f json cpg mutations \
   --type ShoppingCart --exclude-ctors
 ```
 
@@ -361,7 +361,7 @@ This lists every field that `priceShoppingCart` writes to, which the new impleme
 **Step 4: Extract the PDG.**
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json cpg pdg priceShoppingCart
+rg-build -r example/coolstore -f json cpg pdg priceShoppingCart
 ```
 
 **Output (truncated):**
@@ -405,7 +405,7 @@ You need to write tests for `priceShoppingCart` and want to ensure you cover all
 **Step 1: Examine the control-flow graph.**
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json inspect priceShoppingCart cfg
+rg-build -r example/coolstore -f json inspect priceShoppingCart cfg
 ```
 
 **Output (truncated):**
@@ -438,7 +438,7 @@ The agent identifies all branch points:
 **Step 2: Examine data dependencies.**
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json inspect priceShoppingCart pdg --edge-layer data
+rg-build -r example/coolstore -f json inspect priceShoppingCart pdg --edge-layer data
 ```
 
 The agent identifies the key data flows:
@@ -448,7 +448,7 @@ The agent identifies the key data flows:
 **Step 3: Check field mutations to verify test assertions.**
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json cpg mutations \
+rg-build -r example/coolstore -f json cpg mutations \
   --type ShoppingCart --exclude-ctors
 ```
 

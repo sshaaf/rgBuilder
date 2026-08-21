@@ -17,10 +17,10 @@ Whether you want to load your code graph into Neo4j, visualize it in Gephi, embe
 
 ## Example Project
 
-This guide uses the **CoolStore Monolith** (`example/coolstore-weblogic`). Make sure you have run `discover` first:
+This guide uses the **CoolStore** (`example/coolstore`). Make sure you have run `discover` first:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover .
+rg-build -r example/coolstore discover .
 ```
 
 ## Step-by-Step
@@ -30,7 +30,7 @@ rg-build -r example/coolstore-weblogic discover .
 Export all functions to GraphML format:
 
 ```bash
-rg-build -r example/coolstore-weblogic export \
+rg-build -r example/coolstore export \
   --export-format graphml \
   --export-output /tmp/coolstore.graphml \
   --query "type:Function"
@@ -55,7 +55,7 @@ Exported 7526 nodes, 21396 edges -> /tmp/coolstore.graphml
 Export the entire graph (all node types) to JSON:
 
 ```bash
-rg-build -r example/coolstore-weblogic export \
+rg-build -r example/coolstore export \
   --export-format json \
   --export-output /tmp/coolstore.json \
   --query all
@@ -69,7 +69,7 @@ Exported 14763 nodes, 50082 edges -> /tmp/coolstore.json
 [✓] rg-build export finished in 70ms
 ```
 
-The `all` query exports every node and edge in the graph -- 14,763 nodes and 50,082 edges for the CoolStore monolith.
+The `all` query exports every node and edge in the graph -- 14,763 nodes and 50,082 edges for the CoolStore application.
 
 ### 3. Filtered Export
 
@@ -77,19 +77,19 @@ Use query filters to export subsets of the graph:
 
 ```bash
 # Export only classes
-rg-build -r example/coolstore-weblogic export \
+rg-build -r example/coolstore export \
   --export-format json \
   --export-output /tmp/coolstore-classes.json \
   --query "type:Class"
 
 # Export by name
-rg-build -r example/coolstore-weblogic export \
+rg-build -r example/coolstore export \
   --export-format json \
   --export-output /tmp/cart-service.json \
   --query "name:ShoppingCartService"
 
 # Export all functions
-rg-build -r example/coolstore-weblogic export \
+rg-build -r example/coolstore export \
   --export-format graphml \
   --export-output /tmp/coolstore-functions.graphml \
   --query functions
@@ -100,7 +100,7 @@ rg-build -r example/coolstore-weblogic export \
 Create an Obsidian vault where each heading section becomes an interlinked note:
 
 ```bash
-rg-build -r example/coolstore-weblogic export \
+rg-build -r example/coolstore export \
   --export-format obsidian \
   --export-output /tmp/coolstore-vault \
   --query all
@@ -113,7 +113,7 @@ This creates a directory of markdown files that you can open in Obsidian, with w
 Generate a DOT file for rendering with Graphviz:
 
 ```bash
-rg-build -r example/coolstore-weblogic export \
+rg-build -r example/coolstore export \
   --export-format graphviz \
   --export-output /tmp/coolstore.dot \
   --query "name:ShoppingCartService"
@@ -130,7 +130,7 @@ dot -Tsvg /tmp/coolstore.dot -o /tmp/coolstore.svg
 Generate a Mermaid diagram for embedding in markdown:
 
 ```bash
-rg-build -r example/coolstore-weblogic export \
+rg-build -r example/coolstore export \
   --export-format mermaid \
   --export-output /tmp/coolstore.mmd \
   --query "name:ShoppingCartService"
@@ -143,7 +143,7 @@ The output can be pasted directly into a markdown file or rendered by any Mermai
 Export in Open Knowledge Foundation JSON format:
 
 ```bash
-rg-build -r example/coolstore-weblogic export \
+rg-build -r example/coolstore export \
   --export-format okf \
   --export-output /tmp/coolstore-okf.json \
   --query all

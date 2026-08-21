@@ -15,7 +15,7 @@ Think of `discover` as the indexing step: you run it once (or after significant 
 
 ## Example Project
 
-This guide uses the **CoolStore Monolith** -- a Java EE 7 e-commerce application deployed on Oracle WebLogic Server. It lives in `example/coolstore-weblogic` and contains Java services, REST endpoints, JPA entities, and an AngularJS frontend.
+This guide uses the **CoolStore** -- a Java EE e-commerce application. It lives in `example/coolstore` and contains Java services, REST endpoints, JPA entities, and an AngularJS frontend.
 
 ## Step-by-Step
 
@@ -24,7 +24,7 @@ This guide uses the **CoolStore Monolith** -- a Java EE 7 e-commerce application
 The simplest invocation indexes the repository at the current directory:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover .
+rg-build -r example/coolstore discover .
 ```
 
 **Output:**
@@ -40,7 +40,7 @@ rg-build -r example/coolstore-weblogic discover .
 - rgBuilder scanned every supported source file (Java, JavaScript, and others) under the repository root.
 - It built a graph of 14,763 nodes (functions, classes, modules) and their call/containment/import edges.
 - It detected 186 circular dependency cycles in the codebase.
-- The graph snapshot was written to `example/coolstore-weblogic/.rgbuilder/graph.snapshot.bin`.
+- The graph snapshot was written to `example/coolstore/.rgbuilder/graph.snapshot.bin`.
 - The entire process completed in under one second.
 
 ### 2. Discovery with Deep Analysis
@@ -48,7 +48,7 @@ rg-build -r example/coolstore-weblogic discover .
 To enable control-flow graphs, PDGs, and dominance analysis for every function, add `--with-cfg`:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover . --with-cfg
+rg-build -r example/coolstore discover . --with-cfg
 ```
 
 **Output:**
@@ -79,7 +79,7 @@ Skipped files due to errors failed=1
 For the most complete analysis, combine all the deep-analysis flags:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover . \
+rg-build -r example/coolstore discover . \
   --with-cfg \
   --with-dashboard \
   --with-harmonic \
@@ -100,7 +100,7 @@ This enables:
 If you only want to index Java files, use the `--languages` flag:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover . --languages java
+rg-build -r example/coolstore discover . --languages java
 ```
 
 This skips all JavaScript, TypeScript, and other files, producing a smaller, faster index focused on the backend code.
@@ -110,7 +110,7 @@ This skips all JavaScript, TypeScript, and other files, producing a smaller, fas
 To skip vendor or generated code:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover . --exclude bower_components
+rg-build -r example/coolstore discover . --exclude bower_components
 ```
 
 ### 6. Inspecting Artifacts

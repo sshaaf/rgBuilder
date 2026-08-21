@@ -1,6 +1,6 @@
 # rgBuilder Guides
 
-Practical, step-by-step guides for every major rgBuilder feature. Each guide uses the **CoolStore Monolith** (`example/coolstore-weblogic`) as a running example so you can follow along on a real Java EE codebase.
+Practical, step-by-step guides for every major rgBuilder feature. Each guide uses the **CoolStore** application (`example/coolstore`) as a running example so you can follow along on a real Java EE codebase.
 
 ## Guides
 
@@ -28,8 +28,8 @@ All guides assume you have rgBuilder installed. See the [installation instructio
 To follow the examples, clone the repository and navigate to the example project:
 
 ```bash
-git clone https://github.com/sshaaf/rgBuilder.git
-cd rgBuilder/example/coolstore-weblogic
+git clone https://github.com/konveyor-ecosystem/coolstore.git
+cd coolstore
 ```
 
 ## Related Resources

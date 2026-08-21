@@ -16,10 +16,10 @@ The result is a **blast-radius score** (0--100), a list of direct callers, and t
 
 ## Example Project
 
-This guide uses the **CoolStore Monolith** (`example/coolstore-weblogic`). Make sure you have run `discover` first:
+This guide uses the **CoolStore** (`example/coolstore`). Make sure you have run `discover` first:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover .
+rg-build -r example/coolstore discover .
 ```
 
 ## Step-by-Step
@@ -29,7 +29,7 @@ rg-build -r example/coolstore-weblogic discover .
 Check the impact of the `priceShoppingCart` method:
 
 ```bash
-rg-build -r example/coolstore-weblogic blast-radius priceShoppingCart
+rg-build -r example/coolstore blast-radius priceShoppingCart
 ```
 
 **Output:**
@@ -65,7 +65,7 @@ Blast radius for 'priceShoppingCart'
 For machine consumption or scripting, use `-f json`:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json blast-radius priceShoppingCart
+rg-build -r example/coolstore -f json blast-radius priceShoppingCart
 ```
 
 **Output:**
@@ -86,7 +86,7 @@ rg-build -r example/coolstore-weblogic -f json blast-radius priceShoppingCart
   "target": {
     "canonical_fqn": "ShoppingCartService::priceShoppingCart",
     "class_context": "ShoppingCartService",
-    "file_path": "example/coolstore-weblogic/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
+    "file_path": "example/coolstore/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
     "id": "7b380647-19dc-49d3-96e5-11216a9fde32",
     "language": "java",
     "signature": "public void priceShoppingCart(ShoppingCart sc) {",
@@ -95,19 +95,19 @@ rg-build -r example/coolstore-weblogic -f json blast-radius priceShoppingCart
   "topology": {
     "direct_callers": [
       {
-        "file_path": "example/coolstore-weblogic/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
+        "file_path": "example/coolstore/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
         "fqn": "com.redhat.coolstore.service.ShoppingCartService.checkOutShoppingCart",
         "id": "431aeb32-896f-41e2-8a8c-260045123da7"
       },
       {
-        "file_path": "example/coolstore-weblogic/./src/main/java/com/redhat/coolstore/rest/CartEndpoint.java",
+        "file_path": "example/coolstore/./src/main/java/com/redhat/coolstore/rest/CartEndpoint.java",
         "fqn": "com.redhat.coolstore.rest.CartEndpoint.add",
         "id": "0c001a42-69bb-4bc7-98b9-915e07478130"
       }
     ],
     "impact_zone": [
       {
-        "file_path": "example/coolstore-weblogic/./src/main/java/com/redhat/coolstore/rest/CartEndpoint.java",
+        "file_path": "example/coolstore/./src/main/java/com/redhat/coolstore/rest/CartEndpoint.java",
         "fqn": "com.redhat.coolstore.rest.CartEndpoint.checkout",
         "id": "eb0366e0-e3ec-4e06-971a-582850917b61"
       }
@@ -124,7 +124,7 @@ The JSON output provides full detail: the target function's signature, file path
 By default, blast radius computes the full transitive closure. To limit analysis to a specific number of call hops:
 
 ```bash
-rg-build -r example/coolstore-weblogic blast-radius getShoppingCart --depth 3
+rg-build -r example/coolstore blast-radius getShoppingCart --depth 3
 ```
 
 **Output:**
@@ -149,7 +149,7 @@ The `--depth 3` flag limits the impact zone to at most 3 levels of callers, usef
 Compare with a constructor, which typically has zero callers:
 
 ```bash
-rg-build -r example/coolstore-weblogic blast-radius ShoppingCartService
+rg-build -r example/coolstore blast-radius ShoppingCartService
 ```
 
 **Output:**
@@ -168,8 +168,8 @@ A score of 0 means this function (the constructor) has no upstream callers in th
 Use `--policy-file` to enforce thresholds:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json blast-radius priceShoppingCart \
-  --policy-file example/coolstore-weblogic/policy.json
+rg-build -r example/coolstore -f json blast-radius priceShoppingCart \
+  --policy-file example/coolstore/policy.json
 ```
 
 The policy file (`policy.json`) defines rules like maximum impact zone size. If `priceShoppingCart` violates any rule, the `violations` array in the output will be populated and the exit code will be non-zero.

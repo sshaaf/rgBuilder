@@ -16,10 +16,10 @@ Semantic search is built on a separate opt-in index (`semantic_index.bin`) that 
 
 ## Example Project
 
-This guide uses the **CoolStore Monolith** (`example/coolstore-weblogic`). Make sure you have run `discover` first:
+This guide uses the **CoolStore** (`example/coolstore`). Make sure you have run `discover` first:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover .
+rg-build -r example/coolstore discover .
 ```
 
 ## Step-by-Step
@@ -29,13 +29,13 @@ rg-build -r example/coolstore-weblogic discover .
 Semantic search requires a separate indexing step. Run `semantic index` after `discover`:
 
 ```bash
-rg-build -r example/coolstore-weblogic semantic index
+rg-build -r example/coolstore semantic index
 ```
 
 **Output:**
 
 ```
-Indexed 7526 functions (vocab-accumulate-v2, 256 dims) → example/coolstore-weblogic/.rgbuilder/semantic_index.bin
+Indexed 7526 functions (vocab-accumulate-v2, 256 dims) → example/coolstore/.rgbuilder/semantic_index.bin
   incremental: 0 reused, 7526 embedded, 0 removed
 ```
 
@@ -50,7 +50,7 @@ Indexed 7526 functions (vocab-accumulate-v2, 256 dims) → example/coolstore-web
 Search for functions related to "shopping cart checkout":
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json semantic query "shopping cart checkout" --limit 5
+rg-build -r example/coolstore -f json semantic query "shopping cart checkout" --limit 5
 ```
 
 **Output:**
@@ -61,7 +61,7 @@ rg-build -r example/coolstore-weblogic -f json semantic query "shopping cart che
   "hits": [
     {
       "distance": 63,
-      "file_path": "example/coolstore-weblogic/./src/main/webapp/bower_components/angular-animate/angular-animate.js",
+      "file_path": "example/coolstore/./src/main/webapp/bower_components/angular-animate/angular-animate.js",
       "fused_score": 0.4749,
       "name": "close",
       "node_id": "5bda7d09-ac18-40c7-a90a-3a8876894947",
@@ -88,7 +88,7 @@ rg-build -r example/coolstore-weblogic -f json semantic query "shopping cart che
 Disable fusion to use pure keyword matching:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json semantic query "checkout" \
+rg-build -r example/coolstore -f json semantic query "checkout" \
   --limit 5 --no-fusion
 ```
 
@@ -97,7 +97,7 @@ rg-build -r example/coolstore-weblogic -f json semantic query "checkout" \
 For more thorough searches, increase the candidate pool that the fusion step considers:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json semantic query "order processing" \
+rg-build -r example/coolstore -f json semantic query "order processing" \
   --limit 10 --candidate-pool 200
 ```
 
@@ -106,7 +106,7 @@ rg-build -r example/coolstore-weblogic -f json semantic query "order processing"
 Search within a specific scope. Community-scoped search finds entire communities relevant to your query:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json semantic query "checkout" \
+rg-build -r example/coolstore -f json semantic query "checkout" \
   --scope community --limit 10
 ```
 
@@ -115,13 +115,13 @@ rg-build -r example/coolstore-weblogic -f json semantic query "checkout" \
 To search documentation sections instead of code functions, first index with the `docs` scope:
 
 ```bash
-rg-build -r example/coolstore-weblogic semantic index --scope docs --embedder hash
+rg-build -r example/coolstore semantic index --scope docs --embedder hash
 ```
 
 Then query:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json semantic query "deployment instructions" \
+rg-build -r example/coolstore -f json semantic query "deployment instructions" \
   --scope docs --limit 5
 ```
 

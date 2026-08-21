@@ -16,10 +16,10 @@ GQL is the primary interface for asking precise, composable questions: "What fun
 
 ## Example Project
 
-This guide uses the **CoolStore Monolith** (`example/coolstore-weblogic`). Make sure you have run `discover` first:
+This guide uses the **CoolStore** (`example/coolstore`). Make sure you have run `discover` first:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover .
+rg-build -r example/coolstore discover .
 ```
 
 ## Step-by-Step
@@ -29,7 +29,7 @@ rg-build -r example/coolstore-weblogic discover .
 rgBuilder ships built-in macros for common queries. The `all_functions` macro returns every function in the graph:
 
 ```bash
-rg-build -r example/coolstore-weblogic gql --macro-name all_functions unused
+rg-build -r example/coolstore gql --macro-name all_functions unused
 ```
 
 **Output (first 10 lines):**
@@ -54,7 +54,7 @@ The text format prints one function name per line. The argument `unused` is a pl
 Add `-f json` to get structured output with file paths, types, and qualified names:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json gql --macro-name all_functions unused
+rg-build -r example/coolstore -f json gql --macro-name all_functions unused
 ```
 
 **Output (truncated):**
@@ -67,7 +67,7 @@ rg-build -r example/coolstore-weblogic -f json gql --macro-name all_functions un
     [
       {
         "binding": "f",
-        "file": "example/coolstore-weblogic/./src/main/webapp/bower_components/moment/src/lib/locale/ordinal.js",
+        "file": "example/coolstore/./src/main/webapp/bower_components/moment/src/lib/locale/ordinal.js",
         "node": "anonymous",
         "type": "Function"
       }
@@ -84,7 +84,7 @@ The `count` field tells you the graph contains **7,526 functions** total.
 Write a `MATCH` query with a `WHERE` clause to find a specific function:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json gql \
+rg-build -r example/coolstore -f json gql \
   "MATCH (f:Function) WHERE f.name = 'priceShoppingCart' RETURN f"
 ```
 
@@ -98,7 +98,7 @@ rg-build -r example/coolstore-weblogic -f json gql \
     [
       {
         "binding": "f",
-        "file": "example/coolstore-weblogic/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
+        "file": "example/coolstore/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
         "node": "priceShoppingCart",
         "qualified_name": "com.redhat.coolstore.service.ShoppingCartService.priceShoppingCart",
         "type": "Function"
@@ -116,7 +116,7 @@ This returns the exact function with its file path and fully qualified name.
 Use `LIKE` with wildcards (`%`) to find functions matching a pattern:
 
 ```bash
-rg-build -r example/coolstore-weblogic gql \
+rg-build -r example/coolstore gql \
   "MATCH (f:Function) WHERE f.name LIKE '%Cart%' RETURN f.name, f.file LIMIT 15"
 ```
 
@@ -127,7 +127,7 @@ This finds all functions containing "Cart" in their name.
 Query for `Class` nodes to see every class in the graph:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json gql \
+rg-build -r example/coolstore -f json gql \
   "MATCH (c:Class) RETURN c LIMIT 15"
 ```
 
@@ -140,7 +140,7 @@ rg-build -r example/coolstore-weblogic -f json gql \
     [
       {
         "binding": "c",
-        "file": "example/coolstore-weblogic/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
+        "file": "example/coolstore/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
         "node": "ShoppingCartService",
         "qualified_name": "com.redhat.coolstore.service.ShoppingCartService",
         "type": "Class"
@@ -149,7 +149,7 @@ rg-build -r example/coolstore-weblogic -f json gql \
     [
       {
         "binding": "c",
-        "file": "example/coolstore-weblogic/./src/main/java/com/redhat/coolstore/model/ShoppingCart.java",
+        "file": "example/coolstore/./src/main/java/com/redhat/coolstore/model/ShoppingCart.java",
         "node": "ShoppingCart",
         "qualified_name": "com.redhat.coolstore.model.ShoppingCart",
         "type": "Class"
@@ -165,7 +165,7 @@ rg-build -r example/coolstore-weblogic -f json gql \
 Use `qualified_name` for precise lookups when a short name is ambiguous:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json gql \
+rg-build -r example/coolstore -f json gql \
   "MATCH (c:Class) WHERE c.qualified_name = 'com.redhat.coolstore.model.ShoppingCart' RETURN c"
 ```
 
@@ -174,7 +174,7 @@ rg-build -r example/coolstore-weblogic -f json gql \
 The `all_communities` macro returns detected functional clusters:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json gql --macro-name all_communities unused
+rg-build -r example/coolstore -f json gql --macro-name all_communities unused
 ```
 
 **Output (truncated):**
@@ -212,7 +212,7 @@ rg-build -r example/coolstore-weblogic -f json gql --macro-name all_communities 
 Find all functions in a specific community by its ID:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json gql \
+rg-build -r example/coolstore -f json gql \
   "MATCH (f:Function) WHERE f.community_id = '12715' RETURN f LIMIT 20"
 ```
 
@@ -221,7 +221,7 @@ rg-build -r example/coolstore-weblogic -f json gql \
 Add the `--explain` flag to include extra metadata (like qualified names) in the response:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json gql --explain \
+rg-build -r example/coolstore -f json gql --explain \
   "MATCH (f:Function) WHERE f.name = 'priceShoppingCart' RETURN f"
 ```
 

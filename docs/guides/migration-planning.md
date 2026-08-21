@@ -16,7 +16,7 @@ Migration planning answers the critical question: "In what order should we extra
 
 ## Example Project
 
-This guide uses the **CoolStore Monolith** (`example/coolstore-weblogic`) -- a Java EE 7 e-commerce application that is a realistic migration candidate.
+This guide uses the **CoolStore** (`example/coolstore`) -- a Java EE e-commerce application that is a realistic migration candidate.
 
 ## Step-by-Step
 
@@ -25,7 +25,7 @@ This guide uses the **CoolStore Monolith** (`example/coolstore-weblogic`) -- a J
 Migration planning requires harmonic centrality and the migration hints export:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover . \
+rg-build -r example/coolstore discover . \
   --with-cfg \
   --with-harmonic \
   --export-migration-hints
@@ -56,7 +56,7 @@ rg-build -r example/coolstore-weblogic discover . \
 The migration plan is a JSON file with ordered extraction steps:
 
 ```bash
-cat example/coolstore-weblogic/.rgbuilder/migration_plan.json
+cat example/coolstore/.rgbuilder/migration_plan.json
 ```
 
 **Output (truncated):**
@@ -114,17 +114,17 @@ rgBuilder offers four migration strategy presets:
 
 ```bash
 # Foundational-first: extract shared libraries and utilities first
-rg-build -r example/coolstore-weblogic discover . \
+rg-build -r example/coolstore discover . \
   --with-harmonic --export-migration-hints \
   --migration-preset foundational_first
 
 # Dense cluster: extract tightly-coupled clusters together
-rg-build -r example/coolstore-weblogic discover . \
+rg-build -r example/coolstore discover . \
   --with-harmonic --export-migration-hints \
   --migration-preset dense_cluster
 
 # Risk mitigation: prioritize low-risk extractions
-rg-build -r example/coolstore-weblogic discover . \
+rg-build -r example/coolstore discover . \
   --with-harmonic --export-migration-hints \
   --migration-preset risk_mitigation
 ```
@@ -142,12 +142,12 @@ Control how steps are sorted:
 
 ```bash
 # Scheduled: dependency-aware topological sort (default)
-rg-build -r example/coolstore-weblogic discover . \
+rg-build -r example/coolstore discover . \
   --with-harmonic --export-migration-hints \
   --migration-order scheduled
 
 # Priority: sort by priority score regardless of dependencies
-rg-build -r example/coolstore-weblogic discover . \
+rg-build -r example/coolstore discover . \
   --with-harmonic --export-migration-hints \
   --migration-order priority
 ```
@@ -179,14 +179,14 @@ After reviewing the plan, use other rgBuilder commands to dig deeper:
 
 ```bash
 # See what functions are in the community being extracted
-rg-build -r example/coolstore-weblogic -f json gql \
+rg-build -r example/coolstore -f json gql \
   "MATCH (f:Function) WHERE f.community_id = '13' RETURN f LIMIT 20"
 
 # Check blast radius of a specific function before extracting
-rg-build -r example/coolstore-weblogic blast-radius getShoppingCart --depth 3
+rg-build -r example/coolstore blast-radius getShoppingCart --depth 3
 
 # View mutations on the domain model being extracted
-rg-build -r example/coolstore-weblogic -f json cpg mutations \
+rg-build -r example/coolstore -f json cpg mutations \
   --type ShoppingCart --exclude-ctors
 ```
 
@@ -195,7 +195,7 @@ rg-build -r example/coolstore-weblogic -f json cpg mutations \
 If you enabled `--with-dashboard`, the migration plan is also available in the browser dashboard:
 
 ```bash
-rg-build -r example/coolstore-weblogic serve --open
+rg-build -r example/coolstore serve --open
 ```
 
 Navigate to the **Migration** tab to see the roadmap as an interactive timeline.

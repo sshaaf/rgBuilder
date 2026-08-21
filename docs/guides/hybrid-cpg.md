@@ -16,10 +16,10 @@ The "hybrid" in the name refers to the two-resolution architecture: the coarse-g
 
 ## Example Project
 
-This guide uses the **CoolStore Monolith** (`example/coolstore-weblogic`). Make sure you have run `discover` with `--with-cfg`:
+This guide uses the **CoolStore** (`example/coolstore`). Make sure you have run `discover` with `--with-cfg`:
 
 ```bash
-rg-build -r example/coolstore-weblogic discover . --with-cfg
+rg-build -r example/coolstore discover . --with-cfg
 ```
 
 ## Step-by-Step
@@ -29,14 +29,14 @@ rg-build -r example/coolstore-weblogic discover . --with-cfg
 First, verify that the CPG archive is available:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json cpg status
+rg-build -r example/coolstore -f json cpg status
 ```
 
 **Output:**
 
 ```json
 {
-  "archive_path": "example/coolstore-weblogic/.rgbuilder/analysis/cfg_pdg.archive.bin",
+  "archive_path": "example/coolstore/.rgbuilder/analysis/cfg_pdg.archive.bin",
   "archive_present": true,
   "ast_skeleton_count": 0,
   "ast_skeleton_present": false,
@@ -61,14 +61,14 @@ rg-build -r example/coolstore-weblogic -f json cpg status
 Look up a function by name and check if L_proc data exists:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json cpg function priceShoppingCart
+rg-build -r example/coolstore -f json cpg function priceShoppingCart
 ```
 
 **Output:**
 
 ```json
 {
-  "file_path": "example/coolstore-weblogic/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
+  "file_path": "example/coolstore/./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java",
   "has_l_proc": true,
   "id": "7b380647-19dc-49d3-96e5-11216a9fde32",
   "is_constructor": false,
@@ -90,7 +90,7 @@ rg-build -r example/coolstore-weblogic -f json cpg function priceShoppingCart
 See all functions called by (and calling) `priceShoppingCart`:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json cpg calls priceShoppingCart
+rg-build -r example/coolstore -f json cpg calls priceShoppingCart
 ```
 
 **Output (truncated):**
@@ -122,7 +122,7 @@ rg-build -r example/coolstore-weblogic -f json cpg calls priceShoppingCart
 The `cpg mutations` command finds every place a type's fields are modified -- critical for DTO safety and encapsulation analysis:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json cpg mutations \
+rg-build -r example/coolstore -f json cpg mutations \
   --type ShoppingCart --exclude-ctors
 ```
 
@@ -135,7 +135,7 @@ rg-build -r example/coolstore-weblogic -f json cpg mutations \
   "mutations": [
     {
       "code": "this.shoppingCartItemList = shoppingCartItemList",
-      "file": "example/coolstore-weblogic/./src/main/java/com/redhat/coolstore/model/ShoppingCart.java",
+      "file": "example/coolstore/./src/main/java/com/redhat/coolstore/model/ShoppingCart.java",
       "function": "setShoppingCartItemList",
       "is_constructor": false,
       "kind": "ThisField",
@@ -146,7 +146,7 @@ rg-build -r example/coolstore-weblogic -f json cpg mutations \
     },
     {
       "code": "this.cartItemTotal = cartItemTotal",
-      "file": "example/coolstore-weblogic/./src/main/java/com/redhat/coolstore/model/ShoppingCart.java",
+      "file": "example/coolstore/./src/main/java/com/redhat/coolstore/model/ShoppingCart.java",
       "function": "setCartItemTotal",
       "is_constructor": false,
       "kind": "ThisField",
@@ -199,7 +199,7 @@ rg-build -r example/coolstore-weblogic -f json cpg mutations \
 Trace how a variable flows through a function:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json cpg flows \
+rg-build -r example/coolstore -f json cpg flows \
   ./src/main/java/com/redhat/coolstore/service/ShoppingCartService.java \
   --line 68 --variable sc --function priceShoppingCart --direction forward
 ```
@@ -230,7 +230,7 @@ The `flows` subcommand wraps `slice` with a simpler interface, showing the step-
 Inspect the program dependence graph for a function:
 
 ```bash
-rg-build -r example/coolstore-weblogic -f json cpg pdg priceShoppingCart
+rg-build -r example/coolstore -f json cpg pdg priceShoppingCart
 ```
 
 **Output (truncated):**
