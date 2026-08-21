@@ -19,6 +19,7 @@ Practical, step-by-step guides for every major rgBuilder feature. Each guide use
 | [CI Policy Checks](ci-policy-checks.md) | `check` | Enforce architectural rules in your CI pipeline |
 | [HTTP Server and Dashboard](http-server-and-dashboard.md) | `serve` | Run an HTTP API and browser-based dashboard |
 | [Migration Planning](migration-planning.md) | `discover --export-migration-hints` | Generate a dependency-aware migration roadmap |
+| [Agent Skill](agent-skill.md) | `install --skill` | Teach AI agents to use rgBuilder for refactoring, migration, porting, and testing |
 
 ## Prerequisites
 
